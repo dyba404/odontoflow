@@ -28,6 +28,23 @@ Dominio propio (ej. odontoflow.pe / .app — se decide al registrar)
   Node lo llama vía `POST /documents`.
 - **WhatsApp Cloud API (M4)**: integración oficial, webhook entrante. Cuentas Business por tenant.
 
+## Entorno local de desarrollo (real, implementado 2026-08-15)
+
+```
+Windows 11 24H2
+├── node / npm / git / código  → C:\Users\Administrator\Documents\projects\odontoflow
+└── WSL2: Ubuntu 26.04 LTS (usuario: dev)
+    ├── systemd habilitado
+    ├── Docker Engine 29.7 + compose plugin 5.4 (repo oficial, target "noble" compat)
+    └── postgres:16 (container odontoflow-db, volumen pgdata)
+             ↑ expuesto en localhost:5432 (WSL2 forwarding automático)
+```
+
+- Código en Windows; los contenedores solo corren servicios (nada montado desde Windows en los contenedores, salvo el compose file vía `/mnt/c`).
+- `.references/` (gitignored): referencias clonadas — boxyhq/saas-starter-kit (tenancy headless), giansalex/lycet, thegreenter/greenter, clawnify/open-salon, satnaing/shadcn-admin.
+- Levantar/parar: `wsl.exe -d Ubuntu -u dev -- sudo docker compose -f /mnt/c/Users/Administrator/Documents/projects/odontoflow/docker-compose.yml up -d` / `wsl.exe --shutdown` (libera RAM y detiene contenedores; reanudan con `docker compose up -d`).
+- Conexión desde Windows: `postgres://odontoflow:odontoflow_dev@localhost:5432/odontoflow` (.env.local.example).
+
 ## Multi-tenancy
 
 - Single-database con `tenant_id` (=organization_id de BoxyHQ) en TODA query.
