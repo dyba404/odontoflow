@@ -1,0 +1,19 @@
+{
+  "name": "odontoflow",
+  "private": true,
+  "version": "0.1.0",
+  "description": "SaaS de gestión para consultorios odontológicos en Perú",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @odontoflow/web",
+    "build": "npm run build -w @odontoflow/core && npm run build -w @odontoflow/ui && npm run build -w @odontoflow/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

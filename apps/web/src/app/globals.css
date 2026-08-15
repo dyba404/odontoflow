@@ -1,0 +1,36 @@
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--of-bg);
+  color: var(--of-text);
+  font-family: var(--of-font-sans);
+}
+
+a {
+  color: var(--of-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--of-primary-hover);
+  text-decoration: underline;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0 0 0.5rem;
+}
