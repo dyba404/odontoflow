@@ -2,6 +2,7 @@ services:
   db:
     image: postgres:16
     container_name: odontoflow-db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: odontoflow
       POSTGRES_PASSWORD: odontoflow_dev

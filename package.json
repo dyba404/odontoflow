@@ -9,9 +9,16 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @odontoflow/web",
-    "build": "npm run build -w @odontoflow/core && npm run build -w @odontoflow/ui && npm run build -w @odontoflow/web",
+    "build": "npm run build -w @odontoflow/db -w @odontoflow/core -w @odontoflow/ui -w @odontoflow/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "of:up": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/of.ps1 up",
+    "of:down": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/of.ps1 down",
+    "of:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/of.ps1 status",
+    "of:db": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/of.ps1 db",
+    "db:generate": "npm run db:generate -w @odontoflow/db",
+    "db:migrate": "npm run db:migrate -w @odontoflow/db",
+    "db:seed": "npm run db:seed -w @odontoflow/db"
   },
   "engines": {
     "node": ">=20"

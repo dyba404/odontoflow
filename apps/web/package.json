@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@odontoflow/core": "*",
+    "@odontoflow/db": "^0.1.0",
     "@odontoflow/ui": "*",
     "next": "^15.1.6",
     "react": "^19.0.0",
