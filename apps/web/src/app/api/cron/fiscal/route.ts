@@ -6,7 +6,8 @@ import { consultarCdrComprobante, emitirComprobante } from "@/lib/emitir";
 export const dynamic = "force-dynamic";
 
 function bearerValido(req: Request): boolean {
-  const esperado = process.env.CRON_SECRET ?? "dev-cron-secret";
+  const esperado = process.env.CRON_SECRET;
+  if (!esperado) return false;
   const header = req.headers.get("authorization") ?? "";
   return header === `Bearer ${esperado}`;
 }

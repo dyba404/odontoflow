@@ -1,6 +1,8 @@
 # Stack de producción: db + lycet (sidecar SUNAT) + web (Next.js standalone) + cron (supercronic).
-# Uso: docker compose -f docker-compose.prod.yml up -d --build
-# Requiere definir CRON_SECRET (y los demás secretos) vía variables de entorno o archivo .env.
+# Uso: copia .env.prod.example a .env, completa los obligatorios y ejecuta
+#      docker compose -f docker-compose.prod.yml up -d --build
+# Los valores obligatorios usan ${VAR:?mensaje}: sin ellos el `up` falla a
+# propósito (no se despliega con secretos inseguros por defecto).
 
 name: odontoflow-prod
 
@@ -11,7 +13,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-odontoflow}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-odontoflow_dev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obligatorio (ver .env.prod.example)}
       POSTGRES_DB: ${POSTGRES_DB:-odontoflow}
     # Sin puertos publicados a la máquina: solo accesible desde la red interna.
     volumes:
@@ -29,7 +31,7 @@ services:
     container_name: odontoflow-lycet-prod
     restart: unless-stopped
     environment:
-      CLIENT_TOKEN: ${LYCET_TOKEN:-123456}
+      CLIENT_TOKEN: ${LYCET_TOKEN:?LYCET_TOKEN obligatorio (no uses el default 123456)}
       CORS_ALLOW_ORIGIN: .
     # Sin puerto publicado: web lo llama por la red interna (http://lycet:8000).
     volumes:
@@ -60,19 +62,19 @@ services:
       HOSTNAME: 0.0.0.0
       # packages/db/src/client.ts extrae host/puerto de DATABASE_URL para su sondeo TCP
       # (packages/db/src/client.ts); dentro de la red el host es `db`.
-      DATABASE_URL: postgres://${POSTGRES_USER:-odontoflow}:${POSTGRES_PASSWORD:-odontoflow_dev}@${DATABASE_HOST:-db}:5432/${POSTGRES_DB:-odontoflow}
-      CRON_SECRET: ${CRON_SECRET:-dev-cron-secret}
+      DATABASE_URL: postgres://${POSTGRES_USER:-odontoflow}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obligatorio (ver .env.prod.example)}@${DATABASE_HOST:-db}:5432/${POSTGRES_DB:-odontoflow}
+      CRON_SECRET: ${CRON_SECRET:?CRON_SECRET obligatorio (genera uno aleatorio, ver .env.prod.example)}
       LYCET_URL: http://lycet:8000
-      LYCET_TOKEN: ${LYCET_TOKEN:-123456}
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3111}
+      LYCET_TOKEN: ${LYCET_TOKEN:?LYCET_TOKEN obligatorio (no uses el default 123456)}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?NEXT_PUBLIC_APP_URL obligatorio (URL publica HTTPS, ver .env.prod.example)}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_FROM: ${RESEND_FROM:-}
       # resend es el canal de producción; smtp-dev solo existe en docker-compose.yml (Mailpit).
       MAIL_MODE: ${MAIL_MODE:-resend}
       WA_REPLY_MODE: ${WA_REPLY_MODE:-single}
       YAPE_PLIN_NUMBER: ${YAPE_PLIN_NUMBER:-}
-      ADMIN_EMAILS: ${ADMIN_EMAILS:-owner@demo.odontoflow.pe}
-      LOCAL_MASTER_KEY: ${LOCAL_MASTER_KEY:-}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      LOCAL_MASTER_KEY: ${LOCAL_MASTER_KEY:?LOCAL_MASTER_KEY obligatorio (define UNA vez, ver .env.prod.example)}
       WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
     ports:
       - "${WEB_PORT:-3111}:3111"
@@ -100,7 +102,7 @@ services:
     image: odontoflow-web-build:prod
     profiles: ["tools"]
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-odontoflow}:${POSTGRES_PASSWORD:-odontoflow_dev}@${DATABASE_HOST:-db}:5432/${POSTGRES_DB:-odontoflow}
+      DATABASE_URL: postgres://${POSTGRES_USER:-odontoflow}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obligatorio (ver .env.prod.example)}@${DATABASE_HOST:-db}:5432/${POSTGRES_DB:-odontoflow}
     depends_on:
       db:
         condition: service_healthy
@@ -115,7 +117,7 @@ services:
       web:
         condition: service_healthy
     environment:
-      CRON_SECRET: ${CRON_SECRET:-dev-cron-secret}
+      CRON_SECRET: ${CRON_SECRET:?CRON_SECRET obligatorio (genera uno aleatorio, ver .env.prod.example)}
 
 volumes:
   pgdata:
