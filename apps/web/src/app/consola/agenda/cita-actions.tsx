@@ -85,7 +85,7 @@ export function CitaActions({
         <Button
           size="icon"
           variant="ghost"
-          className="size-7"
+          className="size-7 [@media(pointer:coarse)]:min-w-12"
           title="Reprogramar"
           aria-label={`Reprogramar cita de ${paciente}`}
           onClick={() => {
@@ -101,7 +101,7 @@ export function CitaActions({
         <Button
           size="icon"
           variant="ghost"
-          className="size-7"
+          className="size-7 [@media(pointer:coarse)]:min-w-12"
           title="Cancelar"
           aria-label={`Cancelar cita de ${paciente}`}
           onClick={cancelar}

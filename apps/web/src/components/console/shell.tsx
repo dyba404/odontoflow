@@ -42,7 +42,7 @@ export function ConsoleShell({
   }, []);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+    <div className="flex h-dvh overflow-hidden bg-background pt-[env(safe-area-inset-top)] text-foreground">
       <ConsoleSidebar
         clinicName={clinicName}
         clinicSlug={clinicSlug}
@@ -64,7 +64,7 @@ export function ConsoleShell({
             <button
               type="button"
               onClick={() => setPaletteOpen(true)}
-              className="flex items-center gap-2 rounded-md border bg-background px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              className="flex items-center gap-2 rounded-md border bg-background px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground [@media(pointer:coarse)]:min-h-12"
             >
               <Search className="size-4" />
               <span className="hidden md:inline">Buscar…</span>
@@ -82,7 +82,7 @@ export function ConsoleShell({
           </div>
         </header>
 
-        <nav className="flex gap-1 overflow-x-auto border-b bg-background/80 px-3 py-1.5 lg:hidden">
+        <nav className="flex gap-1 overflow-x-auto border-b bg-background/80 px-3 py-2 lg:hidden [@media(pointer:coarse)]:py-2.5">
           {groups
             .flatMap((g) => g.items)
             .flatMap((item) =>
@@ -95,7 +95,7 @@ export function ConsoleShell({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "whitespace-nowrap rounded-md px-2.5 py-1 text-sm text-muted-foreground",
+                  "whitespace-nowrap rounded-md px-2.5 py-1 text-sm text-muted-foreground [@media(pointer:coarse)]:min-h-12 [@media(pointer:coarse)]:inline-flex [@media(pointer:coarse)]:items-center [@media(pointer:coarse)]:px-3",
                   (pathname === item.href ||
                     (item.href !== "/consola" && pathname.startsWith(item.href))) &&
                     "bg-accent font-medium text-accent-foreground",
@@ -107,7 +107,9 @@ export function ConsoleShell({
             ))}
         </nav>
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+          {children}
+        </main>
       </div>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>

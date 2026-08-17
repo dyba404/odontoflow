@@ -166,7 +166,7 @@ export default async function ConsolaPage() {
           <Link
             key={a.label}
             href={a.href}
-            className="group flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-all duration-300 hover:bg-surface-hover hover:text-foreground"
+            className="group flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-all duration-300 hover:bg-surface-hover hover:text-foreground [@media(pointer:coarse)]:min-h-12"
           >
             <a.icon className="size-3.5 text-muted-foreground/40 transition-colors duration-300 group-hover:text-foreground" />
             {a.label}

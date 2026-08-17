@@ -155,7 +155,7 @@ export default async function AgendaPage({
                 key={v.id}
                 href={hrefVista(v.id, fechaISO)}
                 className={cn(
-                  "rounded-md px-3 py-1 text-xs font-medium transition-colors",
+                  "rounded-md px-3 py-1 text-xs font-medium transition-colors [@media(pointer:coarse)]:min-h-12 [@media(pointer:coarse)]:px-4 [@media(pointer:coarse)]:text-sm [@media(pointer:coarse)]:inline-flex [@media(pointer:coarse)]:items-center",
                   v.id === vista
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground",
@@ -170,7 +170,7 @@ export default async function AgendaPage({
             <Link
               href={hrefVista(vista, format(anterior, "yyyy-MM-dd"))}
               aria-label="Anterior"
-              className={cn(buttonVariants({ variant: "outline", size: "icon" }), "size-8")}
+              className={cn(buttonVariants({ variant: "outline", size: "icon" }), "size-8 [@media(pointer:coarse)]:min-h-12 [@media(pointer:coarse)]:min-w-12")}
             >
               <ChevronLeft className="size-4" />
             </Link>
@@ -183,7 +183,7 @@ export default async function AgendaPage({
             <Link
               href={hrefVista(vista, format(siguiente, "yyyy-MM-dd"))}
               aria-label="Siguiente"
-              className={cn(buttonVariants({ variant: "outline", size: "icon" }), "size-8")}
+              className={cn(buttonVariants({ variant: "outline", size: "icon" }), "size-8 [@media(pointer:coarse)]:min-h-12 [@media(pointer:coarse)]:min-w-12")}
             >
               <ChevronRight className="size-4" />
             </Link>
