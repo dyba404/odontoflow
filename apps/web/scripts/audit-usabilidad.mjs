@@ -75,15 +75,65 @@ async function revisar(page, vpWidth) {
       const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
       if (el && el !== b && !b.contains(el) && !el.contains(b)) tapados++;
     });
-    return { truncados, fueraVertical, textoInvisible, tapados };
+    // Tap targets: controles reales con aspecto de botón < 44px (excluye links de texto inline)
+    const tapChicos = [];
+    document.querySelectorAll("button, [role=button], select").forEach((b) => {
+      const r = b.getBoundingClientRect();
+      if (r.width < 10 || r.height < 10 || r.bottom < 0 || r.top > window.innerHeight) return;
+      const cs = getComputedStyle(b);
+      if (cs.display === "none" || cs.visibility === "hidden" || cs.pointerEvents === "none") return;
+      if (r.height < 44 || r.width < 44) {
+        const texto = (b.textContent || "").trim().slice(0, 32);
+        tapChicos.push(
+          `${b.tagName.toLowerCase()}${texto ? ` "${texto}"` : ""} ${Math.round(r.width)}x${Math.round(r.height)}`,
+        );
+      }
+    });
+    document.querySelectorAll("a").forEach((b) => {
+      const r = b.getBoundingClientRect();
+      if (r.width < 10 || r.height < 10 || r.bottom < 0 || r.top > window.innerHeight) return;
+      const cs = getComputedStyle(b);
+      if (cs.display === "none" || cs.visibility === "hidden" || cs.pointerEvents === "none") return;
+      const cls = typeof b.className === "string" ? b.className : "";
+      const pareceBoton =
+        cs.backgroundColor !== "rgba(0, 0, 0, 0)" ||
+        /rounded-(md|lg|xl|2xl|full)/.test(cls);
+      if (!pareceBoton) return; // link de texto inline: no aplica el mínimo táctil
+      if (r.height < 44 || r.width < 44) {
+        const texto = (b.textContent || "").trim().slice(0, 32);
+        tapChicos.push(`a ${texto ? `"${texto}" ` : ""}${Math.round(r.width)}x${Math.round(r.height)}`);
+      }
+    });
+    return { truncados, fueraVertical, textoInvisible, tapados, tapChicos };
   }, vpWidth);
   return res;
 }
 
+// hasTouch activa pointer:coarse (misma media query que usa la app para ≥48px);
+// el init script descarta el banner de instalación para no contaminar la medición.
+async function contextoTactil(browser, vp, cookie) {
+  const ctx = await browser.newContext({
+    viewport: { width: vp.width, height: vp.height },
+    hasTouch: true,
+  });
+  if (cookie) {
+    await ctx.addCookies([{ name: "of_session", value: cookie, domain: "localhost", path: "/" }]);
+  }
+  await ctx.addInitScript(() => {
+    try {
+      localStorage.setItem("of-pwa-descartado", "1");
+    } catch {}
+  });
+  return ctx;
+}
+
+const REPORT_TAP_UMBRAL = 3;
+
 for (const vp of [{ name: "movil", width: 390, height: 844 }, { name: "tablet", width: 820, height: 1180 }]) {
   const browser = await chromium.launch();
+  const token = await loginOwner();
 
-  const ctxPub = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+  const ctxPub = await contextoTactil(browser, vp, null);
   const pub = await ctxPub.newPage();
   for (const [nombre, ruta] of Object.entries(PUBLICAS)) {
     await pub.goto(BASE + ruta, { waitUntil: "domcontentloaded" });
@@ -93,13 +143,14 @@ for (const vp of [{ name: "movil", width: 390, height: 844 }, { name: "tablet", 
     if (r.tapados > 0) hot.push(`${r.tapados} botones/links tapados`);
     if (r.truncados > 2) hot.push(`${r.truncados} textos truncados`);
     if (r.textoInvisible > 2) hot.push(`${r.textoInvisible} textos con contraste bajo`);
+    if (r.tapChicos.length >= REPORT_TAP_UMBRAL) {
+      hot.push(`${r.tapChicos.length} tap targets <44px: ${r.tapChicos.slice(0, 5).join(" | ")}`);
+    }
     if (hot.length) problemas.push(`${vp.name} ${nombre}: ${hot.join(", ")}`);
   }
   await ctxPub.close();
 
-  const token = await loginOwner();
-  const ctxStaff = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
-  await ctxStaff.addCookies([{ name: "of_session", value: token, domain: "localhost", path: "/" }]);
+  const ctxStaff = await contextoTactil(browser, vp, token);
   const staff = await ctxStaff.newPage();
   for (const [nombre, ruta] of Object.entries(CONSOLA)) {
     await staff.goto(BASE + ruta, { waitUntil: "domcontentloaded" });
@@ -109,11 +160,14 @@ for (const vp of [{ name: "movil", width: 390, height: 844 }, { name: "tablet", 
     if (r.tapados > 0) hot.push(`${r.tapados} botones/links tapados`);
     if (r.truncados > 2) hot.push(`${r.truncados} textos truncados`);
     if (r.textoInvisible > 2) hot.push(`${r.textoInvisible} textos con contraste bajo`);
+    if (r.tapChicos.length >= REPORT_TAP_UMBRAL) {
+      hot.push(`${r.tapChicos.length} tap targets <44px: ${r.tapChicos.slice(0, 5).join(" | ")}`);
+    }
     if (hot.length) problemas.push(`${vp.name} ${nombre}: ${hot.join(", ")}`);
   }
   await ctxStaff.close();
   await browser.close();
 }
 
-console.log(`\n=== ${problemas.length} problemas de usabilidad móvil/tablet ===`);
+console.log(`\n=== ${problemas.length} problemas de usabilidad móvil/tablet (contexto táctil, incluye tap targets <44px) ===`);
 problemas.forEach((p) => console.log(p));

@@ -135,6 +135,18 @@ Salida: entregable de capacitación para cuando se venda el servicio (guías in-
 
 ---
 
+## v1.5.0 — Celular de verdad: PWA instalable, ergonomia tactil y banner de instalacion
+
+- [x] Fase 1 PWA realmente instalable: hasta ahora los iconos eran solo SVG (Chrome acepta SVG con fallback, pero iOS/iPadOS exige `apple-touch-icon` PNG y Android prefiere PNG), asi que la app era "agregable" pero no instalable de verdad. Nuevo `apps/web/scripts/genera-iconos.mjs` (Playwright renderiza el logo y exporta icon-192/icon-512/icon-512-maskable PNG a `public/icons/` + `src/app/apple-icon.png` que App Router convierte en `<link rel="apple-touch-icon">`). `manifest.webmanifest` actualizado con los 3 PNG (maskable separado para adaptive icons de Android), `theme_color` #0d9488 y start_url `/consola`. `layout.tsx`: `appleWebApp` movido de `Viewport` a `Metadata` (fix de tipos Next 15) y `viewportFit: "cover"` en viewport
+- [x] Fase 2 Ergonomia tactil ≥48px sin tocar el diseño desktop: la regla no es un breakpoint de ancho sino el dispositivo — todos los controles ganan `min-h-12` (48px) solo bajo `[@media(pointer:coarse)]:` (Tailwind v4, media query arbitraria). `ui/button.tsx` lo trae en la base; iconos de la agenda (reprogramar/cancelar), tabs Dia/Semana/Mes, prev/next del calendario y quick actions del panel completan los tap targets. `shell.tsx`: `h-dvh`, header con `pt-[env(safe-area-inset-top)]`, padding inferior con safe-area, nav movil touch-friendly
+- [x] Fase 3 Banner "Instala Odontoflow": nuevo `components/pwa/install-banner.tsx` montado en layout global. Aparece solo en dispositivo tactil (pointer:coarse), no standalone, nunca si ya fue descartado (localStorage `of-pwa-descartado`) y muestra instruccion con pasos correctos segun plataforma: iOS (Safari: Compartir → "Agregar a inicio", no existe install prompt nativo) / Android (menu → Instalar/Agregar)
+- [x] Fase 4 Auditoria tactil: `audit-usabilidad.mjs` ahora corre con `hasTouch` (activa la misma media query que usa la app), mide tap targets <44px de controles con aspecto de boton (excluye links de texto inline) y descarta el banner de instalacion via init script para no contaminar. Resultado: **0 problemas** en movil/tablet tras los fixes
+- Typecheck + lint (0 warnings) + build verdes; E2E 11/11 contra el build final (6 desktop + 5 movil Pixel 7); auditoria tactil 0 problemas en 11 rutas
+
+Salida: la app puede instalarse en la pantalla de inicio de Android e iPhone como una app real (icono, splash, standalone), los botones cumplen el minimo tactil recomendado (≥44-48px) solo en dispositivos tactiles y el safe-area del notch esta cubierto.
+
+---
+
 ## Backlog post-M5 → incluido en 1.0
 
 Topología detallada por módulo en `docs/05-modulos-topologia.md`.
