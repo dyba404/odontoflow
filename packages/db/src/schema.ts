@@ -1008,6 +1008,28 @@ export const whatsappSettings = pgTable("whatsapp_settings", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const whatsappMessages = pgTable(
+  "whatsapp_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    waId: text("wa_id"),
+    direction: text("direction").notNull(),
+    patientId: uuid("patient_id").references(() => patients.id),
+    phoneNumber: text("phone_number"),
+    body: text("body"),
+    estado: text("estado").notNull().default("recibido"),
+    error: text("error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("whatsapp_messages_tenant_created_idx").on(t.tenantId, t.createdAt),
+    index("whatsapp_messages_patient_idx").on(t.patientId),
+  ],
+);
+
 // ---------------------------------------------------------------------------
 // ARCO (Ley 29733) — solicitudes de datos
 // ---------------------------------------------------------------------------
