@@ -118,6 +118,23 @@ Salida: todo lo internamente resoluble quedó resuelto. Solo resta lo externo: V
 
 ---
 
+## v1.4.0 — Capacitación + QA responsive: centro de guías in-app, onboarding y móvil verificado
+
+- [x] Fase 0 QA responsive: scripts de auditoría reutilizables (`apps/web/scripts/audit-responsive.mjs` ~34 rutas × 3 viewports 390/820/1440 con capturas; `audit-overflow-real.mjs` desbordes reales de documento; `audit-usabilidad.mjs` botones tapados/truncados/contraste). Resultado: **0 desbordes reales y 0 problemas de usabilidad** en móvil/tablet (las tablas ya usan wrappers scrollable; el shell móvil navega horizontal). La E2E gana proyecto persistente `mobile` (Pixel 7, RBAC) para regresión de layout
+- [x] Fase 1 Centro de capacitación (patrón help center externo de Cliniko/Intercom adaptado a "nada externo todavía"):
+  - `lib/guias.ts`: guías estructuradas por sección y rol como datos (formato migrable a Notion/Intercom si algún día se quiere el help center afuera)
+  - `/consola/guia` in-app: filtra las guías según los permisos del rol del sesionista; sidebar gana "Guía de la app" en el grupo Soporte
+  - `/{clinica}/guia` pública sin login (igual que privacidad/términos): el dueño envía el link a su equipo sin darles acceso todavía
+  - 13 capturas reales de la app en `public/guia/`, regenerables con `scripts/captura-guia.mjs`
+  - `/consola/soporte` reemplaza sus 3 guías inline por tarjeta al centro
+- [x] Fase 2 Checklist de primeros pasos en el panel del owner: `console-data.primerosPasos()` calcula con datos reales (legal configurado, servicios, equipo invitado, pacientes como proxy de página compartida, primera cita confirmada); contador 0/5..4/5, items tachados al completar y la tarjeta desaparece sola al terminar. Verificado con tenant efímero vía `/api/auth/signup` (muestra 0/5) y el demo completo (oculta)
+- [x] Fase 3 `docs/10-capacitacion.md`: guion del video demo escena por escena para grabarlo después con OBS (versión ventas 5 min + capacitación por rol 10 min) + procedimiento para regenerar capturas
+- [x] Typecheck + lint + build verdes; E2E 11/11 contra el build final (6 desktop + 5 móvil)
+
+Salida: entregable de capacitación para cuando se venda el servicio (guías in-app por rol, link público para el equipo, checklist de onboarding y guion de grabación) y el responsive verificado en celular/tablet con regresión automática.
+
+---
+
 ## Backlog post-M5 → incluido en 1.0
 
 Topología detallada por módulo en `docs/05-modulos-topologia.md`.
