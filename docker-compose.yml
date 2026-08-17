@@ -44,6 +44,25 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  whatsmock:
+    build:
+      context: ./.references/whap
+    image: odontoflow-whatsmock:local
+    container_name: odontoflow-whatsmock
+    restart: unless-stopped
+    environment:
+      WEBHOOK_URL: http://host.docker.internal:3111/api/whatsapp/webhook
+    ports:
+      - "3010:3010"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://127.0.0.1:3010/health >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 10
+
 volumes:
   pgdata:
   lycetdata:

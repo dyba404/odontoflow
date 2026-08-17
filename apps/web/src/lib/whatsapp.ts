@@ -16,7 +16,7 @@ export const CODIGOS_FUERA_ALCANCE = new Set([
 ]);
 
 export function whatsAppUrl(phoneNumberId: string): string {
-  return `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
+  return `${process.env.WHATSAPP_BASE_URL ?? "https://graph.facebook.com/v19.0"}/${phoneNumberId}/messages`;
 }
 
 export function whatsAppConfigurada(settings: WhatsAppSettingsLike | null | undefined): boolean {
