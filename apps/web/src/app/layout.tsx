@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import { OfflineBanner } from "@/components/pwa/offline-banner";
 import { PwaRegister } from "@/components/pwa/register";
+import { InstallBanner } from "@/components/pwa/install-banner";
 import "@odontoflow/ui/tokens.css";
 import "./globals.css";
 
@@ -32,6 +33,7 @@ export default function RootLayout({
         <Toaster position="top-right" richColors closeButton />
         <PwaRegister />
         <OfflineBanner />
+        <InstallBanner />
       </body>
     </html>
   );
