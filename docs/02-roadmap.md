@@ -86,6 +86,23 @@ Regla: feature freeze tras M3. Solo ship → vender → medir antes de construir
 
 ---
 
+## v1.2.0 — Doble local de WhatsApp + ensayo general en vivo (sin producción externa)
+
+- [x] Fase A: `caja/pagos/[id]/aseguradora` rechaza pagos anulados (409); `cron/fiscal` consulta el CDR antes de reemitir comprobantes rechazados ya enviados (contador `cdrRecuperados`, evita duplicar notas aceptadas sin CDR local); `consultarCdrComprobante` acepta `pendiente_envio`/`rechazado`
+- [x] Fase B: whatsmock local — repo `fdarian/whap` en `.references/whap`, servicio `whatsmock` en docker-compose (`:3010`, API Meta-compatible `/v22.0/{phoneNumberId}/messages` + `/mock/simulate-message`), `scripts/setup-whatsmock.ps1` idempotente, `WHATSAPP_BASE_URL` configurable en `lib/whatsapp.ts` (default sigue siendo Graph real)
+- [x] Fase B: webhook de WhatsApp en `172.17.48.1:3111` (`WEBHOOK_URL` configurable vía `WHATSAPP_WEBHOOK_URL`; `host.docker.internal` no alcanza al host en WSL-Docker)
+- [x] Fase C: `scripts/fiscal-demo.ts` configura el tenant demo para emisión electrónica contra **SUNAT beta real** (RUC 20161515648 / MODDATOS, certificado de pruebas lycet, Clave SOL cifrada con la master key dev) — idempotente
+- [x] Fase D: ensayo general verificado en vivo:
+  - WhatsApp: entrante simulado → respuesta single con link `localhost:3111/dental/reserva`; keyword REPROGRAMAR → link mágico
+  - Portal paciente: resumen/cuotas/presupuestos con token; pago QR genera PNG + ref `ACF525` + pago `por_conciliar`; conciliación staff → cuota pagada; token inválido 404 y ownership en PDFs de terceros 404
+  - Fiscal real SUNAT beta: boleta B001-5 emitida y aceptada (hash, XML, CDR), PDF con QR embebido, y baja: boleta → nota de crédito BN01-2 aceptada. Fix raíz: SUNAT rechaza DocumentTypeCode 03 en VoidedDocumentsLine — solo las facturas admiten Comunicación de Baja; boletas van por nota de crédito (código lo tenía invertido). Fix colateral: fechas sin serializar en raw SQL del correlativo voided
+  - `NEXT_PUBLIC_APP_URL=http://localhost:3111` en `apps/web/.env.local`: links de correo/WhatsApp/portal ahora apuntan al servidor real de pruebas
+- [x] Fase E: E2E Playwright 6/6 verde contra el build final con los cambios anteriores; typecheck limpio; backup real verificado (`scripts/backup.ps1` → `backups/*.dump`, retención 30 días, gitignored)
+
+Salida: todo el stack corre 100% local con dobles de prueba (whatsmock, Mailpit, lycet→SUNAT beta), ensayo end-to-end verificado y sin tocar producción externa.
+
+---
+
 ## Backlog post-M5 → incluido en 1.0
 
 Topología detallada por módulo en `docs/05-modulos-topologia.md`.
