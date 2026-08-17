@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, eq, gt } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getDb, invitations, teams } from "@odontoflow/db";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ token: string }> }) {

@@ -340,6 +340,7 @@ export function PortalPaciente({ token }: { token: string }) {
                   {pagoCuota?.id === cuota.id && pagoQr && (
                     <div className="mt-4 rounded-xl border border-accent bg-accent/40 p-4">
                       <div className="flex flex-col items-center gap-3">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- QR generado al vuelo (data: base64); next/image no optimiza data URLs */}
                         <img
                           src={pagoQr.qr}
                           alt="QR de pago"

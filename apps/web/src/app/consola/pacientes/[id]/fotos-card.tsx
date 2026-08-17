@@ -262,6 +262,7 @@ export function FotosCard({
                               }}
                               style={arrastrando === f.id ? { opacity: 0.4 } : undefined}
                             >
+                              {/* eslint-disable-next-line @next/next/no-img-element -- el optimizador de next/image no puede acceder al endpoint autenticado /api/adjuntos */}
                               <img
                                 src={`/api/adjuntos/${f.id}`}
                                 alt={f.nombre}

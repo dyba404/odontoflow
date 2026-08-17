@@ -1,11 +1,9 @@
 import { Phone, ClipboardList } from "lucide-react";
-import type { AppointmentStatus } from "@odontoflow/core";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/status-badge";
 import { Avatar } from "@/components/ui/avatar";
 import { PageHeader } from "@/components/console/page-header";
 import { EmptyState } from "@/components/console/empty-state";

@@ -8,7 +8,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -25,12 +24,6 @@ import { getSession } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
-
-const PLAN_LABEL: Record<string, string> = {
-  free: "Free",
-  pro: "Pro",
-  premium: "Premium",
-};
 
 const ESTADO_LABEL: Record<string, string> = {
   activo: "Activo",

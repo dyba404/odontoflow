@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
 import { getDb, notificationSettings } from "@odontoflow/db";
 import { guardStaff, guardError } from "@/lib/auth";
 import { logAuditSesion } from "@/lib/audit";
