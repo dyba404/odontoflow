@@ -22,5 +22,11 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      // Regresión de layout/RBAC en celular (diseño mobile-first para doctor/asistente).
+      name: "mobile",
+      testMatch: "rbac.spec.ts",
+      use: { ...devices["Pixel 7"] },
+    },
   ],
 });
