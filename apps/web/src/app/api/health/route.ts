@@ -24,7 +24,7 @@ export async function GET() {
     correo: mailConfigurado(),
     lycet: lycetConfigurado(),
   };
-  const ok = Object.values(checks).every(Boolean);
+  const ok = db;
 
   return NextResponse.json({ ok, version: "1.0.0", ts, checks }, ok ? undefined : { status: 503 });
 }

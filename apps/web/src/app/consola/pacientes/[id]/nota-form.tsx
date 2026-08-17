@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
+import { useEffect, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { eliminarBorrador, guardarBorrador, leerBorrador } from "@/lib/offline-store";
 import { cn } from "@/lib/utils";
 
 const MAX = 2000;
@@ -14,7 +15,29 @@ export function NotaForm({ patientId }: { patientId: string }) {
   const [pending, start] = useTransition();
   const [nota, setNota] = useState("");
 
+  const clave = `nota-clinica:${patientId}`;
   const limpio = nota.trim();
+
+  useEffect(() => {
+    let activo = true;
+    leerBorrador(clave).then((borrador) => {
+      if (activo && borrador?.contenido) {
+        setNota(borrador.contenido);
+        toast.info("Se recuperó un borrador sin conexión");
+      }
+    });
+    return () => {
+      activo = false;
+    };
+  }, [clave]);
+
+  useEffect(() => {
+    if (!nota) return;
+    const t = setTimeout(() => {
+      void guardarBorrador(clave, nota);
+    }, 600);
+    return () => clearTimeout(t);
+  }, [clave, nota]);
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -34,6 +57,7 @@ export function NotaForm({ patientId }: { patientId: string }) {
         return;
       }
       toast.success("Nota añadida");
+      void eliminarBorrador(clave);
       setNota("");
       setTimeout(() => router.refresh(), 300);
     });

@@ -124,9 +124,9 @@ export function NotificacionesForm({
         />
         {!emailOperativo && (
           <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            El envío por email requiere configurar RESEND_API_KEY y RESEND_FROM, o usar
-            MAIL_MODE=smtp-dev con Mailpit en desarrollo. Los toggles se guardan igualmente,
-            pero los mensajes no saldrán hasta activar un canal.
+            El envío por email requiere activar el canal de correo (RESEND_API_KEY y un
+            remitente verificado RESEND_FROM). Los toggles se guardan igualmente,
+            pero los mensajes no saldrán hasta activarlo.
           </p>
         )}
         <div className="grid grid-cols-2 gap-3 pt-1">

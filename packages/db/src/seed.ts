@@ -244,6 +244,327 @@ async function sanearDemo(d: NonNullable<typeof db>, tenantId: string) {
   if (!tocado) console.log("Sanear demo: datos ya completos, nada que hacer.");
 }
 
+const ASEGURADORAS_DEMO = [
+  { nombre: "Rímac EPS", ruc: "20411490001", telefono: "01-612-4000" },
+  { nombre: "Pacífico Seguros", ruc: "20331135077", telefono: "01-513-5000" },
+  { nombre: "Mapfre Perú", ruc: "20418893167", telefono: "01-213-3333" },
+] as const;
+
+async function upsertAseguradoras(d: NonNullable<typeof db>, tenantId: string) {
+  const existentes = await d
+    .select({ id: schema.insurers.id, nombre: schema.insurers.nombre })
+    .from(schema.insurers)
+    .where(eq(schema.insurers.tenantId, tenantId));
+  const porNombre = new Map(existentes.map((r) => [r.nombre, r.id]));
+  const ids = new Map<string, string>();
+  for (const a of ASEGURADORAS_DEMO) {
+    const prev = porNombre.get(a.nombre);
+    if (prev) {
+      ids.set(a.nombre, prev);
+    } else {
+      const [row] = await d
+        .insert(schema.insurers)
+        .values({ tenantId, nombre: a.nombre, ruc: a.ruc, telefono: a.telefono })
+        .returning({ id: schema.insurers.id });
+      ids.set(a.nombre, row!.id);
+    }
+  }
+  const nuevas = ASEGURADORAS_DEMO.length - porNombre.size;
+  if (nuevas > 0) console.log(`Demo: ${nuevas} aseguradoras creadas.`);
+  return ids;
+}
+
+async function upsertCoberturas(
+  d: NonNullable<typeof db>,
+  tenantId: string,
+  insurers: Map<string, string>,
+) {
+  const pacientes = await d
+    .select({ id: schema.patients.id })
+    .from(schema.patients)
+    .where(eq(schema.patients.tenantId, tenantId))
+    .orderBy(asc(schema.patients.createdAt))
+    .limit(4);
+  const planes: Array<{ patient: string; insurer: string; plan: string; copago: string }> = [];
+  if (pacientes[0]) planes.push({ patient: pacientes[0].id, insurer: "Rímac EPS", plan: "Preferente", copago: "20.00" });
+  if (pacientes[1]) planes.push({ patient: pacientes[1].id, insurer: "Pacífico Seguros", plan: "Vital", copago: "30.00" });
+  if (pacientes[2]) planes.push({ patient: pacientes[2].id, insurer: "Mapfre Perú", plan: "Salud Total", copago: "10.00" });
+  if (pacientes[3]) planes.push({ patient: pacientes[3].id, insurer: "Rímac EPS", plan: "Clásico", copago: "25.00" });
+
+  const existentes = await d
+    .select({ id: schema.patientCoverages.id, patientId: schema.patientCoverages.patientId })
+    .from(schema.patientCoverages)
+    .innerJoin(
+      schema.patients,
+      eq(schema.patientCoverages.patientId, schema.patients.id),
+    )
+    .where(eq(schema.patients.tenantId, tenantId));
+  const pacientesConCobertura = new Set(existentes.map((r) => r.patientId));
+
+  const filas = planes.filter((p) => !pacientesConCobertura.has(p.patient));
+  if (filas.length === 0) return 0;
+  await d.insert(schema.patientCoverages).values(
+    filas.map((p) => ({
+      patientId: p.patient,
+      insurerId: insurers.get(p.insurer) ?? "",
+      plan: p.plan,
+      copagoPct: p.copago,
+      vigenteDesde: fechaLima(-90),
+      vigenteHasta: fechaLima(365),
+    })),
+  );
+  return filas.length;
+}
+
+const PRODUCTOS_DEMO = [
+  { nombre: "Guantes de nitrilo (caja x100)", categoria: "insumos", unidad: "caja", stock: "24.00", stockMin: "5.00", costoUnit: "18.50", lote: "GN-2401", cantidad: "24.00", vence: 365 },
+  { nombre: "Anestesia lidocaína 2% (frasco)", categoria: "anestesia", unidad: "frasco", stock: "12.00", stockMin: "3.00", costoUnit: "22.00", lote: "LIDO-0925", cantidad: "12.00", vence: 300 },
+  { nombre: "Resina compuesta A2 (jeringa)", categoria: "materiales", unidad: "jeringa", stock: "8.00", stockMin: "2.00", costoUnit: "45.00", lote: null, cantidad: null, vence: null },
+  { nombre: "Puntas de irrigación (pack x50)", categoria: "insumos", unidad: "pack", stock: "15.00", stockMin: "4.00", costoUnit: "12.00", lote: "PI-2503", cantidad: "15.00", vence: 540 },
+  { nombre: "Ácido ortofosfórico 37% (jeringa)", categoria: "materiales", unidad: "jeringa", stock: "2.00", stockMin: "3.00", costoUnit: "15.00", lote: null, cantidad: null, vence: null },
+] as const;
+
+async function upsertInventario(
+  d: NonNullable<typeof db>,
+  tenantId: string,
+  createdById: string | null,
+) {
+  const existentes = await d
+    .select({ id: schema.inventoryItems.id, nombre: schema.inventoryItems.nombre })
+    .from(schema.inventoryItems)
+    .where(eq(schema.inventoryItems.tenantId, tenantId));
+  const porNombre = new Map(existentes.map((r) => [r.nombre, r.id]));
+  let nuevos = 0;
+  let lotes = 0;
+  for (const p of PRODUCTOS_DEMO) {
+    let itemId = porNombre.get(p.nombre);
+    if (!itemId) {
+      const [row] = await d
+        .insert(schema.inventoryItems)
+        .values({
+          tenantId,
+          nombre: p.nombre,
+          categoria: p.categoria,
+          unidad: p.unidad,
+          stock: p.stock,
+          stockMin: p.stockMin,
+          costoUnit: p.costoUnit,
+        })
+        .returning({ id: schema.inventoryItems.id });
+      itemId = row!.id;
+      porNombre.set(p.nombre, itemId);
+      nuevos++;
+      await d.insert(schema.stockMovements).values({
+        tenantId,
+        itemId,
+        tipo: "ingreso",
+        cantidad: p.stock,
+        nota: "Inventario inicial (demo)",
+        createdBy: createdById,
+      });
+    }
+    if (p.lote) {
+      const [yaLote] = await d
+        .select({ id: schema.inventoryLots.id })
+        .from(schema.inventoryLots)
+        .where(and(eq(schema.inventoryLots.itemId, itemId), eq(schema.inventoryLots.lote, p.lote)))
+        .limit(1);
+      if (!yaLote) {
+        await d.insert(schema.inventoryLots).values({
+          itemId,
+          lote: p.lote,
+          vence: p.vence !== null ? fechaLima(p.vence) : null,
+          cantidad: p.cantidad ?? "0",
+        });
+        lotes++;
+      }
+    }
+  }
+  if (nuevos > 0) console.log(`Demo: ${nuevos} productos de inventario con stock y kardex.`);
+  if (lotes > 0) console.log(`Demo: ${lotes} lotes de inventario.`);
+}
+
+async function upsertLabOrders(d: NonNullable<typeof db>, tenantId: string) {
+  const [cuenta] = await d
+    .select({ n: sql<number>`count(*)::int` })
+    .from(schema.labOrders)
+    .where(eq(schema.labOrders.tenantId, tenantId));
+  if (Number(cuenta?.n ?? 0) >= 2) return 0;
+  const pacientes = await d
+    .select({ id: schema.patients.id })
+    .from(schema.patients)
+    .where(eq(schema.patients.tenantId, tenantId))
+    .orderBy(asc(schema.patients.createdAt))
+    .limit(4);
+  if (pacientes.length === 0) return 0;
+  const filas: Array<typeof schema.labOrders.$inferInsert> = [
+    {
+      tenantId,
+      patientId: pacientes[0]!.id,
+      tipo: "Corona de porcelana",
+      laboratorio: "DentalLab Lima",
+      fechaPromesa: fechaLima(7),
+      costo: "350.00",
+      estado: "fabricacion",
+      notas: "Pieza 46, tono A2",
+    },
+  ];
+  if (pacientes[1]) {
+    filas.push({
+      tenantId,
+      patientId: pacientes[1].id,
+      tipo: "Placa miorrelajante",
+      laboratorio: "OrtoPro",
+      fechaPromesa: fechaLima(14),
+      costo: "180.00",
+      estado: "enviado",
+      notas: null,
+    });
+  }
+  await d.insert(schema.labOrders).values(filas);
+  return filas.length;
+}
+
+async function upsertPresupuestos(
+  d: NonNullable<typeof db>,
+  tenantId: string,
+  createdById: string | null,
+) {
+  const [cuenta] = await d
+    .select({ n: sql<number>`count(*)::int` })
+    .from(schema.quotes)
+    .where(eq(schema.quotes.tenantId, tenantId));
+  if (Number(cuenta?.n ?? 0) >= 3) return 0;
+  const pacientes = await d
+    .select({ id: schema.patients.id })
+    .from(schema.patients)
+    .where(eq(schema.patients.tenantId, tenantId))
+    .orderBy(asc(schema.patients.createdAt))
+    .limit(5);
+  if (pacientes.length === 0) return 0;
+  const mkItems = (arr: Array<[string, number, string]>) =>
+    arr.map(([descripcion, cantidad, precio]) => ({
+      servicioId: null,
+      descripcion,
+      cantidad,
+      precioUnitario: Number(precio),
+    }));
+  const presupuestoA = mkItems([
+    ["Limpieza dental", 1, "80.00"],
+    ["Resina / empaste", 2, "150.00"],
+  ]);
+  const presupuestoB = mkItems([["Endodoncia (1ra sesión)", 1, "250.00"]]);
+  const presupuestoC = mkItems([
+    ["Blanqueamiento", 1, "600.00"],
+    ["Limpieza dental", 1, "80.00"],
+  ]);
+  const base = {
+    tenantId,
+    createdBy: createdById,
+    expiraEn: fechaLima(30),
+  };
+  const filas = [
+    { ...base, patientId: pacientes[0]!.id, titulo: "Plan básico de rehabilitación", items: presupuestoA, total: "380.00", estado: "enviado" as const },
+    { ...base, patientId: pacientes[1]!.id, titulo: "Endodoncia pieza 26", items: presupuestoB, total: "250.00", estado: "aprobado" as const },
+    { ...base, patientId: pacientes[2]!.id, titulo: "Blanqueamiento + limpieza", items: presupuestoC, total: "680.00", estado: "enviado" as const },
+  ];
+  const creados = await d.insert(schema.quotes).values(filas).returning({ id: schema.quotes.id });
+  return creados.length;
+}
+
+async function upsertCuotas(d: NonNullable<typeof db>, tenantId: string) {
+  const existente = await d
+    .select({ id: schema.installments.id })
+    .from(schema.installments)
+    .innerJoin(schema.patients, eq(schema.installments.patientId, schema.patients.id))
+    .where(eq(schema.patients.tenantId, tenantId))
+    .limit(1);
+  if (existente.length > 0) return 0;
+  const [aprobado] = await d
+    .select({
+      id: schema.quotes.id,
+      patientId: schema.quotes.patientId,
+      total: schema.quotes.total,
+    })
+    .from(schema.quotes)
+    .where(and(eq(schema.quotes.tenantId, tenantId), eq(schema.quotes.estado, "aprobado")))
+    .orderBy(asc(schema.quotes.createdAt))
+    .limit(1);
+  if (!aprobado) return 0;
+  const montoCuota = (Math.round(Number(aprobado.total) / 2 * 100) / 100).toFixed(2);
+  const pagosExistentes = await d
+    .select({ id: schema.payments.id, metodo: schema.payments.metodo })
+    .from(schema.payments)
+    .where(and(eq(schema.payments.tenantId, tenantId), eq(schema.payments.patientId, aprobado.patientId)))
+    .limit(1);
+  let pagoId: string | null = null;
+  if (pagosExistentes[0] && pagosExistentes[0].metodo === "yape") {
+    pagoId = pagosExistentes[0].id;
+  } else {
+    const [nuevo] = await d
+      .insert(schema.payments)
+      .values({
+        tenantId,
+        patientId: aprobado.patientId,
+        monto: montoCuota,
+        metodo: "yape",
+        referencia: `CUOTA1-${aprobado.id.slice(0, 8)}`,
+        estado: "valido",
+      })
+      .returning({ id: schema.payments.id });
+    pagoId = nuevo!.id;
+  }
+  await d.insert(schema.installments).values([
+    {
+      tenantId,
+      patientId: aprobado.patientId,
+      quoteId: aprobado.id,
+      concepto: "Cuota 1 de 2",
+      n: 1,
+      monto: montoCuota,
+      pagado: montoCuota,
+      vence: fechaLima(15),
+      estado: "pagada",
+      paymentId: pagoId,
+    },
+    {
+      tenantId,
+      patientId: aprobado.patientId,
+      quoteId: aprobado.id,
+      concepto: "Cuota 2 de 2",
+      n: 2,
+      monto: montoCuota,
+      vence: fechaLima(45),
+      estado: "pendiente",
+    },
+  ]);
+  return 2;
+}
+
+async function enriquecerDemo(d: NonNullable<typeof db>, tenantId: string) {
+  const [ownerMember] = await d
+    .select({ userId: schema.memberships.userId })
+    .from(schema.memberships)
+    .where(and(eq(schema.memberships.teamId, tenantId), eq(schema.memberships.role, "owner")))
+    .limit(1);
+  const createdById = ownerMember?.userId ?? null;
+
+  const insurers = await upsertAseguradoras(d, tenantId);
+  const coberturas = await upsertCoberturas(d, tenantId, insurers);
+  await upsertInventario(d, tenantId, createdById);
+  const labs = await upsertLabOrders(d, tenantId);
+  const presupuestos = await upsertPresupuestos(d, tenantId, createdById);
+  const cuotas = await upsertCuotas(d, tenantId);
+
+  if (coberturas + labs + presupuestos + cuotas > 0) {
+    console.log(
+      `Enriquecer demo: +${coberturas} coberturas, +${labs} órdenes de laboratorio, +${presupuestos} presupuestos, +${cuotas} cuotas.`,
+    );
+  } else {
+    console.log("Enriquecer demo: datos ya completos, nada que hacer.");
+  }
+}
+
 async function run() {
   if (!db) throw new Error("sin conexión a Postgres");
   const d = db;
@@ -251,6 +572,7 @@ async function run() {
   if (existing.length > 0) {
     await heal(d, existing[0]!.id);
     await sanearDemo(d, existing[0]!.id);
+    await enriquecerDemo(d, existing[0]!.id);
     return;
   }
 

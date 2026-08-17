@@ -22,3 +22,8 @@ smoke-server.log
 
 # Adjuntos de pacientes (archivos clínicos): jamás al repo
 apps/web/.data/
+
+# Playwright (artefactos de E2E)
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/playwright/.cache/
