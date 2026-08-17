@@ -9,7 +9,10 @@
 #   GET  /health                    -> 200
 #   POST /webhook/simulate-message  -> dispara un mensaje entrante contra el webhook local
 # Ademas POSTea eventos de webhook simulados (delivery/read) a la app:
-#   WEBHOOK_URL=http://host.docker.internal:3111/api/whatsapp/webhook
+#   WEBHOOK_URL=http://<IP-vEthernet-WSL-de-Windows>:3111/api/whatsapp/webhook
+# (dentro de WSL-Docker, host.docker.internal apunta al bridge 172.18.0.1 y NO
+# alcanza a Windows; usar la IP de la interfaz vEthernet (WSL). Sobrescribible
+# con la variable WHATSAPP_WEBHOOK_URL para docker compose).
 #
 # Para que la app envie contra el mock, en .env.local:
 #   WHATSAPP_BASE_URL=http://127.0.0.1:3010/v22.0

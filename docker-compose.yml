@@ -51,7 +51,11 @@ services:
     container_name: odontoflow-whatsmock
     restart: unless-stopped
     environment:
-      WEBHOOK_URL: http://host.docker.internal:3111/api/whatsapp/webhook
+      # whatsmock devuelve aqui los webhooks simulados. OJO: dentro de WSL-Docker,
+      # host.docker.internal apunta al bridge de Docker (172.18.0.1), no a Windows.
+      # La ruta que alcanza al host es la IP vEthernet(WSL) de Windows (p.ej. 172.17.48.1).
+      # Sobrescribir con WHATSAPP_WEBHOOK_URL si la IP del host cambia.
+      WEBHOOK_URL: ${WHATSAPP_WEBHOOK_URL:-http://172.17.48.1:3111/api/whatsapp/webhook}
     ports:
       - "3010:3010"
     extra_hosts:
