@@ -103,6 +103,21 @@ Salida: todo el stack corre 100% local con dobles de prueba (whatsmock, Mailpit,
 
 ---
 
+## v1.3.0 — Hardening pre-venta: legal editable, secrets fail-closed, backup prod
+
+- [x] Cumplimiento legal por tenant (Ley 29733): migración 0016 `legal_settings` (razón social, RUC, domicilio, contacto ARCO, textos de privacidad/términos/consentimiento); plantillas legales en `lib/legal.ts` que se rellenan con los datos del responsable — son placeholders editables desde la UI, no textos fijos
+  - UI `/consola/config/legal` (solo owner, gate `services.manage` como el resto de config): formulario de responsable + textareas + "Generar textos con mis datos" + vista previa pública + audit `legal.actualizar`
+  - API pública `GET /api/clinicas/[clinica]/legal` (solo lectura, cache 5 min) y `GET/PUT /api/config/legal` (valida RUC 11 dígitos, email, máx 10k chars por texto)
+  - Páginas públicas `/{clinica}/privacidad` y `/{clinica}/terminos`; el wizard de reserva ahora enlaza ambas desde el checkbox de consentimiento y el portal paciente las muestra en su footer
+- [x] Secrets fail-closed: `docker-compose.prod.yml` ya no tiene defaults inseguros (`dev-cron-secret`, `odontoflow_dev`, `123456`, `ADMIN_EMAILS` demo, `NEXT_PUBLIC_APP_URL` localhost) — las variables obligatorias (`POSTGRES_PASSWORD`, `CRON_SECRET`, `LOCAL_MASTER_KEY`, `LYCET_TOKEN`, `NEXT_PUBLIC_APP_URL`) usan `${VAR:?mensaje}` y el `compose up` falla si faltan; los 6 `/api/cron/*` rechazan todo (401) si no hay `CRON_SECRET` configurado; nuevo `.env.prod.example` con generadores y advertencias (una sola `LOCAL_MASTER_KEY` para siempre)
+- [x] Backup diario en producción: contenedor `cron` ahora trae `postgresql-client` + `backup-db.sh` (pg_dump -Fc a las 03:40 Lima → `./backups` del host vía volumen, retención 30 días, misma política que `scripts/backup.ps1` dev); entrypoint con su-exec para que el usuario sin privilegios pueda escribir en el bind mount. Verificado con restauración real (scratch DB → conteos correctos → drop)
+- [x] Lint 100% limpio (0 warnings): 9 imports/vars sin usar eliminados; los 2 `<img>` restantes (QR data: del portal y fotos detrás de `/api/adjuntos`) llevan eslint-disable justificado: el optimizador next/image no optimiza data URLs ni pasa credenciales a endpoints autenticados
+- [x] E2E Playwright 6/6 contra el build final (matriz RBAC ampliada a 29 rutas incluyendo `/consola/config/legal`)
+
+Salida: todo lo internamente resoluble quedó resuelto. Solo resta lo externo: VPS + dominio + HTTPS, Resend con dominio verificado, credenciales/plantillas WhatsApp de Meta, CI remoto.
+
+---
+
 ## Backlog post-M5 → incluido en 1.0
 
 Topología detallada por módulo en `docs/05-modulos-topologia.md`.
