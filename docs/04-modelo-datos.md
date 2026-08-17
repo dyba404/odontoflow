@@ -68,33 +68,102 @@ subscriptions (id, tenant_id, plan enum: free|pro|premium, estado enum: activo|p
 audit_logs (id, tenant_id, user_id, accion, entidad, entidad_id, ip, payload jsonb, created_at)
 ```
 
-## Fiscal (fase futura — se crea en M3 en modo manual para no reescribir)
+## Fiscal (implementado — modo manual por defecto, electrónica vía sidecar lycet)
 
 ```
-vat_settings (tenant_id PK, ruc, regimen enum: RUS|RER|MYPE, clave_sol_enc text,
-              serie_boleta, serie_factura, corr_boleta int, corr_factura int,
+vat_settings (tenant_id PK, ruc, razon_social,
+              regimen enum: RUS|RER|MYPE,
+              ambiente text default 'beta',                -- beta | prod (SUNAT)
+              clave_sol_enc, certificado_enc, certificado_pass_enc,  -- cifrados con LOCAL_MASTER_KEY
+              certificado_vence date,
+              serie_boleta default 'B001', serie_factura default 'F001',
+              corr_boleta int, corr_factura int,
               emision enum: manual|electronica)
-certificates (tenant_id, file_enc_pfx bytea, password_enc text, vence date, estado)
-receipts (id, tenant_id, payment_id, tipo enum: boleta|factura|nota_credito|nota_debito,
-          serie, correlativo, sunat_hash, cdr_url, xml_url, pdf_url,
-          estado enum: manual|pendiente_envio|aceptado|rechazado|baja, created_at)
+receipts (id, tenant_id, payment_id unique, tipo enum: boleta|factura|nota_credito|nota_debito,
+          serie, correlativo int,
+          sunat_estado enum: manual|pendiente_envio|aceptado|rechazado|baja,  -- estado fiscal real
+          sunat_hash, cdr_url, xml_url, pdf_url, emitida_at, registrado_por, created_at)
 ```
 Nota: cada tenant usa SU ruc + SU certificado + SU Clave SOL. Nunca el nuestro.
+El estado de emisión vive en `receipts.sunat_estado` (enum), ya no en un campo `estado` aparte.
+Certificado y Clave SOL se cifran at-rest con `LOCAL_MASTER_KEY` (lib/crypto).
 
-## Backlog (tablas previstas)
+## Post-M5 implementado (migración 0004)
+
+Tablas y columnas nuevas alineadas al schema real (`packages/db/src/schema.ts`).
 
 ```
-inventory_items  (id, tenant_id, nombre, categoria, unidad, stock numeric, stock_min, costo_unit)
-inventory_lots   (id, item_id, lote, vence date, cantidad)
-stock_movements  (id, item_id, tipo enum: ingreso|consumo|ajuste|merma, cantidad, appointment_id nullable, creado_por)
-service_materials(id, service_id, item_id, cantidad)          -- receta de materiales
-waitlists        (id, tenant_id, patient_id, service_id, prioridad, estado)
-review_requests  (id, tenant_id, appointment_id, paciente_id, enviado_at, respondido bool)
-lab_orders       (id, tenant_id, patient_id, tipo, fecha_promesa, estado, costo)
-campaigns        (id, tenant_id, tipo enum: cumple|reactivacion, estado)
-quotes           (id, tenant_id, patient_id, doctor_id, items jsonb, estado enum: borrador|enviado|aprobado)
-installments     (id, quote_id, n int, monto, vence, estado)
-commissions      (id, tenant_id, doctor_id, payment_id, porcentaje, monto)
+-- Multisucursal
+branches (id, tenant_id, nombre, slug, direccion, telefono, activo)
+  unique (tenant_id, slug)
+
+-- Inventario
+inventory_items (id, tenant_id, nombre, categoria, unidad, stock numeric(12,2),
+                stock_min numeric(12,2), costo_unit numeric(10,2), activo)
+inventory_lots  (id, item_id, lote, vence date, cantidad numeric(12,2))
+stock_movements (id, tenant_id, item_id, tipo enum: ingreso|consumo|ajuste|merma,
+                cantidad numeric(12,2), appointment_id nullable, nota, created_by)
+service_materials (id, service_id, item_id, cantidad numeric(12,2))  -- receta; unique(service_id,item_id)
+
+-- Laboratorio / protésico
+lab_orders (id, tenant_id, patient_id, appointment_id, tipo, laboratorio,
+            fecha_promesa date, costo numeric(10,2),
+            estado enum: enviado|fabricacion|recibido|colocado|cancelado, notas)
+
+-- Presupuestos + cuotas
+quotes (id, tenant_id, patient_id, doctor_id(membership), titulo, items jsonb,
+        total numeric(10,2), estado enum: borrador|enviado|aprobado|rechazado|convertido,
+        expira_en date, nota)
+installments (id, tenant_id, patient_id, quote_id, concepto, n int,
+              monto numeric(10,2), pagado numeric(10,2), vence date,
+              estado enum: pendiente|parcial|pagada|vencida|cancelada, payment_id)
+
+-- Comisiones por doctor
+commission_settings (membership_id PK, porcentaje numeric(5,2), updated_at)
+commission_entries (id, tenant_id, doctor_membership_id, payment_id, appointment_id,
+                    base numeric(10,2), porcentaje numeric(5,2), monto numeric(10,2), periodo)
+                    unique (payment_id, doctor_membership_id)
+
+-- EPS / seguros
+insurers (id, tenant_id, nombre, ruc, telefono, activo)
+patient_coverages (id, patient_id, insurer_id, plan, copago_pct numeric(5,2),
+                   vigente_desde date, vigente_hasta date, activo, notas)
+
+-- Lista de espera anti-huecos
+waitlists (id, tenant_id, patient_id, service_id, preferencia, prioridad int default 5,
+           estado enum: activa|ofrecida|aceptada|expirada|retirada)
+
+-- Reseñas Google
+review_requests (id, tenant_id, appointment_id, patient_id, canal default 'email',
+                 enviado_at, respondido bool, respondido_at)
+
+-- Campañas
+campaigns (id, tenant_id, tipo enum: cumple|reactivacion, titulo, mensaje, canal,
+           estado enum: programada|completada|error, audiencia jsonb,
+           enviado_a int, enviados_ok int, ejecutada_at)
+
+-- WhatsApp Cloud API (por tenant)
+whatsapp_settings (tenant_id PK, phone_number_id, token_enc, webhook_verified_at, activo)
+
+-- ARCO Ley 29733
+data_requests (id, tenant_id, patient_id, tipo, estado default 'pendiente',
+               detalle, gestionado_por)
+
+-- Columnas nuevas sobre tablas existentes
+teams.restringir_fuera_horario bool      -- restricción opcional fuera de horario
+teams.google_place_id text               -- reseñas Google
+teams.google_review_url text
+patients.antecedentes text
+patients.medicacion text
+patients.activo bool default true        -- soft-delete ARCO
+receipts.sunat_estado enum               -- ver sección Fiscal
+receipts.sunat_hash, cdr_url, xml_url, pdf_url, emitida_at
+attachments.foto_tipo text               -- antes/después
+attachments.foto_orden int
+attachments.tratamiento text
+services.branch_id uuid
+appointments.branch_id uuid
+payments.branch_id uuid
 ```
 
 ## Reglas de negocio clave

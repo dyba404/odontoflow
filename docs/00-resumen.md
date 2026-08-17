@@ -5,6 +5,10 @@ SaaS de gestión para consultorios odontológicos en Perú (mercado MYPE masivo)
 ## Qué es
 Reservas online (modelo solicitud→confirmación), agenda multirol, ficha clínica con
 odontograma FDI, caja con Yape/Plin/efectivo, recordatorios y dashboard de ganancias.
+Correcciones auditadas de punta a punta: citas reversibles (deshacer check-in/llamado,
+paciente que llegó tarde), anulación contable de pagos, reapertura de cierre diario,
+retrocesos de laboratorio y baja SUNAT real (RA boleta + nota de crédito factura).
+Recordatorios WhatsApp por plantillas Meta con fallback automático a email.
 
 ## Decisiones clave (acordado con el dueño del proyecto)
 
@@ -29,10 +33,11 @@ odontograma FDI, caja con Yape/Plin/efectivo, recordatorios y dashboard de ganan
 | Ruta local | `~/Documents/projects/odontoflow` |
 
 ## Modelo de ingreso (nosotros)
-- Plan Free (S/0): reservas + agenda → gancho de adquisición
-- Plan Pro (S/79): ficha + recordatorios email/SMS ilimitados
-- Plan Premium (S/149): caja + dashboard ganancias + paquetes de recordatorios
-- Add-ons futuros: WhatsApp (por plantilla), facturación electrónica (Greenter sidecar), revendedor NubeFacT si se evalúa
+- Plan Free (S/0): reservas + agenda + sala de espera → gancho de adquisición
+- Plan Pro (S/79): ficha clínica + recordatorios email/WhatsApp
+- Plan Premium (S/149): caja, facturación electrónica SUNAT, dashboard/márgenes, inventario, presupuestos y comisiones
+- Gating real por plan (server-side en `apps/web/src/lib/plans.ts`); módulos premium devuelven 402 `plan_insuficiente` y la UI muestra renovación por Yape
+- Add-ons futuros: WhatsApp (por plantilla), revendedor NubeFacT si se evalúa
 
 ## KPIs objetivo
 - Conversión demo→pago ≥ 40%
@@ -41,4 +46,5 @@ odontograma FDI, caja con Yape/Plin/efectivo, recordatorios y dashboard de ganan
 - 10-30 clientes pagantes al cierre de M5
 
 ## Estado
-M0 en ejecución. Ver `02-roadmap.md`.
+Sistema maduro listo para M5. Roadmap completo y backlog post-M5 implementado. Ver `02-roadmap.md`.
+Máquinas de estado y protocolos de deshacer/corrección: `06-estados-protocolos.md`.

@@ -1,0 +1,1 @@
+ALTER TABLE "vat_settings" DROP COLUMN "serie_nota";

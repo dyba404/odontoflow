@@ -18,3 +18,29 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup-post-reboot.ps1
 
 Cuando termine con exito: abrir opencode en `C:\Users\Administrator\Documents\projects\odontoflow`
 y decir `continua` para retomar con Drizzle/DB + M1.
+
+## backup.ps1
+Genera un respaldo de la base de datos Postgres (contenedor `odontoflow-db` en WSL/Ubuntu).
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\backup.ps1
+```
+
+### Que hace
+1. Verifica que `wsl.exe` este disponible.
+2. Ejecuta `pg_dump` dentro del contenedor `odontoflow-db` (formato comprimido `-Fc`).
+3. Copia el respaldo a `backups\odontoflow_backup_yyyyMMdd_HHmmss.dump` (crea la carpeta si no existe).
+4. Elimina el temporal dentro del contenedor.
+5. Borra respaldos locales con mas de 30 dias de antiguedad.
+
+Requisitos: WSL con distro Ubuntu, Docker activo y contenedor `odontoflow-db` en ejecucion.
+
+## Endpoint de salud
+`GET /api/health` no requiere autenticacion. Ejecuta `SELECT 1` contra la base de datos con
+timeout de 3 segundos.
+
+- Respuesta `200`: `{ "ok": true, "db": true, "version": "1.0.0", "ts": "..." }`
+- Respuesta `503`: `{ "ok": false, "db": false, "version": "1.0.0", "ts": "..." }` si la base no responde.
+
+Util para monitoreo externo y verificacion despues de desplegar.
+

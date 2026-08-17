@@ -1,6 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState, type ReactNode } from "react";
+import {
+  ArrowLeft,
+  BadgeCheck,
+  Bell,
+  CalendarClock,
+  CalendarIcon,
+  Check,
+  CheckCircle2,
+  ChevronRight,
+  CircleDotDashed,
+  Clock,
+  Loader2,
+  ShieldMinus,
+  Sparkles,
+  Stethoscope,
+  Syringe,
+  UserRound,
+} from "lucide-react";
+import { Avatar } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 interface ServicioItem {
   id: string;
@@ -21,31 +43,7 @@ interface Props {
   doctores: DoctorItem[];
 }
 
-const CARD_STYLE: React.CSSProperties = {
-  background: "var(--of-surface)",
-  border: "1px solid var(--of-border)",
-  borderRadius: "var(--of-radius)",
-  padding: "1rem",
-};
-
-const BTN_PRIMARY: React.CSSProperties = {
-  background: "var(--of-primary)",
-  color: "var(--of-on-primary)",
-  border: "none",
-  borderRadius: "var(--of-radius)",
-  padding: "0.6rem 1.2rem",
-  fontWeight: 600,
-  cursor: "pointer",
-};
-
-const BTN_GHOST: React.CSSProperties = {
-  background: "transparent",
-  color: "var(--of-primary)",
-  border: "1px solid var(--of-border)",
-  borderRadius: "var(--of-radius)",
-  padding: "0.6rem 1.2rem",
-  cursor: "pointer",
-};
+const PASOS = ["Servicio", "Horario", "Datos"];
 
 function fechaISO(offsetDias: number): string {
   const d = new Date();
@@ -54,6 +52,99 @@ function fechaISO(offsetDias: number): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+function formatPrecio(precio: string): string {
+  const n = Number(precio);
+  return `S/ ${Number.isFinite(n) ? n.toFixed(2) : precio}`;
+}
+
+function formatFechaLarga(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat("es-PE", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(d);
+}
+
+function iconoServicio(nombre: string) {
+  const n = nombre.toLowerCase();
+  if (n.includes("limpieza")) return Sparkles;
+  if (n.includes("extracci")) return ShieldMinus;
+  if (n.includes("resina") || n.includes("empaste")) return CircleDotDashed;
+  if (n.includes("endodoncia")) return Syringe;
+  return Stethoscope;
+}
+
+function Stepper({ paso }: { paso: number }) {
+  return (
+    <div className="mt-8 flex items-start">
+      {PASOS.map((label, i) => {
+        const num = i + 1;
+        const completado = num < paso;
+        const actual = num === paso;
+        return (
+          <Fragment key={label}>
+            {i > 0 && (
+              <div
+                className={cn(
+                  "mt-3.5 h-px flex-1 transition-colors",
+                  num <= paso ? "bg-primary" : "bg-border",
+                )}
+              />
+            )}
+            <div className="flex flex-col items-center gap-1.5 px-2">
+              <div
+                className={cn(
+                  "flex size-7 items-center justify-center rounded-full text-xs font-semibold transition-colors",
+                  completado && "bg-accent text-accent-foreground",
+                  actual && "bg-primary text-primary-foreground",
+                  !completado && !actual && "border border-border text-muted-foreground",
+                )}
+              >
+                {completado ? <Check className="size-4" /> : num}
+              </div>
+              <span
+                className={cn(
+                  "text-xs",
+                  actual ? "font-semibold text-foreground" : "text-muted-foreground",
+                )}
+              >
+                {label}
+              </span>
+            </div>
+          </Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+function Pill({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm transition-colors",
+        selected
+          ? "border-primary bg-accent font-medium text-foreground"
+          : "border-border bg-card text-muted-foreground hover:border-primary/40",
+      )}
+    >
+      {children}
+    </button>
+  );
 }
 
 export function WizardReserva({ clinicaSlug, clinicaName, servicios, doctores }: Props) {
@@ -73,6 +164,7 @@ export function WizardReserva({ clinicaSlug, clinicaName, servicios, doctores }:
   const [resultado, setResultado] = useState<{ fecha: string; hora: string } | null>(null);
 
   const servicio = servicios.find((s) => s.id === serviceId) ?? null;
+  const doctor = doctores.find((d) => d.membershipId === doctorSel) ?? null;
 
   async function cargarSlots() {
     if (!serviceId) return;
@@ -115,6 +207,7 @@ export function WizardReserva({ clinicaSlug, clinicaName, servicios, doctores }:
           nombre,
           celular,
           email: email || undefined,
+          consentimiento,
         }),
       });
       const j = await r.json();
@@ -135,231 +228,358 @@ export function WizardReserva({ clinicaSlug, clinicaName, servicios, doctores }:
 
   if (resultado) {
     return (
-      <main style={{ maxWidth: "42rem", margin: "0 auto", padding: "2rem 1rem" }}>
-        <div style={{ ...CARD_STYLE, textAlign: "center", padding: "2rem" }}>
-          <h1 style={{ color: "var(--of-primary)" }}>Solicitud enviada</h1>
-          <p style={{ fontSize: "1.0625rem" }}>
-            {servicio?.nombre} · {resultado.fecha} · {resultado.hora}
-          </p>
-          <p style={{ color: "var(--of-text-muted)" }}>
-            {clinicaName} revisará tu solicitud y te confirmará la hora exacta por
-            teléfono o correo. Puedes reprogramar o cancelar respondiendo a su
-            confirmación.
-          </p>
+      <main className="min-h-screen bg-background">
+        <div className="mx-auto max-w-lg px-4 py-8 sm:py-12">
+          <div className="rounded-2xl border border-border bg-card p-8 text-center">
+            <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-accent">
+              <CheckCircle2 className="size-8 text-primary" />
+            </div>
+            <h1 className="mt-4 text-xl font-semibold text-foreground">¡Solicitud enviada!</h1>
+            <div className="mt-4 rounded-lg bg-muted/50 p-3 text-sm text-foreground tabular-nums">
+              {formatFechaLarga(resultado.fecha)} · {resultado.hora} · {servicio?.nombre}
+            </div>
+            <p className="mt-4 text-sm text-muted-foreground">
+              {clinicaName} revisará tu solicitud y confirmará tu cita. Si dejaste tu correo,
+              te llegará la confirmación con un enlace para reprogramar o cancelar.
+            </p>
+            <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+              <Bell className="size-3.5" />
+              Te avisaremos apenas esté confirmada
+            </div>
+          </div>
         </div>
       </main>
     );
   }
 
   return (
-    <main style={{ maxWidth: "42rem", margin: "0 auto", padding: "2rem 1rem" }}>
-      <p style={{ color: "var(--of-text-muted)", fontSize: "0.875rem" }}>
-        Reserva en línea de <strong style={{ color: "var(--of-primary)" }}>{clinicaName}</strong>
-      </p>
-      <h1 style={{ color: "var(--of-primary)" }}>Reserva tu cita</h1>
-      <p style={{ color: "var(--of-text-muted)", fontSize: "0.9375rem" }}>
-        Paso {paso} de 3 · La clínica confirmará tu hora por teléfono o correo.
-      </p>
-
-      {error && (
-        <p style={{ color: "#b91c1c", fontSize: "0.9375rem" }} role="alert">
-          {error}
-        </p>
-      )}
-
-      {paso === 1 && (
-        <div style={{ display: "grid", gap: "0.75rem" }}>
-          {servicios.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => {
-                setServiceId(s.id);
-                setPaso(2);
-              }}
-              style={{
-                ...CARD_STYLE,
-                textAlign: "left",
-                cursor: "pointer",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <span>
-                <strong>{s.nombre}</strong>
-                <span style={{ color: "var(--of-text-muted)", fontSize: "0.875rem", marginLeft: "0.5rem" }}>
-                  {s.duracionMin} min
-                </span>
-              </span>
-              <span style={{ fontWeight: 600 }}>S/ {s.precio}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {paso === 2 && (
-        <div style={{ display: "grid", gap: "0.75rem" }}>
-          <div style={CARD_STYLE}>
-            <label style={{ display: "block", fontWeight: 600, marginBottom: "0.375rem" }}>
-              Fecha
-            </label>
-            <input
-              type="date"
-              value={fecha}
-              min={fechaISO(0)}
-              onChange={(e) => {
-                setFecha(e.target.value);
-                setSlots(null);
-                setSlotSel(null);
-              }}
-              style={{ padding: "0.5rem", borderRadius: "var(--of-radius)", width: "100%" }}
-            />
-            <label style={{ display: "block", fontWeight: 600, margin: "0.75rem 0 0.375rem" }}>
-              Doctor (opcional)
-            </label>
-            <select
-              value={doctorSel}
-              onChange={(e) => {
-                setDoctorSel(e.target.value);
-                setSlots(null);
-                setSlotSel(null);
-              }}
-              style={{ padding: "0.5rem", borderRadius: "var(--of-radius)", width: "100%" }}
-            >
-              <option value="">Cualquier doctor disponible</option>
-              {doctores.map((d) => (
-                <option key={d.membershipId} value={d.membershipId}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-            <div style={{ marginTop: "0.75rem" }}>
-              <button onClick={cargarSlots} disabled={cargandoSlots} style={BTN_PRIMARY}>
-                {cargandoSlots ? "Buscando..." : "Ver horarios"}
-              </button>
-            </div>
+    <main className="min-h-screen bg-background">
+      <div className="mx-auto max-w-lg px-4 py-8 sm:py-12">
+        <header className="flex flex-col items-center gap-2 text-center">
+          <div className="flex size-12 items-center justify-center rounded-2xl bg-primary">
+            <Stethoscope className="size-6 text-primary-foreground" />
           </div>
+          <div>
+            <p className="text-lg font-semibold text-foreground">{clinicaName}</p>
+            <p className="text-sm text-muted-foreground">Reservas en línea</p>
+          </div>
+        </header>
 
-          {slots && slots.length === 0 && (
-            <p style={{ color: "var(--of-text-muted)" }}>
-              No hay horarios libres ese día. Prueba otra fecha.
-            </p>
-          )}
+        <Stepper paso={paso} />
 
-          {slots && slots.length > 0 && (
-            <div style={{ ...CARD_STYLE }}>
-              <label style={{ display: "block", fontWeight: 600, marginBottom: "0.375rem" }}>
-                Horarios de {servicio?.nombre} ({servicio?.duracionMin} min)
-              </label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-                {slots.map((s) => (
+        {error && (
+          <div
+            role="alert"
+            className="mt-6 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+          >
+            {error}
+          </div>
+        )}
+
+        {paso === 1 && (
+          <section className="mt-8 space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">¿Qué necesitas?</h2>
+              <p className="text-sm text-muted-foreground">
+                Elige el servicio y te mostramos horarios disponibles.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {servicios.map((s) => {
+                const Icon = iconoServicio(s.nombre);
+                return (
                   <button
-                    key={s.startTime}
-                    onClick={() => setSlotSel(s)}
-                    style={{
-                      padding: "0.4rem 0.75rem",
-                      borderRadius: "999px",
-                      border:
-                        slotSel?.startTime === s.startTime
-                          ? "2px solid var(--of-primary)"
-                          : "1px solid var(--of-border)",
-                      background:
-                        slotSel?.startTime === s.startTime ? "var(--of-primary-soft, #e0f2f1)" : "transparent",
-                      cursor: "pointer",
-                      fontWeight: slotSel?.startTime === s.startTime ? 700 : 400,
+                    key={s.id}
+                    type="button"
+                    onClick={() => {
+                      setServiceId(s.id);
+                      setPaso(2);
+                    }}
+                    className="flex w-full items-center justify-between rounded-xl border border-border bg-card p-4 text-left transition hover:border-primary/50 hover:shadow-sm"
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                        <Icon className="size-4" />
+                      </span>
+                      <span>
+                        <span className="block font-medium text-foreground">{s.nombre}</span>
+                        <span className="block text-xs text-muted-foreground tabular-nums">
+                          {s.duracionMin} min
+                        </span>
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground tabular-nums">
+                        {formatPrecio(s.precio)}
+                      </span>
+                      <ChevronRight className="size-4 text-muted-foreground" />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 pt-2 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1">
+                <BadgeCheck className="size-3.5" />
+                Sin costo de reserva
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Clock className="size-3.5" />
+                Confirman tu hora el mismo día
+              </span>
+            </div>
+          </section>
+        )}
+
+        {paso === 2 && (
+          <section className="mt-8 space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">¿Cuándo te queda bien?</h2>
+              <p className="text-sm text-muted-foreground">
+                Elige doctor, fecha y hora para tu cita.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-accent/40 px-3 py-2">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setPaso(1)}
+                  aria-label="Volver al paso servicio"
+                  className="rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <ArrowLeft className="size-4" />
+                </button>
+                <span className="truncate text-sm font-medium text-foreground">
+                  {servicio?.nombre}
+                </span>
+              </div>
+              <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                {servicio?.duracionMin} min · {servicio ? formatPrecio(servicio.precio) : ""}
+              </span>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium text-foreground">Doctor (opcional)</p>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                <Pill
+                  selected={doctorSel === ""}
+                  onClick={() => {
+                    setDoctorSel("");
+                    setSlots(null);
+                    setSlotSel(null);
+                  }}
+                >
+                  Cualquier doctor
+                </Pill>
+                {doctores.map((d) => (
+                  <Pill
+                    key={d.membershipId}
+                    selected={doctorSel === d.membershipId}
+                    onClick={() => {
+                      setDoctorSel(d.membershipId);
+                      setSlots(null);
+                      setSlotSel(null);
                     }}
                   >
-                    {s.startTime}
-                  </button>
+                    <Avatar name={d.name} className="size-6 text-[10px]" />
+                    {d.name}
+                  </Pill>
                 ))}
               </div>
             </div>
-          )}
 
-          <div style={{ display: "flex", gap: "0.75rem" }}>
-            <button onClick={() => setPaso(1)} style={BTN_GHOST}>
-              Volver
-            </button>
-            <button
-              onClick={() => setPaso(3)}
-              disabled={!slotSel}
-              style={{ ...BTN_PRIMARY, opacity: slotSel ? 1 : 0.5, cursor: slotSel ? "pointer" : "not-allowed" }}
-            >
-              Continuar
-            </button>
-          </div>
-        </div>
-      )}
+            <div className="space-y-1.5">
+              <label htmlFor="fecha" className="text-sm font-medium text-foreground">
+                Fecha
+              </label>
+              <Input
+                id="fecha"
+                type="date"
+                value={fecha}
+                min={fechaISO(0)}
+                onChange={(e) => {
+                  setFecha(e.target.value);
+                  setSlots(null);
+                  setSlotSel(null);
+                }}
+                className="tabular-nums"
+              />
+            </div>
 
-      {paso === 3 && (
-        <div style={{ display: "grid", gap: "0.75rem" }}>
-          <div style={CARD_STYLE}>
-            <p style={{ margin: 0, fontWeight: 600 }}>
-              {servicio?.nombre} · {fecha} · {slotSel?.startTime}
+            <Button type="button" className="w-full" onClick={cargarSlots} disabled={cargandoSlots}>
+              {cargandoSlots ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Buscando horarios…
+                </>
+              ) : (
+                "Ver horarios disponibles"
+              )}
+            </Button>
+
+            {slots && slots.length === 0 && (
+              <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border py-8 text-center">
+                <CalendarClock className="size-6 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  No hay horarios ese día. Prueba otra fecha.
+                </p>
+              </div>
+            )}
+
+            {slots && slots.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground tabular-nums">
+                  {slots.length} horarios disponibles
+                </p>
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {slots.map((s) => (
+                    <button
+                      key={s.startTime}
+                      type="button"
+                      onClick={() => setSlotSel(s)}
+                      className={cn(
+                        "h-10 rounded-lg border text-sm tabular-nums transition-colors",
+                        slotSel?.startTime === s.startTime
+                          ? "border-primary bg-primary font-medium text-primary-foreground"
+                          : "border-border bg-card text-foreground hover:border-primary/50",
+                      )}
+                    >
+                      {s.startTime}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => setPaso(1)}>
+                Volver
+              </Button>
+              <Button
+                type="button"
+                className="flex-1"
+                disabled={!slotSel}
+                onClick={() => setPaso(3)}
+              >
+                Continuar
+              </Button>
+            </div>
+          </section>
+        )}
+
+        {paso === 3 && (
+          <section className="mt-8 space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Tus datos</h2>
+              <p className="text-sm text-muted-foreground">
+                Confirma tu reserva y te contactamos para la hora exacta.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-semibold text-foreground">{servicio?.nombre}</p>
+                <p className="shrink-0 text-right text-xs text-muted-foreground tabular-nums">
+                  {servicio ? formatPrecio(servicio.precio) : ""} · se paga en clínica
+                </p>
+              </div>
+              <div className="mt-3 space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <CalendarIcon className="size-4 shrink-0" />
+                  <span>{formatFechaLarga(fecha)}</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Clock className="size-4 shrink-0" />
+                  <span className="tabular-nums">
+                    {slotSel?.startTime}–{slotSel?.endTime}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <UserRound className="size-4 shrink-0" />
+                  <span>{doctor ? doctor.name : "Cualquier doctor disponible"}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 rounded-xl border border-border bg-card p-4">
+              <div className="space-y-1.5">
+                <label htmlFor="nombre" className="text-sm font-medium text-foreground">
+                  Nombre completo
+                </label>
+                <Input
+                  id="nombre"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  required
+                  placeholder="Ej. Elena Torres"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="celular" className="text-sm font-medium text-foreground">
+                  Celular (WhatsApp)
+                </label>
+                <Input
+                  id="celular"
+                  type="tel"
+                  value={celular}
+                  onChange={(e) => setCelular(e.target.value)}
+                  required
+                  placeholder="987654321"
+                  className="tabular-nums"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="email" className="text-sm font-medium text-foreground">
+                  Correo (opcional)
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={consentimiento}
+                  onChange={(e) => setConsentimiento(e.target.checked)}
+                  className="mt-0.5 size-4 shrink-0 accent-primary"
+                />
+                <span className="text-xs text-muted-foreground">
+                  Acepto que mis datos se usen para gestionar la cita (Ley 29733 — Protección de
+                  datos personales).
+                </span>
+              </label>
+            </div>
+
+            <div className="flex gap-3">
+              <Button type="button" variant="outline" onClick={() => setPaso(2)}>
+                Volver
+              </Button>
+              <Button
+                type="button"
+                className="flex-1"
+                onClick={enviar}
+                disabled={enviando || !nombre.trim() || !celular.trim() || !consentimiento}
+              >
+                {enviando ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Enviando…
+                  </>
+                ) : (
+                  "Enviar solicitud"
+                )}
+              </Button>
+            </div>
+            <p className="text-center text-xs text-muted-foreground">
+              Sin costo de reserva · La confirma la clínica
             </p>
-            <p style={{ color: "var(--of-text-muted)", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-              S/ {servicio?.precio} · se paga en clínica
-            </p>
-          </div>
-
-          <div style={{ ...CARD_STYLE, display: "grid", gap: "0.75rem" }}>
-            <label>
-              <span style={{ fontWeight: 600 }}>Nombre completo</span>
-              <input
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                required
-                style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem", borderRadius: "var(--of-radius)" }}
-                placeholder="Ej. Elena Torres"
-              />
-            </label>
-            <label>
-              <span style={{ fontWeight: 600 }}>Celular (WhatsApp)</span>
-              <input
-                value={celular}
-                onChange={(e) => setCelular(e.target.value)}
-                required
-                style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem", borderRadius: "var(--of-radius)" }}
-                placeholder="Ej. 987654321"
-              />
-            </label>
-            <label>
-              <span style={{ fontWeight: 600 }}>Correo (opcional)</span>
-              <input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                type="email"
-                style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem", borderRadius: "var(--of-radius)" }}
-              />
-            </label>
-            <label style={{ display: "flex", gap: "0.5rem", fontSize: "0.875rem" }}>
-              <input
-                type="checkbox"
-                checked={consentimiento}
-                onChange={(e) => setConsentimiento(e.target.checked)}
-              />
-              Acepto que mis datos se usen para gestionar la cita (Ley 29733 -
-              Protección de datos personales).
-            </label>
-          </div>
-
-          <div style={{ display: "flex", gap: "0.75rem" }}>
-            <button onClick={() => setPaso(2)} style={BTN_GHOST}>
-              Volver
-            </button>
-            <button
-              onClick={enviar}
-              disabled={enviando || !nombre.trim() || !celular.trim() || !consentimiento}
-              style={{
-                ...BTN_PRIMARY,
-                opacity: enviando || !nombre.trim() || !celular.trim() || !consentimiento ? 0.5 : 1,
-              }}
-            >
-              {enviando ? "Enviando..." : "Enviar solicitud"}
-            </button>
-          </div>
-        </div>
-      )}
+          </section>
+        )}
+      </div>
     </main>
   );
 }

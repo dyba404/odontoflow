@@ -7,10 +7,12 @@
 #   .\scripts\of.ps1 db       # psql dentro del contenedor
 #   .\scripts\of.ps1 logs     # ultimos logs de Postgres
 #   .\scripts\of.ps1 restart  # apaga y vuelve a levantar
+#   .\scripts\of.ps1 of-cron-recordatorios   # dispara el cron de recordatorios 24h
+#   .\scripts\of.ps1 of-cron-renovaciones    # dispara el cron de renovaciones
 
 param(
     [Parameter(Position = 0)]
-    [ValidateSet("up", "down", "status", "ssh", "db", "logs", "restart", "help")]
+    [ValidateSet("up", "down", "status", "ssh", "db", "logs", "restart", "of-cron-recordatorios", "of-cron-renovaciones", "help")]
     [string]$cmd = "status"
 )
 
@@ -26,6 +28,48 @@ function EnsureDocker {
     Wsl "sudo service docker status >/dev/null 2>&1 || sudo service docker start" *> $null
 }
 
+function EnsureKeepAlive {
+    # Mantiene la VM de WSL despierta mientras el Postgres este arriba:
+    # una sola sesion en segundo plano (sin tareas programadas periodicas).
+    # Se detiene automaticamente con: wsl.exe --shutdown
+    $running = Get-CimInstance Win32_Process -Filter "Name = 'wsl.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -match "tail -f /dev/null" }
+    if (-not $running) {
+        Start-Process -FilePath "wsl.exe" -ArgumentList "-d", "Ubuntu", "-e", "tail", "-f", "/dev/null" -WindowStyle Hidden
+    }
+}
+
+function LeerCronSecret {
+    $envFile = Join-Path (Split-Path $PSScriptRoot -Parent) ".env.local"
+    $secret = "dev-cron-secret"
+    if (Test-Path -LiteralPath $envFile) {
+        $linea = Get-Content -LiteralPath $envFile | Where-Object { $_ -match "^CRON_SECRET=" } | Select-Object -First 1
+        if ($linea) {
+            $valor = ($linea -replace "^CRON_SECRET=", "").Trim().Trim('"').Trim("'")
+            if ($valor) { $secret = $valor }
+        }
+    }
+    return $secret
+}
+
+function Invoke-CronEndpoint([string]$ruta, [string]$nombre) {
+    $secret = LeerCronSecret
+    $url = "http://localhost:3111/api/cron/$ruta"
+    Write-Host "[of] Ejecutando cron $nombre -> $url" -ForegroundColor Cyan
+    try {
+        $res = Invoke-RestMethod -Method Post -Uri $url -Headers @{ Authorization = "Bearer $secret" }
+        Write-Host "[of] OK: $($res | ConvertTo-Json -Compress)" -ForegroundColor Green
+    } catch {
+        $mensaje = $_.Exception.Message
+        try {
+            $lector = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+            $cuerpo = $lector.ReadToEnd()
+            if ($cuerpo) { $mensaje = $cuerpo }
+        } catch { }
+        Write-Host "[of] Error cron $nombre : $mensaje" -ForegroundColor Red
+    }
+}
+
 switch ($cmd) {
     "up" {
         Write-Host "[of] Levantando WSL/Ubuntu..." -ForegroundColor Cyan
@@ -33,6 +77,7 @@ switch ($cmd) {
         EnsureDocker
         Write-Host "[of] Levantando Postgres..." -ForegroundColor Cyan
         Wsl "sudo docker compose -f $compose up -d" 2>&1 | Select-Object -Last 2
+        EnsureKeepAlive
         Write-Host "[of] Esperando que Postgres acepte conexiones..." -ForegroundColor Cyan
         $ok = $false
         for ($i = 0; $i -lt 20; $i++) {
@@ -81,5 +126,11 @@ switch ($cmd) {
     }
     "help" {
         Get-Content $MyInvocation.PSCommandPath | Select-Object -First 12
+    }
+    "of-cron-recordatorios" {
+        Invoke-CronEndpoint "recordatorios" "recordatorios 24h"
+    }
+    "of-cron-renovaciones" {
+        Invoke-CronEndpoint "renovaciones" "renovaciones"
     }
 }

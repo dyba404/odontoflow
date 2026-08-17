@@ -1,0 +1,119 @@
+# Stack de producción: db + lycet (sidecar SUNAT) + web (Next.js standalone) + cron (supercronic).
+# Uso: docker compose -f docker-compose.prod.yml up -d --build
+# Requiere definir CRON_SECRET (y los demás secretos) vía variables de entorno o archivo .env.
+
+name: odontoflow-prod
+
+services:
+  db:
+    image: postgres:16
+    container_name: odontoflow-prod-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-odontoflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-odontoflow_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-odontoflow}
+    # Sin puertos publicados a la máquina: solo accesible desde la red interna.
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-odontoflow} -d ${POSTGRES_DB:-odontoflow}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  lycet:
+    build:
+      context: ./.references/lycet
+    image: odontoflow-lycet:prod
+    container_name: odontoflow-lycet-prod
+    restart: unless-stopped
+    environment:
+      CLIENT_TOKEN: ${LYCET_TOKEN:-123456}
+      CORS_ALLOW_ORIGIN: .
+    # Sin puerto publicado: web lo llama por la red interna (http://lycet:8000).
+    volumes:
+      - lycetdata:/var/www/html/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/ >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      # Contexto en la raíz del monorepo: el Dockerfile necesita package-lock.json,
+      # packages/* y tsconfig.base.json para npm ci con workspaces.
+      context: .
+      dockerfile: apps/web/Dockerfile
+    image: odontoflow-web:prod
+    container_name: odontoflow-web-prod
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      lycet:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3111"
+      HOSTNAME: 0.0.0.0
+      # packages/db/src/client.ts extrae host/puerto de DATABASE_URL para su sondeo TCP
+      # (packages/db/src/client.ts); dentro de la red el host es `db`.
+      DATABASE_URL: postgres://${POSTGRES_USER:-odontoflow}:${POSTGRES_PASSWORD:-odontoflow_dev}@${DATABASE_HOST:-db}:5432/${POSTGRES_DB:-odontoflow}
+      CRON_SECRET: ${CRON_SECRET:-dev-cron-secret}
+      LYCET_URL: http://lycet:8000
+      LYCET_TOKEN: ${LYCET_TOKEN:-123456}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3111}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM: ${RESEND_FROM:-}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-owner@demo.odontoflow.pe}
+      LOCAL_MASTER_KEY: ${LOCAL_MASTER_KEY:-}
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
+    ports:
+      - "${WEB_PORT:-3111}:3111"
+    volumes:
+      # La app guarda adjuntos en <cwd>/.data/attachments => /app/apps/web/.data/attachments.
+      - attachments:/app/apps/web/.data
+    healthcheck:
+      # /api/health valida app + conexión a DB (devuelve 503 sin DB).
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3111/api/health >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # Solo herramientas: no arranca con `up` (profile tools).
+  # La imagen standalone de `web` no incluye drizzle-kit ni las migraciones SQL,
+  # por eso migrate usa el stage de build completo del mismo Dockerfile.
+  # Uso: docker compose -f docker-compose.prod.yml run --rm migrate npm run db:migrate
+  #      docker compose -f docker-compose.prod.yml run --rm migrate npm run db:seed
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: build
+    image: odontoflow-web-build:prod
+    profiles: ["tools"]
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-odontoflow}:${POSTGRES_PASSWORD:-odontoflow_dev}@${DATABASE_HOST:-db}:5432/${POSTGRES_DB:-odontoflow}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  cron:
+    build:
+      context: ./docker/cron
+    image: odontoflow-cron:prod
+    container_name: odontoflow-cron-prod
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    environment:
+      CRON_SECRET: ${CRON_SECRET:-dev-cron-secret}
+
+volumes:
+  pgdata:
+  lycetdata:
+  attachments:

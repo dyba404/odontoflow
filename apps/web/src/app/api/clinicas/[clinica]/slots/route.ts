@@ -1,12 +1,22 @@
 import { NextResponse } from "next/server";
 import { computeSlots } from "@/lib/db";
 import { getTenantBySlug, listDoctors } from "@/lib/db";
+import { rateLimit, ipReq } from "@/lib/rate-limit";
 
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ clinica: string }> },
 ) {
   const { clinica } = await params;
+
+  const limite = rateLimit(`slots:${ipReq(req)}`, 60);
+  if (!limite.allowed) {
+    return NextResponse.json(
+      { error: "demasiadas_solicitudes" },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(limite.retryAfterMs / 1000)) } },
+    );
+  }
+
   const url = new URL(req.url);
   const serviceId = url.searchParams.get("serviceId");
   const date = url.searchParams.get("date");

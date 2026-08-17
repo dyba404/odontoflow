@@ -12,3 +12,13 @@ coverage/
 .references/
 pgdata/
 *.tsbuildinfo
+
+# Desarrollo local / sesión: nunca al repo
+logs-*.txt
+session-*.md
+.opencode/
+cookies.txt
+smoke-server.log
+
+# Adjuntos de pacientes (archivos clínicos): jamás al repo
+apps/web/.data/

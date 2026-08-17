@@ -1,72 +1,161 @@
-import Link from "next/link";
+import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
+import { hasPermission, type StaffRole } from "@odontoflow/core";
+import { ConsoleShell } from "@/components/console/shell";
+import { UserMenu } from "@/components/console/user-menu";
+import type { NavGroup } from "@/components/console/sidebar";
+import { getSession, ROLE_INFO } from "@/lib/auth";
+import {
+  solicitudesActivas,
+  citasDelDia,
+  suscripcionTeam,
+} from "@/lib/console-data";
 
-const nav: Array<{ href: string; label: string }> = [
-  { href: "/consola", label: "Inicio" },
-  { href: "/consola/agenda", label: "Agenda del día" },
-  { href: "/consola/sala-espera", label: "Sala de espera" },
-  { href: "/consola/pacientes", label: "Pacientes" },
-  { href: "/consola/caja", label: "Caja" },
-  { href: "/consola/dashboard", label: "Dashboard" },
-  { href: "/consola/personal", label: "Personal" },
-  { href: "/consola/solicitudes", label: "Solicitudes" },
-];
+export const dynamic = "force-dynamic";
 
-export default function ConsolaLayout({
+export default async function ConsolaLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
-  return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      <aside
-        style={{
-          width: 220,
-          flexShrink: 0,
-          background: "var(--of-surface)",
-          borderRight: "1px solid var(--of-border)",
-          padding: "1rem 0.75rem",
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.25rem",
-        }}
-      >
-        <p style={{ fontWeight: 700, color: "var(--of-primary)", padding: "0 0.5rem", margin: "0 0 0.75rem" }}>
-          Odontoflow
-        </p>
-        {nav.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            style={{
-              display: "block",
-              padding: "0.5rem 0.75rem",
-              borderRadius: "var(--of-radius)",
-              color: "var(--of-text)",
-              fontSize: "0.9375rem",
-            }}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </aside>
+}: Readonly<{ children: ReactNode }>) {
+  const session = await getSession();
+  if (!session) redirect("/login");
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <header
-          style={{
-            height: 56,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0 1.25rem",
-            background: "var(--of-surface)",
-            borderBottom: "1px solid var(--of-border)",
-          }}
-        >
-          <span style={{ fontWeight: 600 }}>Consola de la clínica</span>
-          <span style={{ color: "var(--of-text-muted)", fontSize: "0.875rem" }}>
-            Sesión: por implementarse
-          </span>
-        </header>
-        <main style={{ padding: "1.5rem" }}>{children}</main>
-      </div>
-    </div>
+  const [solicitudes, citasHoy, sub] = await Promise.all([
+    solicitudesActivas(session.teamId),
+    citasDelDia(session.teamId, hoyLima()),
+    suscripcionTeam(session.teamId),
+  ]);
+
+  const enSala = citasHoy.filter(
+    (c) => c.estado === "en_espera" || c.estado === "confirmada",
+  ).length;
+
+  const groups = buildNav({
+    citasHoy: citasHoy.length,
+    enSala,
+    solicitudes: solicitudes.length,
+    role: session.role,
+  });
+
+  const planLabel =
+    sub?.plan === "premium" ? "Premium" : sub?.plan === "pro" ? "Pro" : "Free";
+
+  return (
+    <ConsoleShell
+      clinicName={session.teamName}
+      clinicSlug={session.teamSlug}
+      groups={groups}
+      userName={session.name}
+      userRole={ROLE_INFO[session.role].label}
+      planLabel={planLabel}
+      userMenu={<UserMenu userName={session.name} userRole={ROLE_INFO[session.role].label} />}
+    >
+      {children}
+    </ConsoleShell>
   );
+}
+
+function buildNav({
+  citasHoy,
+  enSala,
+  solicitudes,
+  role,
+}: {
+  citasHoy: number;
+  enSala: number;
+  solicitudes: number;
+  role: StaffRole;
+}): NavGroup[] {
+  const can = (p: Parameters<typeof hasPermission>[1]) => hasPermission(role, p);
+
+  const operacion = [
+    { href: "/consola", label: "Panel general", icon: "dashboard" },
+    can("agenda.view_all") || can("agenda.view_own")
+      ? {
+          href: "/consola/agenda",
+          label: role === "doctor" ? "Mi agenda" : "Agenda del día",
+          icon: "agenda",
+          badge: citasHoy || undefined,
+        }
+      : null,
+    can("checkin.perform")
+      ? {
+          href: "/consola/sala-espera",
+          label: "Sala de espera",
+          icon: "espera",
+          badge: enSala || undefined,
+        }
+      : null,
+    can("appointments.edit") && solicitudes > 0
+      ? {
+          href: "/consola/solicitudes",
+          label: "Solicitudes",
+          icon: "solicitudes",
+          badge: solicitudes,
+        }
+      : null,
+    can("patients.manage")
+      ? { href: "/consola/pacientes", label: "Pacientes", icon: "pacientes" }
+      : null,
+    can("waitlist.manage")
+      ? { href: "/consola/lista-espera", label: "Lista de espera", icon: "listaespera" }
+      : null,
+    can("inventory.manage")
+      ? { href: "/consola/inventario", label: "Inventario", icon: "inventario" }
+      : null,
+  ].filter((i): i is NonNullable<typeof i> => i !== null);
+
+  const negociosHijos = [
+    can("payments.register") ? { href: "/consola/caja", label: "Caja del día" } : null,
+    can("receipts.issue")
+      ? { href: "/consola/caja/comprobantes", label: "Comprobantes" }
+      : null,
+    can("reports.view_all") ? { href: "/consola/dashboard", label: "Ingresos" } : null,
+    can("quotes.manage") ? { href: "/consola/presupuestos", label: "Presupuestos" } : null,
+    can("commissions.manage") ? { href: "/consola/comisiones", label: "Comisiones" } : null,
+    can("reminders.send") ? { href: "/consola/recall", label: "Recall" } : null,
+    can("campaigns.manage") ? { href: "/consola/campanas", label: "Campañas" } : null,
+    can("reminders.send") ? { href: "/consola/reviews", label: "Reseñas Google" } : null,
+  ].filter((i): i is NonNullable<typeof i> => i !== null);
+
+  const configHijos = [
+    can("services.manage") ? { href: "/consola/config/servicios", label: "Servicios" } : null,
+    can("staff.manage") ? { href: "/consola/personal", label: "Personal" } : null,
+    can("services.manage")
+      ? { href: "/consola/config/notificaciones", label: "Notificaciones" }
+      : null,
+    can("vat.manage") ? { href: "/consola/config/fiscal", label: "Facturación" } : null,
+    can("services.manage") ? { href: "/consola/config/whatsapp", label: "WhatsApp" } : null,
+    can("insurers.manage") ? { href: "/consola/aseguradoras", label: "Aseguradoras" } : null,
+    can("branches.manage") ? { href: "/consola/sucursales", label: "Sucursales" } : null,
+    role === "owner"
+      ? { href: "/consola/config/suscripcion", label: "Suscripción" }
+      : null,
+    can("reports.view_all") ? { href: "/consola/auditoria", label: "Auditoría" } : null,
+    can("reports.view_all") ? { href: "/consola/arco", label: "ARCO (Ley 29733)" } : null,
+  ].filter((i): i is NonNullable<typeof i> => i !== null);
+
+  const colapsable = (hijos: { href: string; label: string }[], icon: string, label: string) => {
+    const primero = hijos[0];
+    return hijos.length >= 2
+      ? { label, icon, children: hijos }
+      : primero && hijos.length === 1
+        ? { href: primero.href, label: primero.label, icon }
+        : null;
+  };
+
+  const negocio = colapsable(negociosHijos, "caja", "Negocios");
+  const configuracion = colapsable(configHijos, "config", "Configuración");
+
+  const groups: NavGroup[] = [{ title: "Operación", items: operacion }];
+  if (negocio) groups.push({ title: "Administración", items: [negocio] });
+  if (configuracion) groups.push({ title: "Clínica", items: [configuracion] });
+  groups.push({
+    title: "Soporte",
+    items: [{ href: "/consola/soporte", label: "Centro de ayuda", icon: "soporte" }],
+  });
+  return groups;
+}
+
+function hoyLima(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date());
 }

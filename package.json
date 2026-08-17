@@ -12,15 +12,21 @@
     "build": "npm run build -w @odontoflow/db -w @odontoflow/core -w @odontoflow/ui -w @odontoflow/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test -w @odontoflow/core",
     "of:up": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/of.ps1 up",
     "of:down": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/of.ps1 down",
     "of:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/of.ps1 status",
     "of:db": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/of.ps1 db",
+    "of:serve": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/serve-console.ps1",
     "db:generate": "npm run db:generate -w @odontoflow/db",
     "db:migrate": "npm run db:migrate -w @odontoflow/db",
     "db:seed": "npm run db:seed -w @odontoflow/db"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.23"
   }
 }

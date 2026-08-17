@@ -1,0 +1,22 @@
+{
+  "name": "Odontoflow",
+  "short_name": "Odontoflow",
+  "description": "SaaS de gestión para consultorios odontológicos en Perú",
+  "start_url": "/consola",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0d9488",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

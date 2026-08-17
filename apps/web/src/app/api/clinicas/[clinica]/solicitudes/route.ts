@@ -8,6 +8,7 @@ import {
   teams,
 } from "@odontoflow/db";
 import { isSlotStillFree } from "@/lib/db";
+import { rateLimit, ipReq } from "@/lib/rate-limit";
 
 export interface RequestPayload {
   serviceId: string;
@@ -19,6 +20,7 @@ export interface RequestPayload {
   celular: string;
   email?: string;
   notas?: string;
+  consentimiento?: boolean;
 }
 
 export async function POST(
@@ -27,6 +29,14 @@ export async function POST(
 ) {
   const { clinica } = await params;
 
+  const limite = rateLimit(`solicitud-publica:${ipReq(req)}`, 10);
+  if (!limite.allowed) {
+    return NextResponse.json(
+      { error: "demasiadas_solicitudes" },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(limite.retryAfterMs / 1000)) } },
+    );
+  }
+
   let payload: RequestPayload;
   try {
     payload = (await req.json()) as RequestPayload;
@@ -34,10 +44,13 @@ export async function POST(
     return NextResponse.json({ error: "json_invalido" }, { status: 400 });
   }
 
-  const { serviceId, date, startTime, endTime, doctorMembershipId, nombre, celular, email, notas } = payload;
+  const { serviceId, date, startTime, endTime, doctorMembershipId, nombre, celular, email, notas, consentimiento } = payload;
 
   if (!serviceId || !date || !startTime || !endTime || !nombre || !celular) {
     return NextResponse.json({ error: "faltan_datos" }, { status: 400 });
+  }
+  if (consentimiento !== true) {
+    return NextResponse.json({ error: "consentimiento_requerido" }, { status: 400 });
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(startTime) || !/^\d{2}:\d{2}$/.test(endTime)) {
     return NextResponse.json({ error: "formato_invalido" }, { status: 400 });
@@ -95,23 +108,33 @@ export async function POST(
     patient = created[0]!;
   }
 
-  const [appt] = await db
-    .insert(appointments)
-    .values({
-      tenantId: team.id,
-      serviceId: service.id,
-      patientId: patient.id,
-      doctorId: doctorMembershipId || null,
-      preferredDoctorId: doctorMembershipId || null,
-      fecha: date,
-      horaIni: startTime,
-      horaFin: endTime,
-      estado: "solicitada",
-      modoSolicitud: true,
-      monto: service.precio,
-      notas: notas?.trim() || null,
-    })
-    .returning();
+  let appt;
+  try {
+    [appt] = await db
+      .insert(appointments)
+      .values({
+        tenantId: team.id,
+        serviceId: service.id,
+        patientId: patient.id,
+        doctorId: doctorMembershipId || null,
+        preferredDoctorId: doctorMembershipId || null,
+        fecha: date,
+        horaIni: startTime,
+        horaFin: endTime,
+        estado: "solicitada",
+        modoSolicitud: true,
+        monto: service.precio,
+        notas: notas?.trim() || null,
+      })
+      .returning();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const constraint = (e as { constraint_name?: string } | null)?.constraint_name ?? "";
+    if (/appointments_no_overlap/i.test(`${msg} ${constraint}`)) {
+      return NextResponse.json({ error: "horario_ocupado" }, { status: 409 });
+    }
+    throw e;
+  }
   if (!appt) {
     return NextResponse.json({ error: "no_se_pudo_crear" }, { status: 500 });
   }

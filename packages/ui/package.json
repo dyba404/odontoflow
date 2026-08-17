@@ -18,5 +18,9 @@
   },
   "dependencies": {
     "@odontoflow/core": "*"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.23"
   }
 }

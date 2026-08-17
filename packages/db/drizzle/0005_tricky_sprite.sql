@@ -1,0 +1,1 @@
+ALTER TABLE "vat_settings" ADD COLUMN "usuario_sol" text;

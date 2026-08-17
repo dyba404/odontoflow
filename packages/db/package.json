@@ -25,6 +25,8 @@
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.10",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.23",
     "tsx": "^4.23.12"
   }
 }

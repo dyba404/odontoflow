@@ -1,93 +1,146 @@
-import { eq } from "drizzle-orm";
-import { getDb, appointments, patients, services, teams } from "@odontoflow/db";
-import { STATUS_LABEL, statusBadgeStyle } from "@odontoflow/ui";
-import { BotonConfirmar } from "./boton-confirmar";
+import { Phone, ClipboardList } from "lucide-react";
+import type { AppointmentStatus } from "@odontoflow/core";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/status-badge";
+import { Avatar } from "@/components/ui/avatar";
+import { PageHeader } from "@/components/console/page-header";
+import { EmptyState } from "@/components/console/empty-state";
+import { SolicitudActions } from "@/app/consola/solicitudes/solicitud-actions";
+import { getDefaultTeam, solicitudesActivas } from "@/lib/console-data";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const dynamic = "force-dynamic";
 
+function diasRestantes(fecha: string): string {
+  const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date());
+  const a = new Date(`${hoy}T00:00:00`);
+  const b = new Date(`${fecha}T00:00:00`);
+  const diff = Math.round((b.getTime() - a.getTime()) / 86400000);
+  if (diff <= 0) return "hoy";
+  if (diff === 1) return "mañana";
+  return `en ${diff} días`;
+}
+
 export default async function SolicitudesPage() {
-  const db = getDb();
+  const team = await getDefaultTeam();
+  if (!team) redirect("/login");
 
-  const team = (await db.select().from(teams).limit(1))[0];
-
-  if (!team) {
-    return (
-      <section>
-        <h1>Solicitudes en línea</h1>
-        <p style={{ color: "var(--of-text-muted)" }}>Sin clínicas todavía. Ejecuta el seed.</p>
-      </section>
-    );
-  }
-
-  const filas = await db
-    .select({
-      id: appointments.id,
-      fecha: appointments.fecha,
-      horaIni: appointments.horaIni,
-      horaFin: appointments.horaFin,
-      estado: appointments.estado,
-      notas: appointments.notas,
-      pacienteNombre: patients.nombre,
-      pacienteCelular: patients.celular,
-      servicio: services.nombre,
-    })
-    .from(appointments)
-    .innerJoin(patients, eq(appointments.patientId, patients.id))
-    .innerJoin(services, eq(appointments.serviceId, services.id))
-    .where(eq(appointments.estado, "solicitada"));
+  const solicitudes = await solicitudesActivas(team.id);
 
   return (
-    <section>
-      <h1>Solicitudes en línea</h1>
-      <p style={{ color: "var(--of-text-muted)" }}>
-        Cola de solicitudes del portal público de <strong>{team.name}</strong>. Revisa y
-        confirma la hora sugerida.
-      </p>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <PageHeader
+        title="Solicitudes en línea"
+        description="Pacientes que reservaron desde la página pública. Confirma o ajusta cada una."
+        action={
+          solicitudes.length > 0 ? (
+            <Button variant="outline" size="sm">
+              <Phone className="size-4" />
+              Llamar a la primera
+            </Button>
+          ) : undefined
+        }
+      />
 
-      {filas.length === 0 ? (
-        <p style={{ color: "var(--of-text-muted)" }}>
-          No hay solicitudes pendientes. Comparte la página{" "}
-          <code>/{team.slug}/reserva</code>.
-        </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="teal">{solicitudes.length} pendientes</Badge>
+        <span className="text-xs text-muted-foreground">
+          Ordenadas por fecha de llegada
+        </span>
+      </div>
+
+      {solicitudes.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={ClipboardList}
+            title="Cola al día"
+            description="No hay solicitudes pendientes. Comparte la página pública de reservas para recibir nuevas."
+            action={
+              <Link
+                href={`/${team.slug}/reserva`}
+                target="_blank"
+                className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all duration-300 hover:bg-surface-hover hover:text-foreground"
+              >
+                <Phone className="size-3.5" />
+                Abrir página pública
+              </Link>
+            }
+          />
+        </Card>
       ) : (
-        <div
-          style={{
-            border: "1px solid var(--of-border)",
-            borderRadius: "var(--of-radius)",
-            background: "var(--of-surface)",
-            marginTop: "1rem",
-          }}
-        >
-          {filas.map((f) => (
-            <div
-              key={f.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "0.75rem",
-                padding: "0.875rem 1rem",
-                borderBottom: "1px solid var(--of-border)",
-              }}
-            >
-              <div>
-                <strong>{f.pacienteNombre}</strong>
-                <span style={{ color: "var(--of-text-muted)", marginLeft: "0.5rem", fontSize: "0.875rem" }}>
-                  {f.servicio} · {f.fecha} {f.horaIni}–{f.horaFin}
-                </span>
-                <div style={{ color: "var(--of-text-muted)", fontSize: "0.8125rem" }}>
-                  Cel: {f.pacienteCelular}
-                  {f.notas ? ` · Nota: ${f.notas}` : ""}
-                </div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <span style={statusBadgeStyle(f.estado)}>{STATUS_LABEL[f.estado]}</span>
-                <BotonConfirmar citaId={f.id} />
-              </div>
-            </div>
-          ))}
-        </div>
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Paciente</TableHead>
+                <TableHead>Servicio</TableHead>
+                <TableHead>Propone</TableHead>
+                <TableHead>Preferencia</TableHead>
+                <TableHead>Monto</TableHead>
+                <TableHead className="text-right">Acción</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {solicitudes.map((s) => (
+                <TableRow key={s.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar name={s.patientNombre} />
+                      <div>
+                        <p className="text-sm font-medium">{s.patientNombre}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {s.patientCelular}
+                        </p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="teal">{s.servicio}</Badge>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {s.servicioDuracion} min
+                    </p>
+                  </TableCell>
+                  <TableCell>
+                    <p className="text-sm">{s.fecha}</p>
+                    <p className="text-xs font-medium text-amber-600">
+                      {s.horaIni} · {diasRestantes(s.fecha)}
+                    </p>
+                  </TableCell>
+                  <TableCell>
+                    {s.preferredDoctorNombre ? (
+                      <span className="text-sm">{s.preferredDoctorNombre}</span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        Cualquier doctor
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-sm font-medium tabular-nums">
+                    S/ {Number(s.monto).toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <SolicitudActions
+                      citaId={s.id}
+                      paciente={s.patientNombre}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       )}
-    </section>
+    </div>
   );
 }

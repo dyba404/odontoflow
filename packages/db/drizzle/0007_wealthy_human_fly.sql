@@ -1,0 +1,1 @@
+ALTER TABLE "receipts" ADD COLUMN "afectado_id" uuid;

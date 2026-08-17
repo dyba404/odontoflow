@@ -17,11 +17,22 @@ export type Permission =
   | "reminders.send"
   | "staff.manage"
   | "services.manage"
-  | "receipts.issue";
+  | "receipts.issue"
+  | "inventory.manage"
+  | "quotes.manage"
+  | "labs.manage"
+  | "commissions.manage"
+  | "insurers.manage"
+  | "waitlist.manage"
+  | "campaigns.manage"
+  | "vat.manage"
+  | "branches.manage"
+  | "arco.manage";
 
 const ALL: Record<StaffRole, ReadonlyArray<Permission>> = {
   owner: [
     "agenda.view_all",
+    "agenda.view_own",
     "appointments.create",
     "appointments.edit",
     "appointments.cancel_own",
@@ -29,12 +40,24 @@ const ALL: Record<StaffRole, ReadonlyArray<Permission>> = {
     "patients.manage",
     "records.view",
     "records.edit",
+    "records.edit_partial",
     "payments.register",
     "reports.view_all",
+    "reports.view_daily",
     "reminders.send",
     "staff.manage",
     "services.manage",
     "receipts.issue",
+    "inventory.manage",
+    "quotes.manage",
+    "labs.manage",
+    "commissions.manage",
+    "insurers.manage",
+    "waitlist.manage",
+    "campaigns.manage",
+    "vat.manage",
+    "branches.manage",
+    "arco.manage",
   ],
   receptionist: [
     "agenda.view_all",
@@ -47,12 +70,18 @@ const ALL: Record<StaffRole, ReadonlyArray<Permission>> = {
     "reports.view_daily",
     "reminders.send",
     "receipts.issue",
+    "quotes.manage",
+    "insurers.manage",
+    "waitlist.manage",
+    "campaigns.manage",
   ],
   assistant: [
     "agenda.view_all",
     "checkin.perform",
     "patients.manage",
     "records.edit_partial",
+    "inventory.manage",
+    "labs.manage",
   ],
   doctor: [
     "agenda.view_own",
@@ -61,6 +90,8 @@ const ALL: Record<StaffRole, ReadonlyArray<Permission>> = {
     "records.view",
     "records.edit",
     "patients.manage",
+    "quotes.manage",
+    "labs.manage",
   ],
 };
 

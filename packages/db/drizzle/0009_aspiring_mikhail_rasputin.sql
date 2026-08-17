@@ -1,0 +1,1 @@
+ALTER TABLE "vat_settings" ADD COLUMN "serie_nota" text DEFAULT 'F001' NOT NULL;

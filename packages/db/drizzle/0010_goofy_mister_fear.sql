@@ -1,0 +1,2 @@
+ALTER TABLE "receipts" DROP CONSTRAINT "receipts_payment_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "receipts_payment_unique" ON "receipts" USING btree ("payment_id") WHERE "receipts"."tipo" in ('boleta', 'factura');

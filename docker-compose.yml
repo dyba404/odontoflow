@@ -17,5 +17,25 @@ services:
       timeout: 3s
       retries: 10
 
+  lycet:
+    build:
+      context: ./.references/lycet
+    image: odontoflow-lycet:local
+    container_name: odontoflow-lycet
+    restart: unless-stopped
+    environment:
+      CLIENT_TOKEN: ${LYCET_TOKEN:-123456}
+      CORS_ALLOW_ORIGIN: .
+    ports:
+      - "8090:8000"
+    volumes:
+      - lycetdata:/var/www/html/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/ >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
 volumes:
   pgdata:
+  lycetdata:

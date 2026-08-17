@@ -151,6 +151,7 @@ export async function computeSlots(
       and(
         eq(memberships.teamId, tenantId),
         eq(memberships.role, "doctor"),
+        eq(memberships.active, true),
         doctorWhere,
       ),
     );
