@@ -574,7 +574,7 @@ export async function consultarCdrComprobante(opts: {
   if (!row) {
     return { ok: false, error: "comprobante_no_encontrado", status: 404 };
   }
-  if (row.sunatEstado !== "pendiente_envio") {
+  if (row.sunatEstado !== "pendiente_envio" && row.sunatEstado !== "rechazado") {
     return { ok: false, error: "sin_cdr_pendiente", status: 409 };
   }
   if (!lycetConfigurado()) {

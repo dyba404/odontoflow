@@ -32,12 +32,20 @@ export async function POST(
 
   const db = getDb();
   const [pago] = await db
-    .select({ id: payments.id, monto: payments.monto, referencia: payments.referencia })
+    .select({
+      id: payments.id,
+      monto: payments.monto,
+      referencia: payments.referencia,
+      estado: payments.estado,
+    })
     .from(payments)
     .where(and(eq(payments.id, id), eq(payments.tenantId, g.team.id)))
     .limit(1);
   if (!pago) {
     return NextResponse.json({ error: "pago_no_encontrado" }, { status: 404 });
+  }
+  if (pago.estado === "anulado") {
+    return NextResponse.json({ error: "pago_anulado" }, { status: 409 });
   }
 
   if (monto > Number(pago.monto)) {

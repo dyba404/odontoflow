@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { and, eq, gte, or } from "drizzle-orm";
 import { getDb, receipts } from "@odontoflow/db";
-import { emitirComprobante } from "@/lib/emitir";
+import { consultarCdrComprobante, emitirComprobante } from "@/lib/emitir";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +21,12 @@ export async function POST(req: Request) {
   const hace48h = new Date(Date.now() - 48 * 3600_000);
 
   const pendientes = await db
-    .select({ id: receipts.id, tenantId: receipts.tenantId })
+    .select({
+      id: receipts.id,
+      tenantId: receipts.tenantId,
+      sunatEstado: receipts.sunatEstado,
+      emitidaAt: receipts.emitidaAt,
+    })
     .from(receipts)
     .where(
       or(
@@ -33,8 +38,19 @@ export async function POST(req: Request) {
   let reemitidos = 0;
   let rechazados = 0;
   let errores = 0;
+  let cdrRecuperados = 0;
 
   for (const row of pendientes) {
+    if (row.sunatEstado === "rechazado" && row.emitidaAt) {
+      const consulta = await consultarCdrComprobante({
+        tenantId: row.tenantId,
+        receiptId: row.id,
+      });
+      if (consulta.ok && consulta.estado === "aceptado") {
+        cdrRecuperados += 1;
+        continue;
+      }
+    }
     const res = await emitirComprobante({ tenantId: row.tenantId, receiptId: row.id });
     if (res.ok) {
       reemitidos += 1;
@@ -51,5 +67,6 @@ export async function POST(req: Request) {
     reemitidos,
     rechazados,
     errores,
+    cdrRecuperados,
   });
 }
