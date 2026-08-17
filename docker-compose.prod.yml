@@ -67,6 +67,10 @@ services:
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3111}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_FROM: ${RESEND_FROM:-}
+      # resend es el canal de producción; smtp-dev solo existe en docker-compose.yml (Mailpit).
+      MAIL_MODE: ${MAIL_MODE:-resend}
+      WA_REPLY_MODE: ${WA_REPLY_MODE:-single}
+      YAPE_PLIN_NUMBER: ${YAPE_PLIN_NUMBER:-}
       ADMIN_EMAILS: ${ADMIN_EMAILS:-owner@demo.odontoflow.pe}
       LOCAL_MASTER_KEY: ${LOCAL_MASTER_KEY:-}
       WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}

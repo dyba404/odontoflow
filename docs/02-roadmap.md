@@ -71,6 +71,21 @@ Regla: feature freeze tras M3. Solo ship → vender → medir antes de construir
 
 ---
 
+## v1.1.0 — Post-QA: observabilidad, portal paciente, fiscal avanzado, WhatsApp económico
+
+- [x] Observabilidad de email en dev: servicio Mailpit (solo docker-compose.yml dev, :1025 SMTP / :8025 UI) + `MAIL_MODE=resend|smtp-dev` en lib/mail.ts. Producción sigue siendo Resend; el compose prod fija `MAIL_MODE=resend`
+- [x] Portal paciente passwordless (token por paciente 30 días, sin cuentas): citas/historial, cuotas, comprobantes aceptados con descarga PDF/XML/CDR (ownership receipt→payment→patient), presupuesto, consentimientos, botón confirmar asistencia
+- [x] Pago QR Yape/Plin con conciliación semi-automática por referencia (pago `por_conciliar` excluido de caja hasta conciliar; pagina consola "Pagos por conciliar")
+- [x] Consentimiento del wizard público persistido en signed_consents (ya no se descartaba)
+- [x] WhatsApp mínima huella (`WA_REPLY_MODE=silent|single|full`, default single): 1 mensaje por interacción con link a la web; keywords CONFIRMAR/CANCELAR conservadas; todos los entrantes/salientes a tabla `whatsapp_messages` + bandeja en consola
+- [x] Fix webhook_verified_at: solo se estampa en filas con config completa (antes tocaba todas las activas)
+- [x] Fiscal: QR SUNAT embebido en el PDF, logo de clínica en el PDF, baja REAL de boletas vía Resumen de Bajas (voided, ticket + consulta de estado), consulta de CDR diferido (`GET /invoice/status`), split aseguradora y edición de coberturas con UI, soporte/health con checks reales
+- [x] Punto C: Playwright E2E (`npm run test:e2e`, matriz RBAC 28 rutas × 4 roles + flujo transversal), auditoría con filtros/paginación/export CSV, PWA offline real (offline-store IndexedDB + borrador de nota clínica)
+- [x] Seed demo enriquecido e idempotente: aseguradoras/coberturas, inventario con lotes y kardex, laboratorio, presupuestos y cuotas
+- [x] Fixes reales detectados por la E2E: `fmtFechaRelativa` crasheaba con fechas ISO (`/consola/inventario` RangeError); `/api/health` ya no da 503 por canales degradados (correo/lycet) — solo por la DB
+
+---
+
 ## Backlog post-M5 → incluido en 1.0
 
 Topología detallada por módulo en `docs/05-modulos-topologia.md`.
