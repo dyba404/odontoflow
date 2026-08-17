@@ -138,7 +138,7 @@ export async function POST(
 
   const plazoLimite = new Date(Date.now() - PLAZO_BAJA_VOIDED_DIAS * 24 * 3600_000);
   const dentroDePlazo = row.emitidaAt !== null && row.emitidaAt >= plazoLimite;
-  const usarVoided = row.tipo === "boleta" && dentroDePlazo;
+  const usarVoided = row.tipo === "factura" && dentroDePlazo;
 
   const prep = await prepararEnvio(g);  if ("error" in prep) {
     return NextResponse.json(
@@ -176,7 +176,7 @@ export async function POST(
         and(
           eq(receipts.tenantId, g.team.id),
           sql`${receipts.bajaTicket} is not null`,
-          sql`${receipts.bajaEnviadaAt} >= ${inicioDia}`,
+          sql`${receipts.bajaEnviadaAt} >= ${inicioDia.toISOString()}`,
         ),
       );
     const corrVoided = String((enviadasHoy?.n ?? 0) + 1);
@@ -188,7 +188,7 @@ export async function POST(
       company,
       details: [
         {
-          tipoDoc: "03",
+          tipoDoc: "01",
           serie: row.serie,
           correlativo: String(row.correlativo),
           desMotivoBaja: motivo.slice(0, 250),
