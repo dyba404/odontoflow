@@ -5,6 +5,7 @@ import {
   getDb,
   teams,
   memberships,
+  invitations,
   users,
   services,
   appointments,
@@ -20,6 +21,7 @@ import {
   auditLogs,
   attachments,
   signedConsents,
+  legalSettings,
 } from "@odontoflow/db";
 
 export async function serviciosActivosConsola(teamId: string) {
@@ -748,4 +750,99 @@ export async function ultimoCorrelativo(
     .from(receipts)
     .where(and(eq(receipts.tenantId, teamId), eq(receipts.tipo, tipo), eq(receipts.serie, serie)));
   return row?.maximo ?? null;
+}
+
+export interface PrimerPaso {
+  id: string;
+  titulo: string;
+  detail: string;
+  href: string;
+  hecho: boolean;
+}
+
+export async function primerosPasos(teamId: string): Promise<PrimerPaso[]> {
+  const db = getDb();
+  const [legal, servicios, equipo, invitaciones, pacientesCount, citaConfirmada] =
+    await Promise.all([
+      db
+        .select({ razonSocial: legalSettings.razonSocial })
+        .from(legalSettings)
+        .where(eq(legalSettings.tenantId, teamId))
+        .limit(1)
+        .then((r) => r[0] ?? null),
+      db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(services)
+        .where(eq(services.tenantId, teamId))
+        .then((r) => r[0]?.n ?? 0),
+      db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(memberships)
+        .where(eq(memberships.teamId, teamId))
+        .then((r) => r[0]?.n ?? 0),
+      db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(invitations)
+        .where(
+          and(
+            eq(invitations.teamId, teamId),
+            gte(invitations.expiresAt, new Date()),
+          ),
+        )
+        .then((r) => r[0]?.n ?? 0),
+      db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(patients)
+        .where(eq(patients.tenantId, teamId))
+        .then((r) => r[0]?.n ?? 0),
+      db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(appointments)
+        .where(
+          and(
+            eq(appointments.tenantId, teamId),
+            eq(appointments.estado, "confirmada"),
+          ),
+        )
+        .limit(1)
+        .then((r) => r[0]?.n ?? 0),
+    ]);
+
+  return [
+    {
+      id: "legal",
+      titulo: "Configura los datos de tu clínica",
+      detail: "Razón social, RUC y textos legales de tu página pública.",
+      href: "/consola/config/legal",
+      hecho: Boolean(legal?.razonSocial),
+    },
+    {
+      id: "servicios",
+      titulo: "Crea tus servicios y precios",
+      detail: "El catálogo que verán tus pacientes al reservar.",
+      href: "/consola/config/servicios",
+      hecho: servicios > 0,
+    },
+    {
+      id: "equipo",
+      titulo: "Invita a tu equipo",
+      detail: "Recepción, asistente u odontólogo, cada uno con su rol.",
+      href: "/consola/personal",
+      hecho: equipo > 1 || invitaciones > 0,
+    },
+    {
+      id: "reservas",
+      titulo: "Comparte tu página de reservas",
+      detail: "Envía el enlace público: tus pacientes reservan sin cuenta.",
+      href: "/consola/soporte",
+      hecho: pacientesCount > 0,
+    },
+    {
+      id: "primera-cita",
+      titulo: "Confirma tu primera cita",
+      detail: "Revisa la cola de solicitudes y confirma en un clic.",
+      href: "/consola/solicitudes",
+      hecho: citaConfirmada > 0,
+    },
+  ];
 }

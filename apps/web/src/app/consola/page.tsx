@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarPlus, Wallet, Inbox, UserPlus } from "lucide-react";
+import { CalendarPlus, Wallet, Inbox, UserPlus, CheckCircle2, CircleDashed, Sparkles } from "lucide-react";
 import { hasPermission } from "@odontoflow/core";
 import type { AppointmentStatus } from "@odontoflow/core";
 import { redirect } from "next/navigation";
@@ -14,8 +14,10 @@ import {
   teamOverview,
   doctorSchedule,
   doctoresConColor,
+  primerosPasos,
 } from "@/lib/console-data";
 import { fmtPEN } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { CalendarDays, ClipboardList } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +48,8 @@ export default async function ConsolaPage() {
     doctoresConColor(team.id),
   ]);
   const agenda = await doctorSchedule(team.id, overview.today);
+  const pasos = role === "owner" ? await primerosPasos(team.id) : [];
+  const pasosPendientes = pasos.filter((p) => !p.hecho);
 
   const firstName = session.name.split(" ")[0];
   const fechaLarga = new Intl.DateTimeFormat("es-PE", {
@@ -169,6 +173,57 @@ export default async function ConsolaPage() {
           </Link>
         ))}
       </div>
+
+      {pasosPendientes.length > 0 && (
+        <Card>
+          <CardHeader className="flex-row items-center justify-between space-y-0 p-5 pb-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="size-4 text-primary" />
+              <CardTitle className="text-sm font-medium">
+                Primeros pasos
+              </CardTitle>
+              <Badge>
+                {pasos.length - pasosPendientes.length}/{pasos.length}
+              </Badge>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              Se oculta cuando completes todo
+            </span>
+          </CardHeader>
+          <CardContent className="p-5 pt-0">
+            <ul className="divide-y divide-border-subtle">
+              {pasos.map((p) => (
+                <li key={p.id} className="py-2.5">
+                  <Link
+                    href={p.href}
+                    className="group flex items-start gap-3 transition-opacity hover:opacity-80"
+                  >
+                    {p.hecho ? (
+                      <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+                    ) : (
+                      <CircleDashed className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={cn(
+                          "text-sm font-medium",
+                          p.hecho && "text-muted-foreground line-through",
+                        )}
+                      >
+                        {p.titulo}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{p.detail}</p>
+                    </div>
+                    <span className="text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                      {p.hecho ? "Ver" : "Hacer"} →
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-5">
         <Card className="lg:col-span-3">
