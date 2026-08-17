@@ -105,7 +105,7 @@ export default async function CajaPage() {
   const cierreHoyCerrado = cierreHoy !== null && cierreHoy.estado === "cerrado";
 
   const pagosHoy = todos.filter((p) => {
-    if (p.estado === "anulado") return false;
+    if (p.estado === "anulado" || p.estado === "por_conciliar") return false;
     const d = p.createdAt
       ? new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date(p.createdAt))
       : null;

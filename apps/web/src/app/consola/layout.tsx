@@ -109,6 +109,9 @@ function buildNav({
 
   const negociosHijos = [
     can("payments.register") ? { href: "/consola/caja", label: "Caja del día" } : null,
+    can("payments.register")
+      ? { href: "/consola/cuotas", label: "Pagos por conciliar" }
+      : null,
     can("receipts.issue")
       ? { href: "/consola/caja/comprobantes", label: "Comprobantes" }
       : null,

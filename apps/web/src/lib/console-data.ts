@@ -115,7 +115,7 @@ export async function teamOverview(teamId: string) {
   void solicitadas;
   const todayStart = new Date(`${today}T00:00:00`);
   const pagosHoy = paymentsAll.filter((p) => {
-    if (p.estado === "anulado") return false;
+    if (p.estado === "anulado" || p.estado === "por_conciliar") return false;
     const t = p.createdAt ? new Date(p.createdAt) : null;
     return !t || t >= todayStart;
   });
@@ -229,7 +229,7 @@ export async function ingresosDiarios(teamId: string, dias = 14) {
     porDia.set(fmt.format(d), 0);
   }
   for (const p of rows) {
-    if (p.estado === "anulado") continue;
+    if (p.estado === "anulado" || p.estado === "por_conciliar") continue;
     const k = p.createdAt ? fmt.format(new Date(p.createdAt)) : null;
     if (k && porDia.has(k)) porDia.set(k, (porDia.get(k) ?? 0) + Number(p.monto));
   }

@@ -5,10 +5,12 @@ import {
   appointments,
   patients,
   services,
+  signedConsents,
   teams,
 } from "@odontoflow/db";
 import { isSlotStillFree } from "@/lib/db";
 import { rateLimit, ipReq } from "@/lib/rate-limit";
+import { logAudit } from "@/lib/audit";
 
 export interface RequestPayload {
   serviceId: string;
@@ -138,6 +140,26 @@ export async function POST(
   if (!appt) {
     return NextResponse.json({ error: "no_se_pudo_crear" }, { status: 500 });
   }
+
+  const [consent] = await db
+    .insert(signedConsents)
+    .values({
+      tenantId: team.id,
+      patientId: patient.id,
+      citaId: appt.id,
+      servicioNombre: service.nombre,
+      signedBy: patient.nombre,
+      signedAt: new Date(),
+    })
+    .returning({ id: signedConsents.id });
+
+  void logAudit({
+    tenantId: team.id,
+    accion: "consentimiento.registro_publico",
+    entidad: "signed_consents",
+    entidadId: consent?.id,
+    payload: { servicioNombre: service.nombre, via: "wizard_reserva" },
+  });
 
   return NextResponse.json(
     {

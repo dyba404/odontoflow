@@ -301,11 +301,36 @@ Tipos de reminder (`ReminderTipo`): `recordatorio_24h`, `confirmacion_solicitud`
   tenants sin configuración no son tocados. `POST` persiste cada mensaje entrante
   en `whatsapp_messages` (`direction: "in"`, `estado: "recibido"`, `patientId` si
   el número coincide con un paciente, `body` truncado a 1000 chars), además del
-  audit (`whatsapp.mensaje_entrante`, texto truncado a 40 chars) y del procesamiento
-  por `procesarMensajeEntrante`; siempre responde 200 para que Meta no reintente.
-  La bandeja de la consola (`GET /api/whatsapp/mensajes`, página
-  `/consola/whatsapp`, permiso `patients.manage`) lista los mensajes entrantes y
-  salientes del tenant con paginación limit/offset y filtro por dirección.
+   audit (`whatsapp.mensaje_entrante`, texto truncado a 40 chars) y del procesamiento
+   por `procesarMensajeEntrante`; siempre responde 200 para que Meta no reintente.
+   La bandeja de la consola (`GET /api/whatsapp/mensajes`, página
+   `/consola/whatsapp`, permiso `patients.manage`) lista los mensajes entrantes y
+   salientes del tenant con paginación limit/offset y filtro por dirección.
+- **Modos de respuesta del bot** (env `WA_REPLY_MODE`, default `single`; Fase 4,
+  minimización de mensajes facturables ante el pricing de Meta por mensaje de
+  plantilla): la consigna es *charla gratis en web* — el paciente escribe gratis,
+  el bot responde como máximo **1 mensaje** con un link al flujo web
+  (`/{slug}/reserva` y/o el magic link `/{slug}/gestionar/{token}`) y toda la
+  transacción (reprogramar, cancelar, reservar) ocurre gratis en la web.
+  - `silent`: procesa el mensaje entrante (persistencia + keywords aplican cambios
+    de estado en DB igual que siempre: `CONFIRMAR/SI/OK…` confirma la cita,
+    `REPROGRAMAR/CANCELAR/CAMBIAR…` entrega el magic link) pero **no envía ninguna
+    respuesta** por WhatsApp; solo deja audit (`whatsapp.auto_respuesta` con
+    `omitido: modo_silencioso`).
+  - `single` (default): **exactamente 1 mensaje de texto libre** por mensaje
+    entrante (texto libre = gratis dentro de la ventana de servicio de 24 h; no se
+    usan plantillas en respuestas entrantes). Sin keyword: mensaje corto con el
+    link de reserva (`…/{slug}/reserva`). Con keyword: aplica el cambio de estado
+    y responde 1 solo mensaje de confirmación con el magic link de gestión
+    (nunca varios mensajes). El guard anti-spam de 1 respuesta por día
+    (`reminders` `confirmacion_solicitud` canal `whatsapp`) se mantiene para
+    mensajes con keyword.
+  - `full`: comportamiento legado conversacional detallado (mensajes de
+    confirmación con detalle completo).
+  - Toda respuesta saliente del bot se registra también en `whatsapp_messages`
+    (`direction: "out"`, `estado: enviado|error` + `error`) y audit
+    `whatsapp.mensaje_saliente`, de modo que la bandeja de consola muestre la
+    conversación completa.
 - Cron `POST /api/cron/recordatorios` (Bearer `CRON_SECRET`): recorre tenants con
   recordatorio 24h activo; es **idempotente** por cita (si ya existe un reminder
   `recordatorio_24h` para esa cita la omite). El reenvío manual de recordatorios

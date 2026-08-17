@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     .from(payments)
     .where(eq(payments.tenantId, g.team.id));
   const cierreSistema = pagos.reduce((acc, p) => {
-    if (p.estado === "anulado") return acc;
+    if (p.estado === "anulado" || p.estado === "por_conciliar") return acc;
     const d = p.createdAt
       ? new Intl.DateTimeFormat("en-CA", { timeZone: g.team.timezone }).format(
           new Date(p.createdAt),
