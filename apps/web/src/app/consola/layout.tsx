@@ -158,7 +158,10 @@ function buildNav({
   if (configuracion) groups.push({ title: "Clínica", items: [configuracion] });
   groups.push({
     title: "Soporte",
-    items: [{ href: "/consola/soporte", label: "Centro de ayuda", icon: "soporte" }],
+    items: [
+      { href: "/consola/guia", label: "Guía de la app", icon: "soporte" },
+      { href: "/consola/soporte", label: "Centro de ayuda", icon: "soporte" },
+    ],
   });
   return groups;
 }
