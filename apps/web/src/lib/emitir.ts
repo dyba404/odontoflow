@@ -8,6 +8,7 @@ import { attachmentsRoot } from "@/lib/attachments";
 import {
   lycetConfigurado,
   lycetEmitirComprobante,
+  lycetEstadoComprobante,
   lycetExtraerAceptacion,
   lycetGuardarEmpresa,
   lycetMensajeError,
@@ -19,6 +20,7 @@ export type EmitirResultado =
       hash: string | null;
       xmlUrl: string | null;
       cdrUrl: string | null;
+      cdrPendiente: boolean;
     }
   | { ok: false; error: string; message?: string; status: number };
 
@@ -271,6 +273,7 @@ export async function emitirComprobante(opts: {
       correlativo: receipts.correlativo,
       sunatEstado: receipts.sunatEstado,
       afectadoId: receipts.afectadoId,
+      emitidaAt: receipts.emitidaAt,
       monto: payments.monto,
       pacienteNombre: patients.nombre,
       pacienteDocumento: patients.documento,
@@ -285,6 +288,9 @@ export async function emitirComprobante(opts: {
     return { ok: false, error: "comprobante_no_encontrado", status: 404 };
   }
   if (["aceptado", "baja", "baja_pendiente", "baja_aceptada"].includes(row.sunatEstado)) {
+    return { ok: false, error: "comprobante_ya_emitido", status: 409 };
+  }
+  if (row.sunatEstado === "pendiente_envio" && row.emitidaAt) {
     return { ok: false, error: "comprobante_ya_emitido", status: 409 };
   }
 
@@ -405,8 +411,10 @@ export async function emitirComprobante(opts: {
   }
 
   const aceptacion = lycetExtraerAceptacion(res.body);
+  const codeNum = aceptacion.code === null ? Number.NaN : Number(aceptacion.code);
+  const esDiferido = res.ok && aceptacion.code !== null && !aceptacion.aceptado && codeNum === 99;
 
-  if (!res.ok || !aceptacion.aceptado) {
+  if (!res.ok || (!aceptacion.aceptado && !esDiferido)) {
     const motivo = aceptacion.message ?? lycetMensajeError(res.status, res.body);
     await db
       .update(receipts)
@@ -447,6 +455,41 @@ export async function emitirComprobante(opts: {
   } catch {
     xmlUrl = null;
     cdrUrl = null;
+  }
+
+  if (esDiferido) {
+    await db
+      .update(receipts)
+      .set({
+        sunatEstado: "pendiente_envio",
+        xmlUrl,
+        emitidaAt: new Date(),
+      })
+      .where(and(eq(receipts.id, receiptId), eq(receipts.tenantId, tenantId)));
+    if (row.tipo === "boleta" || row.tipo === "factura") {
+      await db
+        .update(vatSettings)
+        .set(
+          row.tipo === "boleta"
+            ? { corrBoleta: sql`${vatSettings.corrBoleta} + 1` }
+            : { corrFactura: sql`${vatSettings.corrFactura} + 1` },
+        )
+        .where(eq(vatSettings.tenantId, tenantId));
+    }
+    void logAudit({
+      tenantId,
+      usuarioId,
+      accion: "comprobante.emitir",
+      entidad: "receipts",
+      entidadId: receiptId,
+      payload: {
+        resultado: "cdr_pendiente",
+        code: aceptacion.code,
+        serie: row.serie,
+        correlativo: row.correlativo,
+      },
+    });
+    return { ok: true, hash: aceptacion.hash, xmlUrl, cdrUrl: null, cdrPendiente: true };
   }
 
   await db
@@ -499,5 +542,151 @@ export async function emitirComprobante(opts: {
     },
   });
 
-  return { ok: true, hash: aceptacion.hash, xmlUrl, cdrUrl };
+  return { ok: true, hash: aceptacion.hash, xmlUrl, cdrUrl, cdrPendiente: false };
+}
+
+export type ConsultaCdrResultado =
+  | { ok: true; estado: "aceptado" | "rechazado" | "pendiente"; message?: string }
+  | { ok: false; error: string; message?: string; status: number };
+
+export async function consultarCdrComprobante(opts: {
+  tenantId: string;
+  receiptId: string;
+  usuarioId?: string | null;
+}): Promise<ConsultaCdrResultado> {
+  const { tenantId, receiptId } = opts;
+  const usuarioId = opts.usuarioId ?? null;
+  const db = getDb();
+
+  const [row] = await db
+    .select({
+      id: receipts.id,
+      tipo: receipts.tipo,
+      serie: receipts.serie,
+      correlativo: receipts.correlativo,
+      sunatEstado: receipts.sunatEstado,
+      xmlUrl: receipts.xmlUrl,
+    })
+    .from(receipts)
+    .where(and(eq(receipts.id, receiptId), eq(receipts.tenantId, tenantId)))
+    .limit(1);
+
+  if (!row) {
+    return { ok: false, error: "comprobante_no_encontrado", status: 404 };
+  }
+  if (row.sunatEstado !== "pendiente_envio") {
+    return { ok: false, error: "sin_cdr_pendiente", status: 409 };
+  }
+  if (!lycetConfigurado()) {
+    return { ok: false, error: "lycet_no_configurado", status: 503 };
+  }
+
+  const [config] = await db
+    .select({ ruc: vatSettings.ruc })
+    .from(vatSettings)
+    .where(eq(vatSettings.tenantId, tenantId))
+    .limit(1);
+  if (!config?.ruc) {
+    return { ok: false, error: "configuracion_incompleta", status: 409 };
+  }
+
+  const tipoDoc = row.tipo === "factura" ? "01" : row.tipo === "boleta" ? "03" : null;
+  if (!tipoDoc) {
+    return { ok: false, error: "tipo_no_consultable", status: 409 };
+  }
+
+  let res: Awaited<ReturnType<typeof lycetEstadoComprobante>>;
+  try {
+    res = await lycetEstadoComprobante(config.ruc, tipoDoc, row.serie, String(row.correlativo));
+  } catch {
+    return { ok: false, error: "lycet_inaccesible", status: 502 };
+  }
+  if (!res.ok) {
+    return {
+      ok: false,
+      error: "consulta_fallida",
+      message: lycetMensajeError(res.status, res.body),
+      status: 502,
+    };
+  }
+
+  const success = res.body.success === true;
+  const code = typeof res.body.code === "string" ? res.body.code : null;
+  const cdr = (res.body.cdrResponse ?? {}) as Record<string, unknown>;
+  const cdrCode = typeof cdr.code === "string" ? cdr.code : null;
+
+  const mensajeCdr =
+    typeof cdr.description === "string" && cdr.description.length > 0
+      ? cdr.description
+      : undefined;
+
+  if (success) {
+    const codeEfectivo = cdrCode ?? code;
+    const codeNum = codeEfectivo === null ? Number.NaN : Number(codeEfectivo);
+    const aceptado = codeEfectivo === "0" || (Number.isFinite(codeNum) && codeNum >= 4000);
+    if (aceptado) {
+      let cdrUrl: string | null = null;
+      const cdrZipBase64 = typeof res.body.cdrZip === "string" ? res.body.cdrZip : null;
+      try {
+        if (cdrZipBase64) {
+          const dir = join(attachmentsRoot(), "fiscal", tenantId);
+          await mkdir(dir, { recursive: true });
+          const nombreCdr = `${row.serie}-${row.correlativo}-cdr.zip`;
+          await writeFile(join(dir, nombreCdr), Buffer.from(cdrZipBase64, "base64"));
+          cdrUrl = `/fiscal/${tenantId}/${nombreCdr}`;
+        }
+      } catch {
+        cdrUrl = null;
+      }
+      await db
+        .update(receipts)
+        .set({ sunatEstado: "aceptado", cdrUrl })
+        .where(and(eq(receipts.id, receiptId), eq(receipts.tenantId, tenantId)));
+      void logAudit({
+        tenantId,
+        usuarioId,
+        accion: "comprobante.consultar_cdr",
+        entidad: "receipts",
+        entidadId: receiptId,
+        payload: { resultado: "aceptado", code: codeEfectivo, serie: row.serie, correlativo: row.correlativo },
+      });
+      return { ok: true, estado: "aceptado", message: mensajeCdr };
+    }
+
+    await db
+      .update(receipts)
+      .set({ sunatEstado: "rechazado" })
+      .where(
+        and(
+          eq(receipts.id, receiptId),
+          eq(receipts.tenantId, tenantId),
+          eq(receipts.sunatEstado, "pendiente_envio"),
+        ),
+      );
+    void logAudit({
+      tenantId,
+      usuarioId,
+      accion: "comprobante.consultar_cdr",
+      entidad: "receipts",
+      entidadId: receiptId,
+      payload: { resultado: "rechazado", code: codeEfectivo, message: mensajeCdr },
+    });
+    return { ok: true, estado: "rechazado", message: mensajeCdr };
+  }
+
+  const messageError =
+    res.body.error && typeof res.body.error === "object"
+      ? ((res.body.error as Record<string, unknown>).message as string | undefined)
+      : undefined;
+
+  const noEncontrado = code === "99" || code === "0127";
+  void logAudit({
+    tenantId,
+    usuarioId,
+    accion: "comprobante.consultar_cdr",
+    entidad: "receipts",
+    entidadId: receiptId,
+    payload: { resultado: "pendiente", code, message: messageError, noEncontrado },
+  });
+  return { ok: true, estado: "pendiente", message: messageError ?? mensajeCdr };
 }

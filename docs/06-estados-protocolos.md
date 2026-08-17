@@ -294,10 +294,18 @@ Tipos de reminder (`ReminderTipo`): `recordatorio_24h`, `confirmacion_solicitud`
 - **Webhook Meta**: `GET /api/whatsapp/webhook` valida `hub.mode=subscribe` +
   `hub.verify_token` (env `WHATSAPP_VERIFY_TOKEN`, default `odontoflow-verify`) y
   responde el `hub.challenge`; al verificar escribe
-  `whatsapp_settings.webhook_verified_at` (nota: el UPDATE actual toca todas las
-  filas con `activo = true`). `POST` registra mensajes entrantes por audit
-  (`whatsapp.mensaje_entrante`, texto truncado a 40 chars) y siempre responde 200
-  para que Meta no reintente.
+  `whatsapp_settings.webhook_verified_at` solo en las filas de tenants con
+  configuración completa (`phoneNumberId` y `tokenEnc` no nulos) y `activo = true`
+  — la verificación es global (un solo webhook para toda la app), pero el
+  timestamp se registra únicamente donde realmente hay un canal armado; los
+  tenants sin configuración no son tocados. `POST` persiste cada mensaje entrante
+  en `whatsapp_messages` (`direction: "in"`, `estado: "recibido"`, `patientId` si
+  el número coincide con un paciente, `body` truncado a 1000 chars), además del
+  audit (`whatsapp.mensaje_entrante`, texto truncado a 40 chars) y del procesamiento
+  por `procesarMensajeEntrante`; siempre responde 200 para que Meta no reintente.
+  La bandeja de la consola (`GET /api/whatsapp/mensajes`, página
+  `/consola/whatsapp`, permiso `patients.manage`) lista los mensajes entrantes y
+  salientes del tenant con paginación limit/offset y filtro por dirección.
 - Cron `POST /api/cron/recordatorios` (Bearer `CRON_SECRET`): recorre tenants con
   recordatorio 24h activo; es **idempotente** por cita (si ya existe un reminder
   `recordatorio_24h` para esa cita la omite). El reenvío manual de recordatorios

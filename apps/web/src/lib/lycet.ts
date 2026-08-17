@@ -86,6 +86,90 @@ export async function lycetEstadoBaja(ruc: string, ticket: string) {
   return lycetFetch(`/api/v1/voided/status?${q.toString()}`);
 }
 
+export async function lycetEnviarBaja(doc: Record<string, unknown>) {
+  return lycetFetch(`/api/v1/voided/send`, {
+    method: "POST",
+    body: JSON.stringify(doc),
+  });
+}
+
+export interface LycetBajaResultado {
+  ok: boolean;
+  ticket: string | null;
+  message: string | null;
+}
+
+export function lycetExtraerBaja(body: Record<string, unknown>): LycetBajaResultado {
+  const sunat = (body?.sunatResponse ?? {}) as Record<string, unknown>;
+  const ticket =
+    typeof sunat.ticket === "string" && sunat.ticket.length > 0 ? sunat.ticket : null;
+  let message: string | null = null;
+  if (sunat.error && typeof sunat.error === "object") {
+    const err = sunat.error as Record<string, unknown>;
+    if (typeof err.message === "string") message = err.message;
+    else if (typeof err.code !== "undefined") message = String(err.code);
+  }
+  return { ok: sunat.success === true && ticket !== null, ticket, message };
+}
+
+export async function lycetEstadoComprobante(
+  ruc: string,
+  tipo: string,
+  serie: string,
+  numero: string,
+) {
+  const q = new URLSearchParams({ tipo, serie, numero });
+  if (ruc) q.set("ruc", ruc);
+  return lycetFetch(`/api/v1/invoice/status?${q.toString()}`);
+}
+
+export async function lycetSubirLogo(ruc: string, logoBase64: string) {
+  return lycetFetch(`/api/v1/configuration/company/${encodeURIComponent(ruc)}/logo`, {
+    method: "PUT",
+    body: JSON.stringify({ logo: logoBase64 }),
+  });
+}
+
+export async function lycetEliminarLogo(ruc: string) {
+  return lycetFetch(`/api/v1/configuration/company/${encodeURIComponent(ruc)}/logo`, {
+    method: "DELETE",
+  });
+}
+
+export interface LycetQrInput {
+  ruc: string;
+  tipo: string;
+  serie: string;
+  numero: string;
+  emision: string;
+  igv: number;
+  total: number;
+  clienteTipo: string;
+  clienteNumero: string;
+}
+
+export interface LycetQrResultado {
+  ok: boolean;
+  status: number;
+  svg: string | null;
+  contentType: string | null;
+}
+
+export async function lycetQr(input: LycetQrInput): Promise<LycetQrResultado> {
+  const res = await fetch(
+    `${lycetUrl()}/api/v1/sale/qr?token=${encodeURIComponent(lycetToken())}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+      signal: AbortSignal.timeout(30_000),
+    },
+  );
+  const contentType = res.headers.get("content-type");
+  const svg = res.ok ? await res.text() : null;
+  return { ok: res.ok, status: res.status, svg, contentType };
+}
+
 export function lycetExtraerAceptacion(body: Record<string, unknown>): LycetAceptacion {
   const sunat = (body?.sunatResponse ?? {}) as Record<string, unknown>;
   const cdr = (sunat.cdrResponse ?? {}) as Record<string, unknown>;

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Plus, ShieldCheck } from "lucide-react";
+import { Pencil, Plus, ShieldCheck, ShieldOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -15,6 +15,7 @@ import { Select } from "@/components/ui/select";
 
 export type Cobertura = {
   id: string;
+  insurerId: string;
   plan: string | null;
   copagoPct: string;
   vigenteDesde: string | null;
@@ -37,6 +38,8 @@ function textoVigencia(c: Cobertura): string {
   return "Sin vigencia definida";
 }
 
+type ModoDialog = { tipo: "crear" } | { tipo: "editar"; cobertura: Cobertura } | null;
+
 export function CoberturasCard({
   patientId,
   coberturas,
@@ -50,7 +53,7 @@ export function CoberturasCard({
 }) {
   const router = useRouter();
   const [lista, setLista] = useState<Cobertura[]>(coberturas);
-  const [open, setOpen] = useState(false);
+  const [modo, setModo] = useState<ModoDialog>(null);
   const [pending, start] = useTransition();
   const [insurerSel, setInsurerSel] = useState("");
   const [plan, setPlan] = useState("");
@@ -59,14 +62,37 @@ export function CoberturasCard({
   const [vigenteHasta, setVigenteHasta] = useState("");
   const [notas, setNotas] = useState("");
 
-  function abrir() {
+  function abrirCrear() {
     setInsurerSel(aseguradoras[0]?.id ?? "");
     setPlan("");
     setCopago("");
     setVigenteDesde("");
     setVigenteHasta("");
     setNotas("");
-    setOpen(true);
+    setModo({ tipo: "crear" });
+  }
+
+  function abrirEditar(c: Cobertura) {
+    setInsurerSel(c.insurerId || aseguradoras[0]?.id || "");
+    setPlan(c.plan ?? "");
+    setCopago(String(Number(c.copagoPct)));
+    setVigenteDesde(c.vigenteDesde ?? "");
+    setVigenteHasta(c.vigenteHasta ?? "");
+    setNotas(c.notas ?? "");
+    setModo({ tipo: "editar", cobertura: c });
+  }
+
+  function validar(): number | null {
+    const copagoNum = copago === "" ? 0 : Number(copago);
+    if (!Number.isFinite(copagoNum) || copagoNum < 0 || copagoNum > 100) {
+      toast.error("El copago debe estar entre 0 y 100%.");
+      return null;
+    }
+    if (vigenteDesde && vigenteHasta && vigenteDesde > vigenteHasta) {
+      toast.error("La vigencia inicial no puede ser posterior a la final.");
+      return null;
+    }
+    return copagoNum;
   }
 
   function onSubmit(e: FormEvent) {
@@ -75,13 +101,49 @@ export function CoberturasCard({
       toast.error("Selecciona una aseguradora.");
       return;
     }
-    const copagoNum = copago === "" ? 0 : Number(copago);
-    if (!Number.isFinite(copagoNum) || copagoNum < 0 || copagoNum > 100) {
-      toast.error("El copago debe estar entre 0 y 100%.");
-      return;
-    }
-    if (vigenteDesde && vigenteHasta && vigenteDesde > vigenteHasta) {
-      toast.error("La vigencia inicial no puede ser posterior a la final.");
+    const copagoNum = validar();
+    if (copagoNum === null) return;
+
+    const body = {
+      insurerId: insurerSel,
+      plan: plan.trim() || undefined,
+      copagoPct: copagoNum,
+      vigenteDesde: vigenteDesde || undefined,
+      vigenteHasta: vigenteHasta || undefined,
+      notas: notas.trim() || undefined,
+    };
+    const nombreAseguradora =
+      aseguradoras.find((a) => a.id === insurerSel)?.nombre ?? "—";
+
+    if (modo?.tipo === "editar") {
+      const id = modo.cobertura.id;
+      start(async () => {
+        const res = await fetch(`/api/coberturas/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          toast.error(`No se pudo actualizar la cobertura: ${j.error ?? "error"}`);
+          return;
+        }
+        const act = j.cobertura as Omit<Cobertura, "insurerNombre"> | undefined;
+        if (act) {
+          setLista((prev) =>
+            prev.map((c) =>
+              c.id === id
+                ? { ...c, ...act, insurerId: insurerSel || c.insurerId, insurerNombre: nombreAseguradora }
+                : c,
+            ),
+          );
+        } else {
+          router.refresh();
+        }
+        toast.success("Cobertura actualizada.");
+        setModo(null);
+        router.refresh();
+      });
       return;
     }
 
@@ -89,14 +151,7 @@ export function CoberturasCard({
       const res = await fetch(`/api/pacientes/${patientId}/coberturas`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          insurerId: insurerSel,
-          plan: plan.trim() || undefined,
-          copagoPct: copagoNum,
-          vigenteDesde: vigenteDesde || undefined,
-          vigenteHasta: vigenteHasta || undefined,
-          notas: notas.trim() || undefined,
-        }),
+        body: JSON.stringify(body),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -105,15 +160,41 @@ export function CoberturasCard({
       }
       const nueva = j.cobertura as Cobertura | undefined;
       if (nueva) {
-        setLista((prev) => [nueva, ...prev]);
-      } else {
-        router.refresh();
+        setLista((prev) => [
+          { ...nueva, insurerId: insurerSel, insurerNombre: nombreAseguradora },
+          ...prev,
+        ]);
       }
       toast.success("Cobertura registrada.");
-      setOpen(false);
+      setModo(null);
       router.refresh();
     });
   }
+
+  function cambiarEstado(c: Cobertura) {
+    start(async () => {
+      const res = c.activo
+        ? await fetch(`/api/coberturas/${c.id}`, { method: "DELETE" })
+        : await fetch(`/api/coberturas/${c.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ estado: "activa" }),
+          });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(`No se pudo actualizar: ${j.error ?? "error"}`);
+        return;
+      }
+      const activoNuevo = c.activo ? false : true;
+      setLista((prev) =>
+        prev.map((x) => (x.id === c.id ? { ...x, activo: activoNuevo } : x)),
+      );
+      toast.success(activoNuevo ? "Cobertura reactivada." : "Cobertura desactivada.");
+      router.refresh();
+    });
+  }
+
+  const abierto = modo !== null;
 
   return (
     <div className="space-y-4">
@@ -138,22 +219,51 @@ export function CoberturasCard({
                 <p className="mt-0.5 text-xs text-muted-foreground">{textoVigencia(c)}</p>
                 {c.notas ? <p className="mt-0.5 text-xs text-muted-foreground">{c.notas}</p> : null}
               </div>
+              {canEdit ? (
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => abrirEditar(c)}
+                  >
+                    <Pencil className="size-3.5" />
+                    Editar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className={
+                      c.activo
+                        ? "h-7 px-2 text-xs text-red-600 hover:text-red-700"
+                        : "h-7 px-2 text-xs"
+                    }
+                    onClick={() => cambiarEstado(c)}
+                    disabled={pending}
+                  >
+                    <ShieldOff className="size-3.5" />
+                    {c.activo ? "Desactivar" : "Reactivar"}
+                  </Button>
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>
       )}
 
       {canEdit ? (
-        <Button type="button" variant="outline" size="sm" onClick={abrir} disabled={aseguradoras.length === 0}>
+        <Button type="button" variant="outline" size="sm" onClick={abrirCrear} disabled={aseguradoras.length === 0}>
           <Plus className="size-4" />
           Nueva cobertura
         </Button>
       ) : null}
 
       <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        title="Nueva cobertura"
+        open={abierto}
+        onClose={() => setModo(null)}
+        title={modo?.tipo === "editar" ? "Editar cobertura" : "Nueva cobertura"}
         icon={<ShieldCheck className="size-4 text-primary" />}
         description="Vincula una aseguradora o EPS a este paciente."
       >
@@ -230,11 +340,15 @@ export function CoberturasCard({
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setModo(null)}>
               Cancelar
             </Button>
             <Button type="submit" disabled={pending || aseguradoras.length === 0}>
-              {pending ? "Guardando…" : "Crear cobertura"}
+              {pending
+                ? "Guardando…"
+                : modo?.tipo === "editar"
+                  ? "Guardar cambios"
+                  : "Crear cobertura"}
             </Button>
           </div>
         </form>

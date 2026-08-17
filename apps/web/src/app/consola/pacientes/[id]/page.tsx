@@ -159,6 +159,7 @@ export default async function FichaPacientePage({
     db
       .select({
         id: patientCoverages.id,
+        insurerId: patientCoverages.insurerId,
         plan: patientCoverages.plan,
         copagoPct: patientCoverages.copagoPct,
         vigenteDesde: patientCoverages.vigenteDesde,
@@ -395,6 +396,7 @@ export default async function FichaPacientePage({
               patientId={paciente.id}
               coberturas={coberturaRows.map((c) => ({
                 id: c.id,
+                insurerId: c.insurerId,
                 plan: c.plan,
                 copagoPct: c.copagoPct,
                 vigenteDesde: c.vigenteDesde,

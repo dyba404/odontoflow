@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import { getDb, whatsappSettings } from "@odontoflow/db";
 import { guardStaff, guardError } from "@/lib/auth";
 import { logAuditSesion } from "@/lib/audit";
@@ -79,6 +79,30 @@ export async function PUT(req: Request) {
         updatedAt: new Date(),
       },
     });
+
+  if (activo && phoneNumberId) {
+    const [recien] = await db
+      .select({
+        tokenEnc: whatsappSettings.tokenEnc,
+        webhookVerifiedAt: whatsappSettings.webhookVerifiedAt,
+      })
+      .from(whatsappSettings)
+      .where(eq(whatsappSettings.tenantId, g.team.id))
+      .limit(1);
+    if (recien?.tokenEnc && !recien.webhookVerifiedAt) {
+      const [verificadoGlobal] = await db
+        .select({ id: whatsappSettings.tenantId })
+        .from(whatsappSettings)
+        .where(isNotNull(whatsappSettings.webhookVerifiedAt))
+        .limit(1);
+      if (verificadoGlobal) {
+        await db
+          .update(whatsappSettings)
+          .set({ webhookVerifiedAt: new Date(), updatedAt: new Date() })
+          .where(eq(whatsappSettings.tenantId, g.team.id));
+      }
+    }
+  }
 
   void logAuditSesion({
     tenantId: g.team.id,

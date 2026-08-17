@@ -1,15 +1,45 @@
 import { Resend } from "resend";
+import nodemailer, { type Transporter } from "nodemailer";
 
 let cliente: Resend | null = null;
+let transporterSmtp: Transporter | null = null;
+
+export type MailModo = "resend" | "smtp-dev";
+
+export function mailModo(): MailModo {
+  return process.env.MAIL_MODE === "smtp-dev" ? "smtp-dev" : "resend";
+}
 
 export function mailConfigurado(): boolean {
+  if (mailModo() === "smtp-dev") return true;
   return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM);
 }
 
 export function mailFrom(): string | null {
   const from = process.env.RESEND_FROM;
   if (from) return from;
+  if (mailModo() === "smtp-dev") return "dev@odontoflow.local";
   return null;
+}
+
+export function mailEstadoHumano(): string {
+  if (mailModo() === "smtp-dev") {
+    return "SMTP dev (Mailpit) → localhost:8025";
+  }
+  if (mailConfigurado()) return "Resend (producción)";
+  return "No configurado";
+}
+
+function smtpTransporter(): Transporter {
+  if (!transporterSmtp) {
+    transporterSmtp = nodemailer.createTransport({
+      host: process.env.MAILPIT_HOST ?? "127.0.0.1",
+      port: Number(process.env.MAILPIT_PORT ?? "1025"),
+      secure: false,
+      tls: { rejectUnauthorized: false },
+    });
+  }
+  return transporterSmtp;
 }
 
 export async function sendMail(opts: {
@@ -18,9 +48,26 @@ export async function sendMail(opts: {
   html: string;
   text: string;
 }): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const from = mailFrom();
+
+  if (mailModo() === "smtp-dev") {
+    if (!from) return { ok: false, reason: "from_no_configurado" };
+    try {
+      await smtpTransporter().sendMail({
+        from,
+        to: opts.to,
+        subject: opts.subject,
+        html: opts.html,
+        text: opts.text,
+      });
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, reason: e instanceof Error ? e.message : "error_smtp" };
+    }
+  }
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { ok: false, reason: "email_no_configurado" };
-  const from = mailFrom();
   if (!from) return { ok: false, reason: "from_no_configurado (define RESEND_FROM)" };
 
   try {

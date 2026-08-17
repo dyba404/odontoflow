@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { guardStaff, guardError } from "@/lib/auth";
 import { gatePlan, respuestaPlanInsuficiente } from "@/lib/plans";
-import { emitirComprobante } from "@/lib/emitir";
+import { emitirComprobante, consultarCdrComprobante } from "@/lib/emitir";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const g = await guardStaff("receipts.issue");
@@ -14,6 +14,28 @@ export async function POST(
   const planCheck = await gatePlan(g.team.id, "facturacion");
   if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
   const { id } = await params;
+
+  let body: { consultarCdr?: boolean };
+  try {
+    body = (await req.json()) as typeof body;
+  } catch {
+    body = {};
+  }
+
+  if (body.consultarCdr) {
+    const cdr = await consultarCdrComprobante({
+      tenantId: g.team.id,
+      receiptId: id,
+      usuarioId: g.user.id,
+    });
+    if (!cdr.ok) {
+      return NextResponse.json(
+        { error: cdr.error, ...(cdr.message ? { message: cdr.message } : {}) },
+        { status: cdr.status },
+      );
+    }
+    return NextResponse.json({ ok: true, estado: cdr.estado, message: cdr.message ?? null });
+  }
 
   const res = await emitirComprobante({
     tenantId: g.team.id,
@@ -33,5 +55,6 @@ export async function POST(
     hash: res.hash,
     xmlUrl: res.xmlUrl,
     cdrUrl: res.cdrUrl,
+    cdrPendiente: res.cdrPendiente,
   });
 }

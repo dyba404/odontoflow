@@ -6,10 +6,22 @@ import { getDb, payments, patients, receipts, vatSettings } from "@odontoflow/db
 import { guardStaff, guardError } from "@/lib/auth";
 import { gatePlan, respuestaPlanInsuficiente } from "@/lib/plans";
 import { attachmentsRoot } from "@/lib/attachments";
-import { generarPdfComprobante } from "@/lib/comprobante-pdf";
+import {
+  generarPdfComprobante,
+  generarQrPng,
+  leerLogoComprobante,
+  qrSunatContenido,
+} from "@/lib/comprobante-pdf";
 import { logAuditSesion } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
+
+function clienteParaQr(documento: string | null): { tipoDoc: string; numDoc: string } {
+  const doc = (documento ?? "").replace(/\s+/g, "");
+  if (/^\d{11}$/.test(doc)) return { tipoDoc: "6", numDoc: doc };
+  if (/^\d{8}$/.test(doc)) return { tipoDoc: "1", numDoc: doc };
+  return { tipoDoc: "1", numDoc: "00000000" };
+}
 
 export async function GET(
   _req: Request,
@@ -64,6 +76,31 @@ export async function GET(
     .where(eq(vatSettings.tenantId, g.team.id))
     .limit(1);
 
+  const numero = `${row.serie}-${String(row.correlativo).padStart(8, "0")}`;
+  const qrAplica = (row.tipo === "boleta" || row.tipo === "factura") && row.sunatEstado !== "manual";
+  let qrPng: Uint8Array | null = null;
+  let qrContenido: string | null = null;
+  if (qrAplica && config?.ruc && row.emitidaAt) {
+    const monto = Math.round(Number(row.monto) * 100) / 100;
+    const valor = Math.round((monto / 1.18) * 100) / 100;
+    const igv = Math.round((monto - valor) * 100) / 100;
+    const cliente = clienteParaQr(row.clienteDocumento);
+    qrContenido = qrSunatContenido({
+      tipo: row.tipo,
+      ruc: config.ruc,
+      serie: row.serie,
+      numero: String(row.correlativo).padStart(8, "0"),
+      igv,
+      total: monto,
+      emision: row.emitidaAt,
+      clienteTipo: cliente.tipoDoc,
+      clienteNumero: cliente.numDoc,
+    });
+    qrPng = await generarQrPng(qrContenido);
+  }
+
+  const logoPng = await leerLogoComprobante(g.team.id);
+
   let pdfBytes: Uint8Array;
   try {
     pdfBytes = await generarPdfComprobante({
@@ -87,12 +124,14 @@ export async function GET(
       bajaMotivo: row.bajaMotivo,
       teamName: g.team.name,
       timezone: g.team.timezone,
+      qrPng,
+      qrContenido,
+      logoPng,
     });
   } catch {
     return NextResponse.json({ error: "pdf_no_generado" }, { status: 500 });
   }
 
-  const numero = `${row.serie}-${String(row.correlativo).padStart(8, "0")}`;
   const nombreArchivo = `${numero}.pdf`;
   let pdfUrl = row.pdfUrl;
   try {

@@ -96,6 +96,9 @@ function buildNav({
     can("patients.manage")
       ? { href: "/consola/pacientes", label: "Pacientes", icon: "pacientes" }
       : null,
+    can("patients.manage")
+      ? { href: "/consola/whatsapp", label: "WhatsApp", icon: "whatsapp" }
+      : null,
     can("waitlist.manage")
       ? { href: "/consola/lista-espera", label: "Lista de espera", icon: "listaespera" }
       : null,

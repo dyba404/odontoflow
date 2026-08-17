@@ -1,6 +1,8 @@
 import { Lock, Receipt } from "lucide-react";
 import { redirect } from "next/navigation";
+import { asc, eq } from "drizzle-orm";
 import { hasPermission } from "@odontoflow/core";
+import { getDb, insurers } from "@odontoflow/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
@@ -10,6 +12,7 @@ import { EmptyState } from "@/components/console/empty-state";
 import { RegistrarPago } from "@/app/consola/caja/registrar-pago";
 import { CierreDialog } from "@/app/consola/caja/components/cierre-dialog";
 import { AnularPago } from "@/app/consola/caja/components/anular-pago";
+import { SplitAseguradora } from "@/app/consola/caja/components/split-aseguradora";
 import { ReabrirCierre } from "@/app/consola/caja/components/reabrir-cierre";
 import { getDefaultTeam, cajaHoy, pacientesBasicos, cierreDelDia, cierresDeCaja } from "@/lib/console-data";
 import { getSession } from "@/lib/auth";
@@ -87,11 +90,16 @@ export default async function CajaPage() {
   }
 
   const hoy = hoyLima();
-  const [todos, pacientes, cierreHoy, cierres] = await Promise.all([
+  const [todos, pacientes, cierreHoy, cierres, aseguradoras] = await Promise.all([
     cajaHoy(team.id),
     pacientesBasicos(team.id),
     cierreDelDia(team.id, hoy),
     cierresDeCaja(team.id),
+    getDb()
+      .select({ id: insurers.id, nombre: insurers.nombre })
+      .from(insurers)
+      .where(eq(insurers.tenantId, team.id))
+      .orderBy(asc(insurers.nombre)),
   ]);
   const role = session.role;
   const cierreHoyCerrado = cierreHoy !== null && cierreHoy.estado === "cerrado";
@@ -232,11 +240,19 @@ export default async function CajaPage() {
                           {anulado ? (
                             <Badge variant="gray">Anulado</Badge>
                           ) : (
-                            <AnularPago
-                              pagoId={p.id}
-                              monto={Number(p.monto)}
-                              paciente={p.patientNombre}
-                            />
+                            <div className="flex items-center justify-end gap-1">
+                              <SplitAseguradora
+                                pagoId={p.id}
+                                monto={Number(p.monto)}
+                                paciente={p.patientNombre}
+                                aseguradoras={aseguradoras}
+                              />
+                              <AnularPago
+                                pagoId={p.id}
+                                monto={Number(p.monto)}
+                                paciente={p.patientNombre}
+                              />
+                            </div>
                           )}
                         </TableCell>
                       </TableRow>

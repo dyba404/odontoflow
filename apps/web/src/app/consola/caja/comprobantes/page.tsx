@@ -12,11 +12,15 @@ import { EmptyState } from "@/components/console/empty-state";
 import { ComprobanteDialog } from "./comprobante-dialog";
 import { EmitirButton } from "./emitir-button";
 import { BajaButton } from "./baja-button";
+import { ConsultarCdrButton } from "./consultar-cdr-button";
+import { LogoComprobanteDialog } from "./logo-comprobante-dialog";
 import { EditarComprobanteManual } from "./editar-comprobante-manual";
 import { ExportSunatButton } from "./export-sunat-button";
 import { getDefaultTeam, pagosSinComprobante, ultimoCorrelativo } from "@/lib/console-data";
 import { getSession } from "@/lib/auth";
 import { gatePlan } from "@/lib/plans";
+import { stat } from "node:fs/promises";
+import { logoComprobantePath } from "@/lib/comprobante-pdf";
 import { PlanGate } from "@/components/console/plan-gate";
 import { fmtPEN } from "@/lib/format";
 import {
@@ -134,7 +138,7 @@ export default async function ComprobantesPage() {
 
   const db = getDb();
   const afectados = alias(receipts, "afectados");
-  const [lista, sinComprobante, ultimoBoleta, fiscal] = await Promise.all([
+  const [lista, sinComprobante, ultimoBoleta, fiscal, hayLogo] = await Promise.all([
     db
       .select({
         id: receipts.id,
@@ -147,6 +151,8 @@ export default async function ComprobantesPage() {
         cdrUrl: receipts.cdrUrl,
         pdfUrl: receipts.pdfUrl,
         afectadoId: receipts.afectadoId,
+        emitidaAt: receipts.emitidaAt,
+        bajaTicket: receipts.bajaTicket,
         createdAt: receipts.createdAt,
         monto: payments.monto,
         metodo: payments.metodo,
@@ -168,6 +174,9 @@ export default async function ComprobantesPage() {
       .where(eq(vatSettings.tenantId, team.id))
       .limit(1)
       .then((r) => r[0] ?? null),
+    stat(logoComprobantePath(team.id))
+      .then(() => true)
+      .catch(() => false),
   ]);
 
   const emisionManual = (fiscal?.emision ?? "manual") === "manual";
@@ -190,6 +199,7 @@ export default async function ComprobantesPage() {
         action={
           <div className="flex flex-wrap items-center gap-2">
             {hasPermission(role, "reports.view_all") ? <ExportSunatButton /> : null}
+            <LogoComprobanteDialog hayLogo={hayLogo} />
             {puedeConfigurar ? (
               <Link
                 href="/consola/config/fiscal"
@@ -307,12 +317,21 @@ export default async function ComprobantesPage() {
                   <TableCell className="whitespace-nowrap text-right">
                     <div className="flex items-center justify-end gap-1.5">
                       <EmitirButton id={c.id} sunatEstado={c.sunatEstado} />
+                      {c.sunatEstado === "pendiente_envio" && c.emitidaAt ? (
+                        <ConsultarCdrButton
+                          id={c.id}
+                          numero={`${c.serie}-${String(c.correlativo).padStart(8, "0")}`}
+                        />
+                      ) : null}
                       {c.tipo === "boleta" || c.tipo === "factura" ? (
                         <BajaButton
                           id={c.id}
                           serie={c.serie}
                           correlativo={c.correlativo}
                           sunatEstado={c.sunatEstado}
+                          tipo={c.tipo}
+                          emitidaAt={c.emitidaAt ? c.emitidaAt.toISOString() : null}
+                          bajaTicket={c.bajaTicket}
                         />
                       ) : null}
                       {c.sunatEstado === "manual" ? (

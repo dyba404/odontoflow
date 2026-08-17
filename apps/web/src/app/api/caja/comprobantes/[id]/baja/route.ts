@@ -11,15 +11,19 @@ import { attachmentsRoot } from "@/lib/attachments";
 import {
   lycetConfigurado,
   lycetEmitirComprobante,
+  lycetEnviarBaja,
   lycetEstadoBaja,
   lycetExtraerAceptacion,
+  lycetExtraerBaja,
   lycetGuardarEmpresa,
   lycetMensajeError,
 } from "@/lib/lycet";
 
 export const dynamic = "force-dynamic";
 
-function ahoraLimaConZona(): string {
+const PLAZO_BAJA_VOIDED_DIAS = 7;
+
+function fechaHoraLima(d: Date): { fecha: string; hora: string } {
   const partes = new Intl.DateTimeFormat("es-PE", {
     timeZone: "America/Lima",
     year: "numeric",
@@ -29,11 +33,16 @@ function ahoraLimaConZona(): string {
     minute: "2-digit",
     second: "2-digit",
     hour12: false,
-  }).formatToParts(new Date());
+  }).formatToParts(d);
   const p: Record<string, string> = {};
   for (const q of partes) p[q.type] = q.value;
   const hora = p.hour === "24" ? "00" : p.hour;
-  return `${p.year}-${p.month}-${p.day}T${hora}:${p.minute}:${p.second}-05:00`;
+  return { fecha: `${p.year}-${p.month}-${p.day}`, hora: `${hora}:${p.minute}:${p.second}` };
+}
+
+function ahoraLimaConZona(): string {
+  const { fecha, hora } = fechaHoraLima(new Date());
+  return `${fecha}T${hora}-05:00`;
 }
 
 async function prepararEnvio(g: { team: { id: string } }) {
@@ -102,6 +111,7 @@ export async function POST(
       serie: receipts.serie,
       correlativo: receipts.correlativo,
       sunatEstado: receipts.sunatEstado,
+      emitidaAt: receipts.emitidaAt,
       paymentId: receipts.paymentId,
       monto: payments.monto,
       pacienteNombre: patients.nombre,
@@ -126,6 +136,126 @@ export async function POST(
     return NextResponse.json({ error: "tipo_no_sujeto_a_baja" }, { status: 409 });
   }
 
+  const plazoLimite = new Date(Date.now() - PLAZO_BAJA_VOIDED_DIAS * 24 * 3600_000);
+  const dentroDePlazo = row.emitidaAt !== null && row.emitidaAt >= plazoLimite;
+  const usarVoided = row.tipo === "boleta" && dentroDePlazo;
+
+  const prep = await prepararEnvio(g);  if ("error" in prep) {
+    return NextResponse.json(
+      { error: prep.error, ...("message" in prep ? { message: prep.message } : {}) },
+      { status: prep.status },
+    );
+  }
+  const config = prep.config;
+
+  const company: Record<string, unknown> = {
+    ruc: config.ruc,
+    razonSocial: config.razonSocial ?? config.ruc,
+    address: {
+      ubigueo: "150101",
+      codigoPais: "PE",
+      departamento: "LIMA",
+      provincia: "LIMA",
+      distrito: "LIMA",
+      urbanizacion: "-",
+      direccion: config.razonSocial ?? "SIN DIRECCION",
+    },
+  };
+  if (config.razonSocial) company.nombreComercial = config.razonSocial;
+
+  const numeroOriginal = `${row.serie}-${row.correlativo}`;
+
+  if (usarVoided) {
+    const gen = fechaHoraLima(row.emitidaAt ?? new Date());
+    const hoy = fechaHoraLima(new Date());
+    const inicioDia = new Date(`${hoy.fecha}T00:00:00-05:00`);
+    const [enviadasHoy] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(receipts)
+      .where(
+        and(
+          eq(receipts.tenantId, g.team.id),
+          sql`${receipts.bajaTicket} is not null`,
+          sql`${receipts.bajaEnviadaAt} >= ${inicioDia}`,
+        ),
+      );
+    const corrVoided = String((enviadasHoy?.n ?? 0) + 1);
+
+    const cuerpo: Record<string, unknown> = {
+      correlativo: corrVoided,
+      fecGeneracion: `${gen.fecha}T00:00:00-05:00`,
+      fecComunicacion: ahoraLimaConZona(),
+      company,
+      details: [
+        {
+          tipoDoc: "03",
+          serie: row.serie,
+          correlativo: String(row.correlativo),
+          desMotivoBaja: motivo.slice(0, 250),
+        },
+      ],
+    };
+
+    let resVoided: Awaited<ReturnType<typeof lycetEnviarBaja>>;
+    try {
+      resVoided = await lycetEnviarBaja(cuerpo);
+    } catch {
+      void logAuditSesion({
+        tenantId: g.team.id,
+        accion: "comprobante.baja",
+        entidad: "receipts",
+        entidadId: id,
+        payload: { vía: "voided", resultado: "lycet_inaccesible", serie: row.serie, correlativo: row.correlativo },
+      });
+      return NextResponse.json({ error: "lycet_inaccesible" }, { status: 502 });
+    }
+
+    const resultado = lycetExtraerBaja(resVoided.body);
+    if (!resVoided.ok || !resultado.ok || !resultado.ticket) {
+      const razon =
+        resultado.message ??
+        lycetMensajeError(resVoided.status, resVoided.body);
+      void logAuditSesion({
+        tenantId: g.team.id,
+        accion: "comprobante.baja",
+        entidad: "receipts",
+        entidadId: id,
+        payload: { vía: "voided", resultado: "rechazado", motivo: razon },
+      });
+      return NextResponse.json({ error: "rechazado_sunat", message: razon }, { status: 409 });
+    }
+
+    await db
+      .update(receipts)
+      .set({
+        sunatEstado: "baja_pendiente",
+        bajaTicket: resultado.ticket,
+        bajaEnviadaAt: new Date(),
+        bajaMotivo: motivo,
+      })
+      .where(and(eq(receipts.id, id), eq(receipts.tenantId, g.team.id)));
+
+    void logAuditSesion({
+      tenantId: g.team.id,
+      accion: "comprobante.baja",
+      entidad: "receipts",
+      entidadId: id,
+      payload: {
+        vía: "voided",
+        resultado: "enviada",
+        ticket: resultado.ticket,
+        correlativo: corrVoided,
+        afectado: numeroOriginal,
+      },
+    });
+
+    return NextResponse.json({
+      ok: true,
+      estado: "baja_pendiente",
+      ticket: resultado.ticket,
+    });
+  }
+
   const [notaPrevia] = await db
     .select({ id: receipts.id, sunatEstado: receipts.sunatEstado })
     .from(receipts)
@@ -148,30 +278,6 @@ export async function POST(
       { status: 409 },
     );
   }
-
-  const prep = await prepararEnvio(g);
-  if ("error" in prep) {
-    return NextResponse.json(
-      { error: prep.error, ...("message" in prep ? { message: prep.message } : {}) },
-      { status: prep.status },
-    );
-  }
-  const config = prep.config;
-
-  const company: Record<string, unknown> = {
-    ruc: config.ruc,
-    razonSocial: config.razonSocial ?? config.ruc,
-    address: {
-      ubigueo: "150101",
-      codigoPais: "PE",
-      departamento: "LIMA",
-      provincia: "LIMA",
-      distrito: "LIMA",
-      urbanizacion: "-",
-      direccion: config.razonSocial ?? "SIN DIRECCION",
-    },
-  };
-  if (config.razonSocial) company.nombreComercial = config.razonSocial;
 
   const serieNota = `${row.serie.charAt(0)}N${row.serie.slice(-2)}`;
   const [maxCorr] = await db
@@ -202,7 +308,6 @@ export async function POST(
     clienteNumero = doc;
   }
 
-  const numeroOriginal = `${row.serie}-${row.correlativo}`;
   const numeroNota = `${serieNota}-${corrNota}`;
 
   const [nota] = await db
@@ -410,14 +515,33 @@ export async function GET(
   const code = typeof res.body.code === "string" ? res.body.code : res.body.code === 0 ? "0" : null;
   const cdr = (res.body.cdrResponse ?? {}) as Record<string, unknown>;
   const cdrCode = typeof cdr.code === "string" ? cdr.code : null;
+  const cdrEncontrado = code === "0";
+  const cdrCodeNum = cdrCode === null ? Number.NaN : Number(cdrCode);
   const aceptada =
-    code === "0" ||
-    (cdrCode !== null && (cdrCode === "0" || Number(cdrCode) >= 4000));
+    cdrEncontrado &&
+    (cdrCode === null || cdrCode === "0" || (Number.isFinite(cdrCodeNum) && cdrCodeNum >= 4000));
 
   if (aceptada) {
+    const cdrZipBase64 = typeof res.body.cdrZip === "string" ? res.body.cdrZip : null;
+    let cdrUrl: string | null = null;
+    if (cdrZipBase64) {
+      try {
+        const dir = join(attachmentsRoot(), "fiscal", g.team.id);
+        await mkdir(dir, { recursive: true });
+        const nombreCdr = `${row.serie}-${row.correlativo}-baja-cdr.zip`;
+        await writeFile(join(dir, nombreCdr), Buffer.from(cdrZipBase64, "base64"));
+        cdrUrl = `/fiscal/${g.team.id}/${nombreCdr}`;
+      } catch {
+        cdrUrl = null;
+      }
+    }
+    const updates: { sunatEstado: "baja_aceptada"; cdrUrl?: string } = {
+      sunatEstado: "baja_aceptada",
+    };
+    if (cdrUrl) updates.cdrUrl = cdrUrl;
     await db
       .update(receipts)
-      .set({ sunatEstado: "baja_aceptada" })
+      .set(updates)
       .where(and(eq(receipts.id, id), eq(receipts.tenantId, g.team.id)));
     void logAuditSesion({
       tenantId: g.team.id,
@@ -427,6 +551,10 @@ export async function GET(
       payload: { resultado: "aceptada", ticket: row.bajaTicket },
     });
     return NextResponse.json({ ok: true, estado: "baja_aceptada" });
+  }
+
+  if (code === "98" || code === "0127") {
+    return NextResponse.json({ ok: true, estado: "en_proceso" });
   }
 
   if (code === "98") {

@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/console/empty-state";
 import { NotificacionesForm } from "./notificaciones-form";
 import { getDefaultTeam } from "@/lib/console-data";
 import { getSession } from "@/lib/auth";
-import { mailConfigurado } from "@/lib/mail";
+import { mailConfigurado, mailEstadoHumano } from "@/lib/mail";
 import { getNotificationSettings } from "@/lib/reminder-engine";
 import { Lock } from "lucide-react";
 
@@ -35,6 +35,7 @@ export default async function NotificacionesConfigPage() {
 
   const settings = await getNotificationSettings(team.id);
   const emailOperativo = mailConfigurado();
+  const estadoEmail = mailEstadoHumano();
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -50,14 +51,14 @@ export default async function NotificacionesConfigPage() {
             <p className="text-sm font-medium">Canal de email</p>
             <p className="text-xs text-muted-foreground">
               {emailOperativo
-                ? "Resend está configurado: los emails se envían al instante."
-                : "Sin RESEND_API_KEY no se pueden enviar emails. Configúrala para activar."}
+                ? `Estado: ${estadoEmail}. Los emails se envían al instante.`
+                : `${estadoEmail}. Configura RESEND_API_KEY o el modo MAIL_MODE=smtp-dev para activar el envío.`}
             </p>
           </div>
           {emailOperativo ? (
-            <Badge variant="green">Activo</Badge>
+            <Badge variant="green">{estadoEmail}</Badge>
           ) : (
-            <Badge variant="amber">Sin configurar</Badge>
+            <Badge variant="amber">{estadoEmail}</Badge>
           )}
         </CardContent>
       </Card>

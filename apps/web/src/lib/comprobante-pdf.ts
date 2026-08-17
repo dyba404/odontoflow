@@ -1,4 +1,75 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import QRCode from "qrcode";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { attachmentsRoot } from "@/lib/attachments";
+
+const TIPO_DOC_QR: Record<string, string> = {
+  boleta: "03",
+  factura: "01",
+};
+
+export function logoComprobantePath(tenantId: string): string {
+  return join(attachmentsRoot(), "fiscal", tenantId, "logo.png");
+}
+
+export async function leerLogoComprobante(tenantId: string): Promise<Uint8Array | null> {
+  try {
+    const buf = await readFile(logoComprobantePath(tenantId));
+    return new Uint8Array(buf);
+  } catch {
+    return null;
+  }
+}
+
+export function qrSunatContenido(opts: {
+  tipo: string;
+  ruc: string;
+  serie: string;
+  numero: string;
+  igv: number;
+  total: number;
+  emision: Date | string;
+  clienteTipo: string;
+  clienteNumero: string;
+}): string {
+  const d = typeof opts.emision === "string" ? new Date(opts.emision) : opts.emision;
+  const p: Record<string, string> = {};
+  for (const q of new Intl.DateTimeFormat("es-PE", {
+    timeZone: "America/Lima",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d)) {
+    p[q.type] = q.value;
+  }
+  const fecha = `${p.year}-${p.month}-${p.day}`;
+  return [
+    opts.ruc,
+    TIPO_DOC_QR[opts.tipo] ?? "03",
+    opts.serie,
+    opts.numero,
+    opts.igv.toFixed(2),
+    opts.total.toFixed(2),
+    fecha,
+    opts.clienteTipo,
+    opts.clienteNumero,
+  ].join("|") + "|";
+}
+
+export async function generarQrPng(contenido: string): Promise<Uint8Array | null> {
+  try {
+    const buf = await QRCode.toBuffer(contenido, {
+      type: "png",
+      width: 240,
+      margin: 2,
+      errorCorrectionLevel: "Q",
+    });
+    return new Uint8Array(buf);
+  } catch {
+    return null;
+  }
+}
 
 export interface ComprobantePdfDatos {
   tipo: string;
@@ -19,6 +90,9 @@ export interface ComprobantePdfDatos {
   bajaMotivo: string | null;
   teamName: string;
   timezone: string;
+  qrPng: Uint8Array | null;
+  qrContenido: string | null;
+  logoPng: Uint8Array | null;
 }
 
 const TIPO_TITULO: Record<string, string> = {
@@ -78,8 +152,16 @@ export async function generarPdfComprobante(d: ComprobantePdfDatos): Promise<Uin
   const esAnulacion = d.sunatEstado === "baja_aceptada" || esNota;
 
   page.drawRectangle({ x: 0, y: 790, width: 595, height: 52, color: teal });
-  page.drawText(d.teamName, { x: 48, y: 814, size: 16, font: fontBold, color: rgb(1, 1, 1) });
-  page.drawText("Odontoflow · comprobante electrónico", { x: 48, y: 798, size: 9, font, color: rgb(0.9, 1, 0.98) });
+  let textoX = 48;
+  const logoImg = d.logoPng ? await pdf.embedPng(d.logoPng).catch(() => null) : null;
+  if (logoImg) {
+    const h = 40;
+    const w = h * (logoImg.width / logoImg.height);
+    page.drawImage(logoImg, { x: 12, y: 796, width: Math.min(w, 110), height: h });
+    textoX = Math.min(12 + w, 122) + 14;
+  }
+  page.drawText(d.teamName, { x: textoX, y: 814, size: 16, font: fontBold, color: rgb(1, 1, 1) });
+  page.drawText("Odontoflow · comprobante electrónico", { x: textoX, y: 798, size: 9, font, color: rgb(0.9, 1, 0.98) });
   page.drawText(titulo, { x: 420, y: 814, size: 11, font: fontBold, color: rgb(1, 1, 1) });
   page.drawText(numero, { x: 420, y: 798, size: 10, font, color: rgb(1, 1, 1) });
 
@@ -152,6 +234,29 @@ export async function generarPdfComprobante(d: ComprobantePdfDatos): Promise<Uin
   if (d.referencia) linea(`Referencia: ${d.referencia}`, { color: gris });
   if (d.sunatEstado === "baja_aceptada" && d.bajaMotivo && !esNota) {
     linea(`Dado de baja por: ${d.bajaMotivo}`, { color: gris });
+  }
+
+  const qrImg = d.qrPng ? await pdf.embedPng(d.qrPng).catch(() => null) : null;
+  if (qrImg) {
+    const lado = 90;
+    page.drawImage(qrImg, { x: 457, y: 95, width: lado, height: lado });
+    page.drawText("Escanea para verificar en SUNAT", {
+      x: 457 + lado - font.widthOfTextAtSize("Escanea para verificar en SUNAT", 7),
+      y: 83,
+      size: 7,
+      font,
+      color: gris,
+    });
+    if (d.qrContenido) {
+      page.drawText(d.qrContenido.slice(0, 130), {
+        x: 48,
+        y: 150,
+        size: 6.5,
+        font,
+        color: gris,
+        maxWidth: 380,
+      });
+    }
   }
 
   page.drawText(

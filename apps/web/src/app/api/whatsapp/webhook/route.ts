@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { and, eq, inArray, sql } from "drizzle-orm";
-import { getDb, patients, whatsappSettings } from "@odontoflow/db";
+import { and, eq, inArray, isNotNull } from "drizzle-orm";
+import { getDb, patients, whatsappMessages, whatsappSettings } from "@odontoflow/db";
 import { logAudit } from "@/lib/audit";
 import { normalizarCelularE164 } from "@/lib/whatsapp";
 import { procesarMensajeEntrante } from "@/lib/whatsapp-entrante";
@@ -31,7 +31,11 @@ export async function GET(req: Request) {
         .update(whatsappSettings)
         .set({ webhookVerifiedAt: new Date(), updatedAt: new Date() })
         .where(
-          and(eq(whatsappSettings.activo, true), sql`${whatsappSettings.webhookVerifiedAt} IS NULL`),
+          and(
+            eq(whatsappSettings.activo, true),
+            isNotNull(whatsappSettings.phoneNumberId),
+            isNotNull(whatsappSettings.tokenEnc),
+          ),
         );
     } catch {
       void 0;
@@ -77,6 +81,19 @@ export async function POST(req: Request) {
                   .limit(1)
               : [];
           if (paciente) {
+            const cuerpo = (msg.text?.body ?? "").slice(0, 1000);
+            await db
+              .insert(whatsappMessages)
+              .values({
+                tenantId: paciente.tenantId,
+                waId,
+                direction: "in",
+                patientId: paciente.id,
+                phoneNumber: waId,
+                body: cuerpo || null,
+                estado: "recibido",
+              })
+              .catch(() => {});
             void logAudit({
               tenantId: paciente.tenantId,
               accion: "whatsapp.mensaje_entrante",
