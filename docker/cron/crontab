@@ -19,3 +19,6 @@ CRON_TZ=America/Lima
 10 8 * * * curl -sf -m 300 -X POST -H "Authorization: Bearer $CRON_SECRET" http://web:3111/api/cron/recall
 # seguimiento de presupuestos/cuotas
 20 8 * * * curl -sf -m 300 -X POST -H "Authorization: Bearer $CRON_SECRET" http://web:3111/api/cron/seguimiento
+
+# Respaldo diario de la base de datos (pg_dump → /backups, retención 30 días).
+40 3 * * * /etc/supercronic/backup-db.sh
