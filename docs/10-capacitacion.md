@@ -67,7 +67,7 @@ Consejos de grabación:
 
 - Graba sobre el seed demo (`npm run db:seed`): ya hay citas hoy, pagos y pacientes.
 - Mantén el cursor visible y muévelo despacio; no hagas scroll rápido.
-- Si algo falla, repite la toma: el seed es idempotente, puedes re-correlo.
+- Si algo falla, repite la toma: el seed es idempotente, puedes volver a correrlo.
 - Sube a YouTube (no listado) o Loom; incrusta el link en `/consola/guia`
   cuando exista (editar `lib/guias.ts`).
 
