@@ -548,8 +548,25 @@ export function WizardReserva({ clinicaSlug, clinicaName, servicios, doctores }:
                   className="mt-0.5 size-4 shrink-0 accent-primary"
                 />
                 <span className="text-xs text-muted-foreground">
-                  Acepto que mis datos se usen para gestionar la cita (Ley 29733 — Protección de
-                  datos personales).
+                  Acepto que mis datos se usen para gestionar la cita según la{" "}
+                  <a
+                    href={`/${clinicaSlug}/privacidad`}
+                    target="_blank"
+                    rel="noopener"
+                    className="text-primary underline"
+                  >
+                    política de privacidad
+                  </a>{" "}
+                  y los{" "}
+                  <a
+                    href={`/${clinicaSlug}/terminos`}
+                    target="_blank"
+                    rel="noopener"
+                    className="text-primary underline"
+                  >
+                    términos de uso
+                  </a>{" "}
+                  (Ley 29733 — Protección de datos personales).
                 </span>
               </label>
             </div>

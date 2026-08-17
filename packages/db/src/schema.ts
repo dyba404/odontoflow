@@ -1052,3 +1052,25 @@ export const dataRequests = pgTable(
   },
   (t) => [index("data_requests_tenant_idx").on(t.tenantId)],
 );
+
+// ---------------------------------------------------------------------------
+// Cumplimiento legal por tenant (Ley 29733). Solo el dueño lo edita.
+// Los textos null se rellenan con las plantillas de lib/legal.ts usando los
+// datos del propio registro (razón social, RUC, etc.) como placeholders.
+// ---------------------------------------------------------------------------
+
+export const legalSettings = pgTable("legal_settings", {
+  tenantId: uuid("tenant_id")
+    .primaryKey()
+    .references(() => teams.id, { onDelete: "cascade" }),
+  razonSocial: text("razon_social"),
+  ruc: text("ruc"),
+  direccionLegal: text("direccion_legal"),
+  emailContactoDatos: text("email_contacto_datos"),
+  telefonoContactoDatos: text("telefono_contacto_datos"),
+  politicaPrivacidad: text("politica_privacidad"),
+  terminosUso: text("terminos_uso"),
+  textoConsentimiento: text("texto_consentimiento"),
+  updatedBy: uuid("updated_by").references(() => users.id),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

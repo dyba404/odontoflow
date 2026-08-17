@@ -42,6 +42,7 @@ const RUTAS: Ruta[] = [
   { ruta: "/consola/sucursales", titulo: "Sucursales", permitidos: ["owner"] }, // branches.manage
   { ruta: "/consola/auditoria", titulo: "Auditoría", permitidos: ["owner"] }, // reports.view_all
   { ruta: "/consola/arco", titulo: "ARCO (Ley 29733)", permitidos: ["owner"] }, // reports.view_all
+  { ruta: "/consola/config/legal", titulo: "Cumplimiento legal", permitidos: ["owner"] }, // services.manage
 ];
 
 for (const rol of ROLES) {

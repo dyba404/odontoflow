@@ -494,6 +494,17 @@ export function PortalPaciente({ token }: { token: string }) {
         <p className="mt-10 text-center text-xs text-muted-foreground">
           Enlace personal y seguro · válido por 30 días
         </p>
+        {data.clinica?.slug ? (
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            <a href={`/${data.clinica.slug}/privacidad`} className="underline">
+              Política de privacidad
+            </a>
+            {" · "}
+            <a href={`/${data.clinica.slug}/terminos`} className="underline">
+              Términos de uso
+            </a>
+          </p>
+        ) : null}
       </div>
     </main>
   );

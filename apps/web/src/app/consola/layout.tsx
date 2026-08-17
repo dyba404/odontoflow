@@ -138,6 +138,7 @@ function buildNav({
       : null,
     can("reports.view_all") ? { href: "/consola/auditoria", label: "Auditoría" } : null,
     can("reports.view_all") ? { href: "/consola/arco", label: "ARCO (Ley 29733)" } : null,
+    can("services.manage") ? { href: "/consola/config/legal", label: "Cumplimiento legal" } : null,
   ].filter((i): i is NonNullable<typeof i> => i !== null);
 
   const colapsable = (hijos: { href: string; label: string }[], icon: string, label: string) => {
