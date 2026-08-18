@@ -132,6 +132,9 @@ function buildDb() {
   const options: DbOptions = {
     max: 4,
     idle_timeout: 20,
+    // Forzar reconexion periodica: WSL se suspende por inactividad y deja
+    // sockets muertos; con max_lifetime el pool los renueva solo.
+    max_lifetime: 300,
     connect_timeout: 15,
     onnotice: () => {},
     socket: () => dbSocketWithRevive(),
