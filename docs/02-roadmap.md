@@ -147,6 +147,21 @@ Salida: la app puede instalarse en la pantalla de inicio de Android e iPhone com
 
 ---
 
+## v1.5.1 — Estabilidad: fix navegacion SPA (service worker), server standalone y pool DB
+
+Bug reportado: en Pacientes, la primera ficha cargaba normal, pero al volver atras y pulsar en otro paciente (u otro modulo) la navegacion no parecia funcionar; abrir en otra pestana si cargaba. Causa raiz: `public/sw.js` cacheaba el HTML de cada pagina visitada (`cache.put` en navigate), y ante fallos servia HTML viejo que referencia chunks JS de builds anteriores → pantalla sin contenido. Una pestana nueva no tenia ese cliente SW activo, por eso funcionaba.
+
+- [x] Fix raiz `sw.js` (`of-cache-v2`): las navegaciones van siempre de red (nunca se cachea HTML de pagina); el unico fallback offline es `offline.html`; assets inmutables (`/_next/static/`, iconos) siguen cache-first; al activarse borra las caches antiguas, asi los clientes existentes migran solos al SW nuevo
+- [x] `scripts/serve-console.ps1`: ya no usa `next start` (Next 15 lo rechaza con `output: "standalone"`; era el aviso permanente en `next-err.log`). Ahora arranca el server standalone oficial (`node .next/standalone/apps/web/server.js`, misma disposicion que el Dockerfile de produccion), copia `public/` y `.next/static/`, inyecta `apps/web/.env.local` (el server standalone no lo carga solo), apunta `ATTACHMENTS_DIR` al directorio real y solo mata instancias previas del propio server (antes mataba todos los nodos y podia tumbar scripts en curso)
+- [x] `packages/db`: `max_lifetime: 300s` en el pool de postgres-js — fuerza reconexion periodica; cubre la ventana de sockets muertos cuando WSL suspende la VM (la otra causa de "navegacion que parecia no cargar": la primera query tras despertar fallaba y el fallback del SW lo enmascaraba)
+- [x] UX: skeletons de carga en `/consola/pacientes` y `/consola/pacientes/[id]` (`PacientesSkeleton`, `FichaPacienteSkeleton`) — la navegacion SPA ahora muestra feedback inmediato en lugar de parecer congelada
+- [x] Regresion E2E `e2e/navegacion.spec.ts` (antes la E2E solo usaba `page.goto` y este patron iba por debajo del radar): listado → click ficha → atras → click otra ficha (donde vivia el bug) → ida/vuelta repetida → nav SPA entre modulos; ademas verifica que el SW instalado no guarda HTML en cache
+- Verificado: typecheck + lint (0 warnings) + build verdes; E2E **13/13** contra el build final (incluye los 2 nuevos de navegacion SPA); auditoria tactil 0 problemas; health con checks db/correo/lycet OK; `next-err.log` limpio
+
+Salida: la navegacion interna vuelve a ser confiable en cualquier modulo; el servidor local corre en el modo soportado por Next y con las mismas disposiciones que produccion; el pool se recupera solo de la suspension de WSL; y el patron "click → atras → click" queda cubierto por regresion automatica.
+
+---
+
 ## Backlog post-M5 → incluido en 1.0
 
 Topología detallada por módulo en `docs/05-modulos-topologia.md`.
