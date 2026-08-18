@@ -14,6 +14,8 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test -w @odontoflow/core",
     "test:e2e": "npm run test:e2e -w @odontoflow/web",
+    "test:e2e:vivo": "npm run test:e2e:vivo -w @odontoflow/web",
+    "test:e2e:vivo-serie": "npm run test:e2e:vivo-serie -w @odontoflow/web",
     "of:up": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/of.ps1 up",
     "of:down": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/of.ps1 down",
     "of:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/of.ps1 status",

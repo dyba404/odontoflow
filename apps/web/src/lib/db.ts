@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, not } from "drizzle-orm";
 import { generateSlots, parseTimeToMin } from "@odontoflow/core";
 import {
   getDb,
@@ -118,7 +118,12 @@ async function doctorBusy(
 
 export async function computeSlots(
   tenantId: string,
-  opts: { serviceId: string; date: string; doctorMembershipId?: string | null },
+  opts: {
+    serviceId: string;
+    date: string;
+    doctorMembershipId?: string | null;
+    excluirCitaId?: string;
+  },
 ): Promise<SlotsResult | null> {
   const db = getDb();
 
@@ -166,6 +171,41 @@ export async function computeSlots(
     return { date: opts.date, slots: [] };
   }
 
+  // Ocupación del "bucket sin asignar": las citas sin doctor (y los bloqueos
+  // sin doctor) ocupan la franja para FUTURAS citas sin asignar. Sin esto se
+  // pueden apilar citas "Sin doctor asignado" en el mismo horario: la API de
+  // creación las acepta todas y el día se llena de citas fantasma. (Las citas
+  // sin asignar NO bloquean la agenda de un doctor puntual.)
+  let noDoctorBusy: Array<{ startMin: number; endMin: number }> = [];
+  if (!opts.doctorMembershipId) {
+    const sinDoctorAppts = await db
+      .select({ horaIni: appointments.horaIni, horaFin: appointments.horaFin })
+      .from(appointments)
+      .where(
+        and(
+          eq(appointments.tenantId, tenantId),
+          eq(appointments.fecha, opts.date),
+          isNull(appointments.doctorId),
+          inArray(appointments.estado, [...OCCUPYING_STATUSES]),
+          opts.excluirCitaId ? not(eq(appointments.id, opts.excluirCitaId)) : undefined,
+        ),
+      );
+    const bloqueosSinDoctor = await db
+      .select({ horaIni: blockedSlots.horaIni, horaFin: blockedSlots.horaFin })
+      .from(blockedSlots)
+      .where(
+        and(
+          eq(blockedSlots.tenantId, tenantId),
+          eq(blockedSlots.fecha, opts.date),
+          isNull(blockedSlots.doctorId),
+        ),
+      );
+    noDoctorBusy = [...sinDoctorAppts, ...bloqueosSinDoctor].map((b) => ({
+      startMin: parseTimeToMin(b.horaIni),
+      endMin: parseTimeToMin(b.horaFin),
+    }));
+  }
+
   const windows = schedules.map((s) => ({
     dayOfWeek: s.dayOfWeek,
     startMin: parseTimeToMin(s.horaIni),
@@ -173,7 +213,7 @@ export async function computeSlots(
   }));
 
   const seen = new Set<string>();
-  const out: SlotInfo[] = [];
+  let out: SlotInfo[] = [];
 
   for (const docId of doctorIds) {
     const busy = await doctorBusy(tenantId, docId, opts.date);
@@ -194,6 +234,16 @@ export async function computeSlots(
         out.push({ startTime: s.startTime, endTime: s.endTime });
       }
     }
+  }
+
+  // En modo "sin asignar", descarta las franjas ya ocupadas por citas sin
+  // doctor: solo el primero gana.
+  if (noDoctorBusy.length > 0) {
+    out = out.filter((s) => {
+      const ini = parseTimeToMin(s.startTime);
+      const fin = parseTimeToMin(s.endTime);
+      return !noDoctorBusy.some((b) => ini < b.endMin && b.startMin < fin);
+    });
   }
 
   out.sort((a, b) => a.startTime.localeCompare(b.startTime));

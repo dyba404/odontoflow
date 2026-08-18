@@ -8,7 +8,9 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "next lint --dir src",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:vivo": "playwright test --config playwright.vivo.config.ts --workers=3 --project vivo --project movil-vivo",
+    "test:e2e:vivo-serie": "playwright test --config playwright.vivo.config.ts --project vivo-serie"
   },
   "dependencies": {
     "@odontoflow/core": "*",

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { getDb, appointments, patients, services, memberships, users } from "@odontoflow/db";
 import { guardStaff, guardError, hoyTenant } from "@/lib/auth";
+import { computeSlots } from "@/lib/db";
 import { logAuditSesion } from "@/lib/audit";
 import { sucursalActiva } from "@/lib/branch";
 import { horaFinDesde, horarioOcupado, normalizarHora } from "./solape";
@@ -136,6 +137,22 @@ export async function POST(req: Request) {
       doctorId: doctorMembershipId,
     });
     if (ocupado) {
+      return NextResponse.json({ error: "horario_ocupado" }, { status: 409 });
+    }
+  } else {
+    // Cita sin doctor: el "bucket sin asignar" ocupa la franja. La lista de
+    // horarios del diálogo ya la descuenta; aquí se valida de nuevo contra el
+    // estado real (lista stale, doble envío). Nota: queda una ventana de
+    // carrera entre este check y el INSERT (sin constraint en BD para citas
+    // sin doctor); la lista de la UI y este check la hacen poco probable.
+    const nuevosSlots = await computeSlots(g.team.id, {
+      serviceId: service.id,
+      date: fecha,
+      doctorMembershipId: null,
+    });
+    const libre =
+      nuevosSlots?.slots.some((s) => normalizarHora(s.startTime) === horaIni) ?? false;
+    if (!libre) {
       return NextResponse.json({ error: "horario_ocupado" }, { status: 409 });
     }
   }

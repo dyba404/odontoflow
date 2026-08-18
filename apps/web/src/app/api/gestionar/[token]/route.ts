@@ -137,9 +137,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
       serviceId: ctx.appointment.serviceId,
       date: fecha,
       doctorMembershipId: doctorId ?? null,
+      excluirCitaId: ctx.appointment.id,
     });
     const libre =
-      (doctorId ? true : nuevosSlots?.slots.some((s) => s.startTime === horaIni)) ?? false;
+      (doctorId
+        ? true
+        : nuevosSlots?.slots.some((s) => normalizarHora(s.startTime) === horaIni)) ?? false;
     if (!doctorId && !libre) {
       return NextResponse.json({ error: "horario_ocupado" }, { status: 409 });
     }

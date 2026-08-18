@@ -162,6 +162,22 @@ Salida: la navegacion interna vuelve a ser confiable en cualquier modulo; el ser
 
 ---
 
+## v1.6.0 — Suite E2E de operación en vivo (saturación real, resiliencia y rendimiento)
+
+Nueva suite `playwright.vivo.config.ts` (`npm run test:e2e:vivo` y `test:e2e:vivo-serie`) que opera el consultorio demo de verdad, todo por UI, con datos únicos por corrida y sin teardown:
+
+- [x] 4 specs de operación en paralelo (3 workers + móvil Pixel 7): alta de clínica completa (signup → checklist primeros pasos → slug duplicado 409 → página pública del slug nuevo), día de operación del owner (paciente → cita hoy → sala de espera → ficha/nota/odontograma → pago → comprobante → cierre) en desktop Y móvil, roles del equipo (RBAC real por UI: recepción/doctor/asistente con sus permisos y ausencias), y ciclo completo del paciente público (reserva → confirmación → correo Mailpit → reprogramar → cancelar)
+- [x] Serie de resiliencia (un worker, va sola): offline real con service worker (pantalla sin conexión + recuperación), contienda de slots entre dos staff con lista stale (solo el primero gana), doble-click en "Crear paciente" (sin duplicados), corte real de Postgres con `docker pause` (skeleton de ficha, no pantalla blanca, recuperación al reanudar) y rate limit de login quemado (429 → la UI avisa amablemente)
+- [x] Barrido de rendimiento: 16 rutas principales (públicas + consola) contra el server caliente; falla si una tarda >10s, queda en blanco (<40 chars) o lanza errores de página. Mejor: /consola en 73ms; peor: /consola/guia 47ms
+- [x] **Bug real #1 (reserva pública):** `/api/gestionar/[token]` comparaba `startTime` sin normalizar ("08:00" vs "08:00:00") → reprogramación válida rechazada con "Ese horario acaba de ocuparse". Fix: `normalizarHora` en ambos lados
+- [x] **Bug real #2 (doble reserva):** las citas "Sin doctor asignado" se podían apilar en el mismo horario sin límite: `POST /api/citas` solo validaba ocupación cuando había doctor, y el constraint de BD `appointments_no_overlap` excluye `doctor_id IS NULL`. Demostrado por la contienda E2E (dos citas en el mismo slot, 135ms aparte). Fix: `computeSlots` descuenta citas y bloqueos sin doctor del "bucket sin asignar" (sin bloquear la agenda de doctores puntuales) + la ruta de creación revalida contra `computeSlots` para citas sin doctor (mismo criterio que gestionar); `gestionar` excluye la propia cita
+- [x] Fixes de spec descubiertos en el camino: el banner PWA de instalación (bottom sheet en pointer:coarse) tapaba el kanban móvil → se descarta una vez por sesión; el botón "Emitir" del comprobante se scopea al form del diálogo (hay uno por fila histórica); la merma de inventario usa el ítem con stock (el primero está en 0); el error esperado del router Next al perder RSC offline se filtra como ruido; `/dental` no es ruta (solo `/dental/reserva`); el option de paciente nuevo se selecciona por value `__nuevo__`
+- [x] Verificado: typecheck + build verdes; **9/9** (operación, 3 workers + móvil) y **6/6** (serie) contra el build final; server standalone reiniciado con los fixes (health db/correo/lycet OK)
+
+Salida: la suite cubre con presión real (paralelismo, cortes, offline, race conditions y rate limits) los flujos que un consultorio opera a diario, y destapó dos bugs reales de disponibilidad (falso rechazo de reprogramación pública y doble reserva de citas sin asignar) ya corregidos en el código.
+
+---
+
 ## Backlog post-M5 → incluido en 1.0
 
 Topología detallada por módulo en `docs/05-modulos-topologia.md`.
