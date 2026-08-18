@@ -1,10 +1,10 @@
-const CACHE_NAME = "of-cache-v1";
+const CACHE_NAME = "of-cache-v2";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) => cache.addAll(["/", "/offline.html"]))
+      .then((cache) => cache.addAll(["/offline.html"]))
       .then(() => self.skipWaiting())
   );
 });
@@ -26,21 +26,17 @@ self.addEventListener("fetch", (event) => {
 
   if (url.origin !== self.location.origin) return;
 
+  // Navegaciones: siempre desde la red. Nunca cacheamos HTML: un HTML
+  // cacheado referencia chunks JS de su build y sirve pantallas rotas
+  // tras rebuilds o caidas del servidor. El unico fallback es offline.html.
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-          return response;
-        })
-        .catch(() =>
-          caches.match(request).then((cached) => cached || caches.match("/offline.html"))
-        )
+      fetch(request).catch(() => caches.match("/offline.html"))
     );
     return;
   }
 
+  // Assets inmutables (hash en el nombre) e iconos: cache-first.
   if (url.pathname.includes("/_next/static/") || url.pathname.includes("/icons/")) {
     event.respondWith(
       caches.match(request).then(
