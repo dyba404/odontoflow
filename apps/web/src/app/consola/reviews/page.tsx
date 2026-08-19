@@ -21,6 +21,8 @@ import { MarcarRespondidaButton, NuevaSolicitudDialog } from "@/app/consola/revi
 import { ConfigDialog } from "@/app/consola/reviews/config-dialog";
 import { getDefaultTeam } from "@/lib/console-data";
 import { getSession, hoyTenant } from "@/lib/auth";
+import { gatePlan } from "@/lib/plans";
+import { PlanGate } from "@/components/console/plan-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +48,19 @@ export default async function ReviewsPage() {
             description="Solo los roles Dueña y Recepción pueden enviar solicitudes de reseña."
           />
         </Card>
+      </div>
+    );
+  }
+
+  const planCheck = await gatePlan(team.id, "recordatorios");
+  if (!planCheck.ok) {
+    return (
+      <div className="mx-auto max-w-6xl space-y-6">
+        <PageHeader
+          title="Reseñas de Google"
+          description="Pide reseñas a tus pacientes atendidos y mide la respuesta."
+        />
+        <PlanGate feature="recordatorios" requerido={planCheck.requerido} />
       </div>
     );
   }

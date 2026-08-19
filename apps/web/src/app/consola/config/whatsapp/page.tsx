@@ -10,6 +10,8 @@ import { EmptyState } from "@/components/console/empty-state";
 import { WhatsAppForm } from "./whatsapp-form";
 import { getDefaultTeam } from "@/lib/console-data";
 import { getSession } from "@/lib/auth";
+import { gatePlan } from "@/lib/plans";
+import { PlanGate } from "@/components/console/plan-gate";
 import { masterKeyConfigurada } from "@/lib/crypto";
 import { appBaseUrl } from "@/lib/mail";
 
@@ -33,6 +35,19 @@ export default async function WhatsAppConfigPage() {
             description="Solo el rol Dueño/a puede editar la configuración de WhatsApp."
           />
         </Card>
+      </div>
+    );
+  }
+
+  const planCheck = await gatePlan(team.id, "recordatorios");
+  if (!planCheck.ok) {
+    return (
+      <div className="mx-auto max-w-6xl space-y-6">
+        <PageHeader
+          title="WhatsApp Cloud API"
+          description="Conecta tu número de WhatsApp Business (Meta) para enviar recordatorios."
+        />
+        <PlanGate feature="recordatorios" requerido={planCheck.requerido} />
       </div>
     );
   }

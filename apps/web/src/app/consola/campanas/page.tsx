@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/table";
 import { EjecutarCampana, NuevaCampanaDialog } from "@/app/consola/campanas/dialogs";
 import { getSession } from "@/lib/auth";
+import { gatePlan } from "@/lib/plans";
+import { PlanGate } from "@/components/console/plan-gate";
 import { getDb, campaigns } from "@odontoflow/db";
 import { desc, eq } from "drizzle-orm";
 
@@ -64,6 +66,19 @@ export default async function CampanasPage() {
             description="Solo los roles Dueño/a y Recepción pueden crear y ejecutar campañas."
           />
         </Card>
+      </div>
+    );
+  }
+
+  const planCheck = await gatePlan(session.teamId, "recordatorios");
+  if (!planCheck.ok) {
+    return (
+      <div className="mx-auto max-w-6xl space-y-6">
+        <PageHeader
+          title="Campañas"
+          description="Envía felicitaciones de cumpleaños y campañas de reactivación por email."
+        />
+        <PlanGate feature="recordatorios" requerido={planCheck.requerido} />
       </div>
     );
   }

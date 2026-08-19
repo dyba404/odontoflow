@@ -10,6 +10,7 @@ import {
 } from "@odontoflow/db";
 import { plantillaRecordatorio24h, fechaLargaEs } from "@/lib/notify";
 import { enviarRecordatorio, getNotificationSettings } from "@/lib/reminder-engine";
+import { planDeTenantSinCache, planEsProOMayor } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,11 @@ export async function POST(req: Request) {
   let reintentos = 0;
 
   for (const team of clinics) {
+    const plan = await planDeTenantSinCache(team.id);
+    if (!planEsProOMayor(plan)) {
+      omitidos++;
+      continue;
+    }
     const settings = await getNotificationSettings(team.id);
     if (settings && !settings.recordatorio24h) continue;
 
@@ -118,6 +124,8 @@ export async function POST(req: Request) {
 
   const desde = new Date(Date.now() - 48 * 3600_000);
   for (const team of clinics) {
+    const plan = await planDeTenantSinCache(team.id);
+    if (!planEsProOMayor(plan)) continue;
     const fallidos = await db
       .select({
         id: reminders.id,

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb, campaigns, patients } from "@odontoflow/db";
 import { guardStaff, guardError } from "@/lib/auth";
+import { gatePlan, respuestaPlanInsuficiente } from "@/lib/plans";
 import { logAuditSesion } from "@/lib/audit";
 import { pacientesDormidos } from "@/lib/console-data";
 
@@ -41,6 +42,8 @@ async function audienciaReactivacion(teamId: string): Promise<Audiencia> {
 export async function GET() {
   const g = await guardStaff("campaigns.manage");
   if (!g.ok) return NextResponse.json({ error: guardError(g) }, { status: g.status });
+  const planCheck = await gatePlan(g.team.id, "recordatorios");
+  if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
 
   const rows = await getDb()
     .select()
@@ -54,6 +57,8 @@ export async function GET() {
 export async function POST(req: Request) {
   const g = await guardStaff("campaigns.manage");
   if (!g.ok) return NextResponse.json({ error: guardError(g) }, { status: g.status });
+  const planCheck = await gatePlan(g.team.id, "recordatorios");
+  if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
 
   let body: { tipo?: string; titulo?: string; mensaje?: string; canal?: string };
   try {

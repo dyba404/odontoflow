@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, desc, eq } from "drizzle-orm";
 import { getDb, patients, patientCoverages, insurers } from "@odontoflow/db";
 import { guardStaff, guardError } from "@/lib/auth";
+import { gatePlan, respuestaPlanInsuficiente } from "@/lib/plans";
 import { logAuditSesion } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,8 @@ export async function GET(
   const { id } = await params;
   const g = await guardStaff("records.view");
   if (!g.ok) return NextResponse.json({ error: guardError(g) }, { status: g.status });
+  const planCheck = await gatePlan(g.team.id, "ficha_avanzada");
+  if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
 
   const db = getDb();
   const [paciente] = await db
@@ -58,6 +61,8 @@ export async function POST(
   const { id } = await params;
   const g = await guardStaff("records.edit");
   if (!g.ok) return NextResponse.json({ error: guardError(g) }, { status: g.status });
+  const planCheck = await gatePlan(g.team.id, "ficha_avanzada");
+  if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
 
   let body: {
     insurerId?: string;

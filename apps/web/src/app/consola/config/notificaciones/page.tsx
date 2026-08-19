@@ -10,6 +10,8 @@ import { getDefaultTeam } from "@/lib/console-data";
 import { getSession } from "@/lib/auth";
 import { mailConfigurado, mailEstadoHumano } from "@/lib/mail";
 import { getNotificationSettings } from "@/lib/reminder-engine";
+import { gatePlan } from "@/lib/plans";
+import { PlanGate } from "@/components/console/plan-gate";
 import { Lock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +31,19 @@ export default async function NotificacionesConfigPage() {
             description="Solo el rol Dueño/a puede editar esta configuración."
           />
         </Card>
+      </div>
+    );
+  }
+
+  const planCheck = await gatePlan(team.id, "recordatorios");
+  if (!planCheck.ok) {
+    return (
+      <div className="mx-auto max-w-6xl space-y-6">
+        <PageHeader
+          title="Notificaciones"
+          description="Activa o desactiva los avisos automáticos que reciben los pacientes."
+        />
+        <PlanGate feature="recordatorios" requerido={planCheck.requerido} />
       </div>
     );
   }

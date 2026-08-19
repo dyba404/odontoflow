@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarClock, Camera, CreditCard, FileText, FlaskRound, Mail, Phone, Receipt, Users } from "lucide-react";
+import { CalendarClock, Camera, CreditCard, FileText, FlaskRound, Mail, Phone, Receipt, Users, Sparkles } from "lucide-react";
 import { ShieldCheck } from "lucide-react";
 import { hasPermission } from "@odontoflow/core";
 import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
@@ -29,6 +29,7 @@ import {
   consentimientosDePaciente,
 } from "@/lib/console-data";
 import { getSession } from "@/lib/auth";
+import { planDeTenant, planEsProOMayor } from "@/lib/plans";
 import { fmtPEN, fmtFechaRelativa } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -111,6 +112,7 @@ export default async function FichaPacientePage({
     registrosPaciente(ficha.paciente.id),
   ]);
   const canEdit = hasPermission(session.role, "records.edit");
+  const pro = planEsProOMayor(await planDeTenant(team.id));
 
   const [adjuntos, consentimientos] = await Promise.all([
     adjuntosDePaciente(team.id, id),
@@ -345,6 +347,7 @@ export default async function FichaPacientePage({
         </Card>
       </div>
 
+      {pro ? (
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="p-5 pb-4">
@@ -411,7 +414,11 @@ export default async function FichaPacientePage({
           </CardContent>
         </Card>
       </div>
+      ) : (
+        <ProHint titulo="Laboratorio, fotos y coberturas" />
+      )}
 
+      {pro ? (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 p-5 pb-4">
           <CardTitle className="flex items-center gap-2 text-sm font-medium">
@@ -491,6 +498,9 @@ export default async function FichaPacientePage({
           ) : null}
         </CardContent>
       </Card>
+      ) : (
+        <ProHint titulo="Documentos y consentimientos" />
+      )}
 
       <Card>
         <CardHeader className="p-5 pb-4">
@@ -556,5 +566,28 @@ export default async function FichaPacientePage({
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function ProHint({ titulo }: { titulo: string }) {
+  return (
+    <Card>
+      <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
+        <span className="flex size-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+          <Sparkles className="size-5" />
+        </span>
+        <p className="text-sm font-semibold">{titulo} es parte del plan Pro</p>
+        <p className="max-w-md text-[13px] text-muted-foreground">
+          Tu plan Free incluye la ficha básica: odontograma y notas clínicas. Actualiza a Pro por
+          Yape o Plin para desbloquear este módulo.
+        </p>
+        <Link
+          href="/consola/config/suscripcion"
+          className="inline-flex h-8 items-center rounded-md border border-input bg-card px-3 text-xs font-medium hover:bg-accent hover:text-accent-foreground"
+        >
+          Ver planes y suscripción
+        </Link>
+      </CardContent>
+    </Card>
   );
 }

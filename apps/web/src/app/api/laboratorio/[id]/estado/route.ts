@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { getDb, labOrders } from "@odontoflow/db";
 import { guardStaff, guardError } from "@/lib/auth";
+import { gatePlan, respuestaPlanInsuficiente } from "@/lib/plans";
 import { logAuditSesion } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,8 @@ export async function PATCH(
   const { id } = await params;
   const g = await guardStaff("labs.manage");
   if (!g.ok) return NextResponse.json({ error: guardError(g) }, { status: g.status });
+  const planCheck = await gatePlan(g.team.id, "ficha_avanzada");
+  if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
 
   let body: { estado?: string; motivo?: string };
   try {

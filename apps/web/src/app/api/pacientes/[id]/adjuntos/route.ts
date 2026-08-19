@@ -6,6 +6,7 @@ import { fileTypeFromBuffer } from "file-type";
 import { getDb, attachments, patients } from "@odontoflow/db";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { guardStaff, guardError } from "@/lib/auth";
+import { gatePlan, respuestaPlanInsuficiente } from "@/lib/plans";
 import { logAuditSesion } from "@/lib/audit";
 import { attachmentsRoot } from "@/lib/attachments";
 
@@ -27,6 +28,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "sin_permiso" }, { status: 403 });
     }
   }
+  const planCheck = await gatePlan(g.team.id, "ficha_avanzada");
+  if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
 
   let form: FormData;
   try {
@@ -161,6 +164,8 @@ export async function GET(
   const { id } = await params;
   const g = await guardStaff("records.view");
   if (!g.ok) return NextResponse.json({ error: guardError(g) }, { status: g.status });
+  const planCheck = await gatePlan(g.team.id, "ficha_avanzada");
+  if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
 
   const db = getDb();
   const [paciente] = await db

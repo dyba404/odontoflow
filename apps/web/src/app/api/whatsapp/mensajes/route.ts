@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import { and, count, desc, eq } from "drizzle-orm";
 import { getDb, whatsappMessages, patients } from "@odontoflow/db";
 import { guardStaff, guardError } from "@/lib/auth";
+import { gatePlan, respuestaPlanInsuficiente } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   const g = await guardStaff("patients.manage");
   if (!g.ok) return NextResponse.json({ error: guardError(g) }, { status: g.status });
+  const planCheck = await gatePlan(g.team.id, "recordatorios");
+  if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
 
   const url = new URL(req.url);
   const limitRaw = Number(url.searchParams.get("limit") ?? "50");

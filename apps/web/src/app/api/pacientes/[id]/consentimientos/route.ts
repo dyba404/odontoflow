@@ -6,6 +6,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { and, eq } from "drizzle-orm";
 import { getDb, attachments, patients, signedConsents } from "@odontoflow/db";
 import { guardStaff, guardError } from "@/lib/auth";
+import { gatePlan, respuestaPlanInsuficiente } from "@/lib/plans";
 import { logAuditSesion } from "@/lib/audit";
 import { attachmentsRoot } from "@/lib/attachments";
 import { fechaLargaEs } from "@/lib/notify";
@@ -18,6 +19,8 @@ export async function POST(
 
   const g = await guardStaff("records.edit");
   if (!g.ok) return NextResponse.json({ error: guardError(g) }, { status: g.status });
+  const planCheck = await gatePlan(g.team.id, "ficha_avanzada");
+  if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
 
   let body: {
     firmaBase64Png?: string;

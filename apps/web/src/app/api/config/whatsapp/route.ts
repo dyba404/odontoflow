@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { eq, isNotNull } from "drizzle-orm";
 import { getDb, whatsappSettings } from "@odontoflow/db";
 import { guardStaff, guardError } from "@/lib/auth";
+import { gatePlan, respuestaPlanInsuficiente } from "@/lib/plans";
 import { logAuditSesion } from "@/lib/audit";
 import { masterKeyConfigurada, cifrar } from "@/lib/crypto";
 
@@ -10,6 +11,8 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const g = await guardStaff("services.manage");
   if (!g.ok) return NextResponse.json({ error: guardError(g) }, { status: g.status });
+  const planCheck = await gatePlan(g.team.id, "recordatorios");
+  if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
 
   const [fila] = await getDb()
     .select({
@@ -33,6 +36,8 @@ export async function GET() {
 export async function PUT(req: Request) {
   const g = await guardStaff("services.manage");
   if (!g.ok) return NextResponse.json({ error: guardError(g) }, { status: g.status });
+  const planCheck = await gatePlan(g.team.id, "recordatorios");
+  if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
 
   if (!masterKeyConfigurada()) {
     return NextResponse.json({ error: "master_key_no_configurada" }, { status: 503 });

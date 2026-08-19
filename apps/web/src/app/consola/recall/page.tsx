@@ -18,6 +18,8 @@ import {
 import { RecordarButton, RecordarTodos } from "@/app/consola/recall/recordar-botones";
 import { getDefaultTeam, pacientesDormidos } from "@/lib/console-data";
 import { getSession } from "@/lib/auth";
+import { gatePlan } from "@/lib/plans";
+import { PlanGate } from "@/components/console/plan-gate";
 import { mailConfigurado } from "@/lib/mail";
 
 export const dynamic = "force-dynamic";
@@ -58,6 +60,19 @@ export default async function RecallPage() {
             description="Solo los roles Dueña y Recepción pueden enviar recordatorios a los pacientes."
           />
         </Card>
+      </div>
+    );
+  }
+
+  const planCheck = await gatePlan(team.id, "recordatorios");
+  if (!planCheck.ok) {
+    return (
+      <div className="mx-auto max-w-6xl space-y-6">
+        <PageHeader
+          title="Recall"
+          description="Pacientes sin visita hace 6 meses o más: recuérdales volver."
+        />
+        <PlanGate feature="recordatorios" requerido={planCheck.requerido} />
       </div>
     );
   }

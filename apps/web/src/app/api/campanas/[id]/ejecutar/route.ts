@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq, inArray } from "drizzle-orm";
 import { getDb, campaigns, patients } from "@odontoflow/db";
 import { guardStaff, guardError } from "@/lib/auth";
+import { gatePlan, respuestaPlanInsuficiente } from "@/lib/plans";
 import { appBaseUrl, mailConfigurado, sendMail } from "@/lib/mail";
 import { logAuditSesion } from "@/lib/audit";
 
@@ -14,6 +15,8 @@ export async function POST(
   const { id } = await params;
   const g = await guardStaff("campaigns.manage");
   if (!g.ok) return NextResponse.json({ error: guardError(g) }, { status: g.status });
+  const planCheck = await gatePlan(g.team.id, "recordatorios");
+  if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
 
   if (!mailConfigurado()) {
     return NextResponse.json({ error: "email_no_configurado" }, { status: 400 });

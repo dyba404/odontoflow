@@ -6,6 +6,8 @@ import { getDb, subscriptions } from "@odontoflow/db";
 export type PlanCode = "free" | "pro" | "premium";
 
 export type PlanFeature =
+  | "ficha_avanzada"
+  | "recordatorios"
   | "caja"
   | "dashboard"
   | "facturacion"
@@ -17,8 +19,10 @@ export type PlanFeature =
 const ORDEN_PLAN: Record<PlanCode, number> = { free: 0, pro: 1, premium: 2 };
 
 export const FEATURE_PLAN: Record<PlanFeature, PlanCode> = {
+  ficha_avanzada: "pro",
+  recordatorios: "pro",
+  dashboard: "pro",
   caja: "premium",
-  dashboard: "premium",
   facturacion: "premium",
   export_sunat: "premium",
   inventario: "premium",
@@ -27,8 +31,10 @@ export const FEATURE_PLAN: Record<PlanFeature, PlanCode> = {
 };
 
 export const FEATURE_TITULO: Record<PlanFeature, string> = {
-  caja: "Caja del día",
+  ficha_avanzada: "Ficha clínica avanzada",
+  recordatorios: "Recordatorios",
   dashboard: "Dashboard de ingresos",
+  caja: "Caja del día",
   facturacion: "Facturación electrónica",
   export_sunat: "Exportación SUNAT",
   inventario: "Inventario y márgenes",
@@ -56,6 +62,21 @@ export const planDeTenant = cache(async (tenantId: string): Promise<PlanCode> =>
   if (sub.estado === "suspendido" || sub.estado === "cancelado") return "free";
   return sub.plan;
 });
+
+export async function planDeTenantSinCache(tenantId: string): Promise<PlanCode> {
+  const [sub] = await getDb()
+    .select({ plan: subscriptions.plan, estado: subscriptions.estado })
+    .from(subscriptions)
+    .where(eq(subscriptions.tenantId, tenantId))
+    .limit(1);
+  if (!sub) return "free";
+  if (sub.estado === "suspendido" || sub.estado === "cancelado") return "free";
+  return sub.plan;
+}
+
+export function planEsProOMayor(plan: PlanCode): boolean {
+  return ORDEN_PLAN[plan] >= ORDEN_PLAN["pro"];
+}
 
 export type GateOk = { ok: true };
 export type GateBloqueo = { ok: false; requerido: PlanCode; planActual: PlanCode };

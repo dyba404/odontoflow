@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { and, eq } from "drizzle-orm";
 import { getDb, attachments } from "@odontoflow/db";
 import { guardStaff, guardError } from "@/lib/auth";
+import { gatePlan, respuestaPlanInsuficiente } from "@/lib/plans";
 import { logAuditSesion } from "@/lib/audit";
 
 const MIME_FOTO = ["image/jpeg", "image/png", "image/webp"];
@@ -17,6 +18,8 @@ export async function GET(
   const { id } = await params;
   const g = await guardStaff("records.view");
   if (!g.ok) return NextResponse.json({ error: guardError(g) }, { status: g.status });
+  const planCheck = await gatePlan(g.team.id, "ficha_avanzada");
+  if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
 
   const [att] = await getDb()
     .select()
@@ -50,6 +53,8 @@ export async function PATCH(
   const { id } = await params;
   const g = await guardStaff("records.edit");
   if (!g.ok) return NextResponse.json({ error: guardError(g) }, { status: g.status });
+  const planCheck = await gatePlan(g.team.id, "ficha_avanzada");
+  if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
 
   let body: { fotoTipo?: string; tratamiento?: string; fotoOrden?: number };
   try {

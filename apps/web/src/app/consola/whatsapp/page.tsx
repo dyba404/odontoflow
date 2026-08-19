@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/table";
 import { getSession } from "@/lib/auth";
 import { getDefaultTeam } from "@/lib/console-data";
+import { gatePlan } from "@/lib/plans";
+import { PlanGate } from "@/components/console/plan-gate";
 import { WhatsappFiltros, WhatsappPaginacion } from "./whatsapp-nav";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +49,19 @@ export default async function WhatsAppPage({
             description="Tu rol no tiene permiso para ver la bandeja de WhatsApp."
           />
         </Card>
+      </div>
+    );
+  }
+
+  const planCheck = await gatePlan(team.id, "recordatorios");
+  if (!planCheck.ok) {
+    return (
+      <div className="mx-auto max-w-6xl space-y-6">
+        <PageHeader
+          title="WhatsApp"
+          description="Bandeja de mensajes entrantes y salientes de WhatsApp."
+        />
+        <PlanGate feature="recordatorios" requerido={planCheck.requerido} />
       </div>
     );
   }

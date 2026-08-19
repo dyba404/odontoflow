@@ -105,3 +105,30 @@ test("alta de clínica: slug duplicado se rechaza con mensaje claro", async ({
 
   await context.close();
 });
+
+// El tier Pro real: un tenant recién dado de alta (Free) no accede al
+// dashboard, recordatorios ni ficha clínica avanzada.
+test("alta de clínica: un plan Free no accede a funciones Pro", async ({ browser }) => {
+  const suf = sufijo();
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await altaClinicaPorUI(page, suf);
+
+  // Dashboard (Pro) bloqueado con la pantalla PlanGate.
+  await page.goto("/consola/dashboard", { waitUntil: "domcontentloaded" });
+  await expect(page.getByText(/es parte del plan Pro/)).toBeVisible();
+
+  // API de recordatorios rechazada con 402.
+  const resNotificaciones = await page.request.post("/api/config/notificaciones", {
+    data: { recordatorio24h: true, recallAuto: true, digestDiario: true },
+  });
+  expect(resNotificaciones.status()).toBe(402);
+
+  // API de ficha avanzada (adjuntos) rechazada con 402.
+  const resAdjuntos = await page.request.post("/api/pacientes/paciente-falso/adjuntos", {
+    data: { nombre: "x.pdf", mime: "application/pdf" },
+  });
+  expect(resAdjuntos.status()).toBe(402);
+
+  await context.close();
+});

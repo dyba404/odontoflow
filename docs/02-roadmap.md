@@ -236,6 +236,44 @@ Salida: el operador del SaaS tiene identidad propia y herramientas de soporte au
 
 ---
 
+## Organización del tier Pro: features gateadas por plan (v1.7.1)
+
+Regla de negocio: Free conserva el flujo de reservas completo (página pública,
+agenda, cola, sala de espera, personal, ficha básica con odontograma y notas) y las
+confirmaciones/reprogramación/waitlist. Pro añade la ficha clínica avanzada y los
+recordatorios (cualquier envío email/WhatsApp). Premium no cambia. Sin migraciones
+ni cambios de roles.
+
+- [x] `lib/plans.ts`: `PlanFeature` gana `ficha_avanzada` y `recordatorios`;
+      `FEATURE_PLAN` = `dashboard:"pro"`, `ficha_avanzada:"pro"`,
+      `recordatorios:"pro"` (resto premium); helpers `planDeTenantSinCache` y
+      `planEsProOMayor` para rutas no-RSC (crons).
+- [x] Páginas gateadas a Pro (`gatePlan` + `PlanGate`): `/consola/recall`,
+      `/consola/config/whatsapp`, `/consola/config/notificaciones`,
+      `/consola/campanas`, `/consola/reviews`, `/consola/whatsapp` (bandeja);
+      `/consola/dashboard` ya estaba gateado y ahora exige Pro.
+- [x] APIs gateadas a Pro (402 `plan_insuficiente`, tras `guardStaff`):
+      recordatorios — `config/notificaciones` (POST), `config/whatsapp` (GET+PUT),
+      `config/reviews` (GET+PUT), `whatsapp/mensajes` (GET), `recall` (POST),
+      `campanas` (GET+POST), `campanas/[id]/ejecutar` (POST), `reviews` (POST),
+      `reviews/[id]/respondido` (PATCH); ficha avanzada — `pacientes/[id]/adjuntos`,
+      `[id]/consentimientos`, `[id]/laboratorio`, `laboratorio/[id]/estado`,
+      `adjuntos/[id]`, `coberturas/[id]`, `pacientes/[id]/coberturas`,
+      `aseguradoras`, `aseguradoras/[id]`.
+- [x] Crons que envían email/WhatsApp saltan tenants no-Pro (sin gasto en Free):
+      `recordatorios` (24h y retry), `recall`, `diario`.
+- [x] Ficha del paciente: en Free se ocultan los bloques avanzados (laboratorio,
+      fotos antes/después, seguros/coberturas, documentos/consentimientos) con hint
+      "es parte del plan Pro"; odontograma y notas clínicas siguen visibles.
+- [x] `/consola/config/suscripcion`: listas de planes alineadas (ficha básica en
+      Free, avanzada + recordatorios + dashboard en Pro, caja/facturación/inventario/
+      presupuestos/comisiones en Premium).
+- [x] E2E `01-alta-clinica`: test "un plan Free no accede a funciones Pro"
+      (dashboard → PlanGate "es parte del plan Pro", `POST /api/config/notificaciones`
+      → 402, `POST /api/pacientes/<falso>/adjuntos` → 402).
+
+---
+
 ## Backlog post-M5 → incluido en 1.0
 
 Topología detallada por módulo en `docs/05-modulos-topologia.md`.

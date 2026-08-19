@@ -4,6 +4,7 @@ import { getDb, teams, patients, appointments, reminders } from "@odontoflow/db"
 import { appBaseUrl } from "@/lib/mail";
 import { plantillaRecall } from "@/lib/notify";
 import { enviarRecordatorio, getNotificationSettings } from "@/lib/reminder-engine";
+import { planDeTenantSinCache, planEsProOMayor } from "@/lib/plans";
 import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,11 @@ export async function POST(req: Request) {
   let omitidos = 0;
 
   for (const team of clinics) {
+    const plan = await planDeTenantSinCache(team.id);
+    if (!planEsProOMayor(plan)) {
+      omitidos++;
+      continue;
+    }
     const settings = await getNotificationSettings(team.id);
     if (!settings || !settings.recallAuto) continue;
 

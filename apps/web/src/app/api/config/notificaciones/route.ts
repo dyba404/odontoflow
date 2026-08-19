@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { getDb, notificationSettings } from "@odontoflow/db";
 import { guardStaff, guardError } from "@/lib/auth";
+import { gatePlan, respuestaPlanInsuficiente } from "@/lib/plans";
 import { logAuditSesion } from "@/lib/audit";
 
 export async function POST(req: Request) {
   const g = await guardStaff("services.manage");
   if (!g.ok) return NextResponse.json({ error: guardError(g) }, { status: g.status });
+  const planCheck = await gatePlan(g.team.id, "recordatorios");
+  if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
 
   let body: {
     recordatorio24h?: boolean;
