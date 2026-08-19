@@ -73,6 +73,7 @@ services:
       MAIL_MODE: ${MAIL_MODE:-resend}
       WA_REPLY_MODE: ${WA_REPLY_MODE:-single}
       YAPE_PLIN_NUMBER: ${YAPE_PLIN_NUMBER:-}
+      # DEPRECADO: solo bootstrap inicial del fundador (is_platform_admin); se ignora en runtime.
       ADMIN_EMAILS: ${ADMIN_EMAILS:-}
       LOCAL_MASTER_KEY: ${LOCAL_MASTER_KEY:?LOCAL_MASTER_KEY obligatorio (define UNA vez, ver .env.prod.example)}
       WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}

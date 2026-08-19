@@ -212,23 +212,24 @@ Salida: la mitigación para el bug de navegaciones con searchParams es autónomo
 Plan completo en `docs/07-soporte-plataforma.md` (problema, patrones externos verificados
 en cal.com/dub/chatwoot, hechos del código actual, checklist por capa y E2E). Resumen:
 
-- [ ] Cuenta fundador real: `users.is_platform_admin` + sesión plataforma sin membership;
+- [x] Cuenta fundador real: `users.is_platform_admin` + sesión plataforma sin membership;
       `isAdmin()` deja de leer `ADMIN_EMAILS` (se elimina el fallback hardcodeado a la demo);
       login con `locked_at`, redirección `/admin` y cambio de contraseña obligatorio en el
       primer login (`must_change_password` + `/primer-acceso`). Seed con password TEMPORAL.
-- [ ] Migración 0017: columnas nuevas en `users`/`sessions` + tabla `impersonation_requests`.
-- [ ] APIs admin (`/api/admin/*`): miembros por tenant, reenvío de recuperación
+- [x] Migración 0017: columnas nuevas en `users`/`sessions` + tabla `impersonation_requests`.
+- [x] APIs admin (`/api/admin/*`): miembros por tenant, reenvío de recuperación
       (patrón cal.com `sendPasswordReset`: reutiliza el flujo self-service server-side),
       bloqueo/desbloqueo de usuario y membresía, impersonación por token de 1 uso (15 min,
       sesión de 8h con `impersonated_by_user_id`), fin de impersonación. Todo auditado en el
       tenant afectado con `via: "soporte_plataforma"`.
-- [ ] UI: `/admin` con miembros expandibles y acciones por miembro; banner permanente de
+- [x] UI: `/admin` con miembros expandibles y acciones por miembro; banner permanente de
       impersonación en el shell de consola con botón "Salir".
-- [ ] E2E `admin.spec.ts` (login fundador → primer cambio → reenvío vía Mailpit →
+- [x] E2E `admin.spec.ts` (login fundador → primer cambio → reenvío vía Mailpit →
       impersonar con banner → salir → usuario bloqueado sin login → token vencido).
-- [ ] Docs batch: README puerto **3111** (no 3000), `ADMIN_EMAILS` como bootstrap
+- [x] Docs batch: README puerto **3111** (no 3000), `ADMIN_EMAILS` como bootstrap
       deprecated, aclaración BoxyHQ = modelo de datos re-implementado (no fork/motor),
       filas nuevas en 00-resumen/04-modelo-datos/01-topologia.
+- [x] Verificado: typecheck + lint (0 warnings) + build standalone fresco (con `/primer-acceso`); **12/12** admin, **14/14** regresión, **9/9** vivo y **6/6** serie contra el build final; health `{db, correo, lycet}: true`; `db:clean` post-suites (10 pacientes, 9 citas, 6 pagos, 4 comprobantes)
 
 Salida: el operador del SaaS tiene identidad propia y herramientas de soporte auditadas
 (recuperación, bloqueos, impersonación) sin depender de SQL manual ni del owner demo.

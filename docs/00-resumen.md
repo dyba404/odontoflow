@@ -25,6 +25,7 @@ Recordatorios WhatsApp por plantillas Meta con fallback automático a email.
 | Roles | owner · receptionist (PC) · assistant (celular) · doctor (celular) · patient (público) |
 | Asistente | Solo datos + estados + adjuntos Rx; NUNCA caja ni precios |
 | Seguridad | RBAC server-side (tenant_id + role), horarios de turno con restricción opcional de acceso fuera de turno, audit log, escalable a SSO (BoxyHQ Jackson) |
+| Panel de operador | Cuenta fundador (`is_platform_admin`, sesión plataforma sin membership) con panel `/admin` auditado: reenvío de recuperación, bloqueo/desbloqueo de usuarios y membresías, impersonación por token de 1 uso. Todo registrado en `audit_logs` con `via: "soporte_plataforma"`; sin SQL manual |
 | UI | Design system propio (paleta teal clínico + neutros cálidos, español día 1, densidad por dispositivo). La UI de BoxyHQ se descarta; solo se usa su motor headless |
 | WhatsApp | Fase M4: solo Cloud API oficial, plantillas de utilidad como add-on cobrado (margen 2-3x). Core: email/SMS |
 | Hosting | Dominio propio (no GitHub Pages; sin huella del perfil personal). App en Heroku (crédito Student Pack US$13/mes ×24m, dominio custom). Landing en Netlify/Vercel free. Repos privados |

@@ -16,6 +16,11 @@ Dominio propio (ej. odontoflow.pe / .app — se decide al registrar)
     Docker)            cron/*          (Resend free)     panel admin flags   Docker, API REST
 ```
 
+Dentro de `app.<dominio>`: `/admin` = panel de soporte de la plataforma (solo fundador
+`is_platform_admin`, sesión plataforma sin membership) + `primer-acceso` = cambio de
+contraseña obligatorio del primer login. Vía `/api/admin/*` con reenvío de recuperación,
+bloqueos y impersonación; todo auditado en el tenant afectado.
+
 ## Decisiones
 
 - **GitHub Pages: DESCARTADO** (URL `usuario.github.io` visible, atado al perfil personal, solo estático).

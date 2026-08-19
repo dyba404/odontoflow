@@ -33,7 +33,7 @@ docker compose up -d          # DEV: Postgres :5432 + lycet :8090
 npm install
 npm run db:migrate
 npm run db:seed
-npm run dev                   # http://localhost:3000
+npm run dev                   # http://localhost:3111
 ```
 
 Copia `.env.local.example` a `.env.local` y ajusta según la tabla de variables de entorno.
@@ -75,7 +75,8 @@ En desarrollo local (Windows) los mismos endpoints se agendan con
 | `RESEND_API_KEY` | Opcional | Envío de emails (recordatorios, confirmaciones, recalls, campañas) falla con `email_no_configurado`. |
 | `RESEND_FROM` | Opcional | Remitente de emails; mismo fallo que sin `RESEND_API_KEY`. |
 | `CRON_SECRET` | Opcional | Cron job (`/api/cron/*`) rechaza peticiones por autenticación. |
-| `ADMIN_EMAILS` | Opcional | Acceso al panel `/admin`; vacío = nadie lo ve. |
+| `ADMIN_EMAILS` | Deprecated (bootstrap) | Ya no gobierna el acceso a `/admin`. El acceso es por cuenta: `users.is_platform_admin` + sesión de plataforma (sin membership). Se conserva solo como bootstrap inicial del fundador; se ignora en runtime. |
+| `FOUNDER_EMAIL` / `FOUNDER_PASSWORD` | Opcional | Crear/actualizar la cuenta fundador (`is_platform_admin`) sin pasar por el seed dev: `npm run db:seed:founder`. En el primer login fuerza el cambio de contraseña en `/primer-acceso`. |
 | `LOCAL_MASTER_KEY` | Opcional | Cifrado at-rest de certificados/Clave SOL y tokens WhatsApp; sin ella la emisión electrónica no puede guardar credenciales. |
 | `LYCET_URL` | Opcional | Emisión electrónica a SUNAT vía sidecar lycet (default `http://localhost:8090`); modo `manual` funciona sin él. |
 | `WHATSAPP_VERIFY_TOKEN` | Opcional | Verificación del webhook de WhatsApp (Meta); el token y phone id se configuran desde consola y se cifran en DB. |
@@ -113,7 +114,7 @@ Seed crea 5 usuarios (password: `demo1234`, dominio `@demo.odontoflow.pe`):
 ## Reglas
 
 1. Multi-tenant: `tenant_id` en toda query y validación server-side.
-2. La UI de BoxyHQ no se usa (solo su modelo headless de tenants/memberships).
+2. BoxyHQ se usa solo como referencia de modelo de datos (tenants/memberships), re-implementado en `packages/db`; ni su UI ni su motor corren aquí.
 3. Privacidad del paciente: whitelist estricta; el paciente nunca ve listas, agenda del doctor ni ocupación real.
 4. Cobro de suscripciones es manual (Yape/Plin directo) vía panel admin; sin pasarela todavía.
 5. Cada clínica emite comprobantes con SU RUC/certificado/Clave SOL (nunca el nuestro).

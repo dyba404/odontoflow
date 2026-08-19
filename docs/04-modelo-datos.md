@@ -5,6 +5,23 @@ invitations, api_keys, webhooks. SOBRE esas tablas se extiende el dominio dental
 
 Convención: TODA tabla de dominio lleva `tenant_id` (= organization_id). Índices por tenant_id.
 
+## Plataforma (v1.7.0)
+
+```
+-- cuenta fundador y sesión de plataforma (sin membership)
+users.is_platform_admin      bool        -- acceso al panel /admin (reemplaza a ADMIN_EMAILS)
+users.locked_at              timestamp   -- bloqueo por soporte (impide el login)
+users.must_change_password   bool        -- primer login fuerza el cambio en /primer-acceso
+sessions.impersonated_by_user_id uuid?   -- quién impersonó esta sesión (auditoría)
+
+-- impersonación (token de 1 uso, expira 15 min; la sesión resultante dura 8h)
+impersonation_requests (id, tenant_id, user_id, token_hash, expira_en,
+                        created_by, created_at, used_at)
+```
+
+Para el panel `/admin` se reutilizan `users` y `memberships` existentes; todo cambio se
+registra en `audit_logs` con `via: "soporte_plataforma"` en el tenant afectado.
+
 ## Núcleo (M0-M2)
 
 ```

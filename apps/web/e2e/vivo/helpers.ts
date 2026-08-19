@@ -84,11 +84,22 @@ export async function contextoSesion(browser: Browser, email: string): Promise<B
 
 /** Login por la UI real (form de /login). Se prueba aquí; la API es solo para staff. */
 export async function loginPorUI(page: Page, email: string, password = PASSTAFF) {
-  await page.goto("/login", { waitUntil: "domcontentloaded" });
-  await page.locator("#login-email").fill(email);
-  await page.locator("#login-password").fill(password);
-  await page.getByRole("button", { name: "Iniciar sesión" }).click();
-  await expect(page).toHaveURL(/\/consola/, { timeout: 15_000 });
+  // El bucket de rate limit (login:desconocido, 10/min) es compartido por todo
+  // el proceso; al correr varias suites seguidas puede estar agotado: se
+  // reintenta esperando el Retry-After.
+  for (let intento = 0; intento < 4; intento++) {
+    await page.goto("/login", { waitUntil: "domcontentloaded" });
+    await page.locator("#login-email").fill(email);
+    await page.locator("#login-password").fill(password);
+    await page.getByRole("button", { name: "Iniciar sesión" }).click();
+    try {
+      await expect(page).toHaveURL(/\/consola/, { timeout: 15_000 });
+      return;
+    } catch {
+      await new Promise((r) => setTimeout(r, 61_000));
+    }
+  }
+  throw new Error(`login UI no llegó a /consola (${email})`);
 }
 
 /** Colecciona pageerrors y console.error de una página para afirmar al final. */
