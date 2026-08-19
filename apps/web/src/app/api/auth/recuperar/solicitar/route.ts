@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const db = getDb();
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
-  if (user?.passwordHash && mailConfigurado()) {
+  if (user?.passwordHash && !user.lockedAt && mailConfigurado()) {
     const token = randomHex(24);
     await db.insert(passwordResets).values({
       userId: user.id,

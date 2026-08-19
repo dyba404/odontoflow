@@ -6,6 +6,12 @@ import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { eq, isNull, and, sql, asc } from "drizzle-orm";
 import * as schema from "./schema.js";
+import {
+  upsertFundador,
+  FOUNDER_EMAIL_DEV,
+  FOUNDER_NAME_DEV,
+  FOUNDER_PASSWORD_DEV,
+} from "./fundador.js";
 
 const DEMO_PASSWORD = "demo1234";
 
@@ -565,6 +571,19 @@ async function enriquecerDemo(d: NonNullable<typeof db>, tenantId: string) {
   }
 }
 
+async function seedFundador(d: NonNullable<typeof db>) {
+  const { creado } = await upsertFundador(d, {
+    email: FOUNDER_EMAIL_DEV,
+    name: FOUNDER_NAME_DEV,
+    passwordHash: hashPassword(FOUNDER_PASSWORD_DEV),
+  });
+  if (creado) {
+    console.log(
+      `Fundador creado: ${FOUNDER_EMAIL_DEV} (contraseña TEMPORAL, se cambia en el primer login).`,
+    );
+  }
+}
+
 async function run() {
   if (!db) throw new Error("sin conexión a Postgres");
   const d = db;
@@ -573,6 +592,7 @@ async function run() {
     await heal(d, existing[0]!.id);
     await sanearDemo(d, existing[0]!.id);
     await enriquecerDemo(d, existing[0]!.id);
+    await seedFundador(d);
     return;
   }
 
@@ -732,6 +752,8 @@ async function run() {
     console.log("    maria@demo.odontoflow.pe      (Doctora)");
     console.log("    asistente@demo.odontoflow.pe  (Asistente)");
   });
+
+  await seedFundador(d);
 }
 
 async function main() {

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Search } from "lucide-react";
 import { ConsoleSidebar, type NavGroup } from "@/components/console/sidebar";
 import { CommandPalette } from "@/components/console/command-palette";
+import { ImpersonationBanner } from "@/components/console/impersonation-banner";
 import { cn } from "@/lib/utils";
 
 export function ConsoleShell({
@@ -16,6 +17,7 @@ export function ConsoleShell({
   userRole,
   planLabel,
   userMenu,
+  impersonation,
   children,
 }: {
   clinicName: string;
@@ -25,6 +27,7 @@ export function ConsoleShell({
   userRole: string;
   planLabel: string;
   userMenu?: React.ReactNode;
+  impersonation?: { adminEmail: string } | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -81,6 +84,14 @@ export function ConsoleShell({
             </span>
           </div>
         </header>
+
+        {impersonation && (
+          <ImpersonationBanner
+            userName={userName}
+            teamName={clinicName}
+            adminEmail={impersonation.adminEmail}
+          />
+        )}
 
         <nav className="flex gap-1 overflow-x-auto border-b bg-background/80 px-3 py-2 lg:hidden [@media(pointer:coarse)]:py-2.5">
           {groups

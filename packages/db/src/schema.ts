@@ -151,6 +151,10 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   passwordHash: text("password_hash"),
+  isPlatformAdmin: boolean("is_platform_admin").notNull().default(false),
+  lockedAt: timestamp("locked_at", { withTimezone: true }),
+  lockedReason: text("locked_reason"),
+  mustChangePassword: boolean("must_change_password").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -478,12 +482,11 @@ export const sessions = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    tenantId: uuid("tenant_id")
-      .notNull()
-      .references(() => teams.id, { onDelete: "cascade" }),
-    membershipId: uuid("membership_id")
-      .notNull()
-      .references(() => memberships.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id").references(() => teams.id, { onDelete: "cascade" }),
+    membershipId: uuid("membership_id").references(() => memberships.id, { onDelete: "cascade" }),
+    impersonatedByUserId: uuid("impersonated_by_user_id").references(() => users.id, {
+      onDelete: "cascade",
+    }),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     userAgent: text("user_agent"),
     ip: text("ip"),
@@ -492,6 +495,7 @@ export const sessions = pgTable(
   (t) => [
     index("sessions_user_id_idx").on(t.userId),
     index("sessions_expires_at_idx").on(t.expiresAt),
+    index("sessions_impersonated_by_idx").on(t.impersonatedByUserId),
   ],
 );
 
@@ -508,6 +512,27 @@ export const passwordResets = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("password_resets_user_id_idx").on(t.userId)],
+);
+
+export const impersonationRequests = pgTable(
+  "impersonation_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    token: text("token").notNull().unique(),
+    targetUserId: uuid("target_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    requestedByUserId: uuid("requested_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("impersonation_requests_expires_idx").on(t.expiresAt)],
 );
 
 export const notificationSettings = pgTable("notification_settings", {

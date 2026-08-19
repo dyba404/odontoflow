@@ -36,6 +36,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     return NextResponse.json({ error: "token_invalido" }, { status: 400 });
   }
 
+  const [user] = await db.select().from(users).where(eq(users.id, reset.userId)).limit(1);
+  if (!user || user.lockedAt) {
+    return NextResponse.json({ error: "token_invalido" }, { status: 400 });
+  }
+
   const hash = await hashPassword(password);
   await db.update(users).set({ passwordHash: hash }).where(eq(users.id, reset.userId));
   await db

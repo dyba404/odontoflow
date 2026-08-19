@@ -1,6 +1,5 @@
 import { ArrowLeft, Building2, CalendarDays, Users } from "lucide-react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -19,9 +18,9 @@ import {
 import { PageHeader } from "@/components/console/page-header";
 import { EmptyState } from "@/components/console/empty-state";
 import { PlanEditor } from "@/app/admin/plan-editor";
+import { MembersPanel } from "@/app/admin/members-panel";
 import { panelAdmin } from "@/lib/console-data";
-import { getSession } from "@/lib/auth";
-import { isAdmin } from "@/lib/admin";
+import { requirePlatformSession } from "@/lib/guard-sesion";
 
 export const dynamic = "force-dynamic";
 
@@ -39,9 +38,7 @@ const fmtVence = new Intl.DateTimeFormat("es-PE", {
 });
 
 export default async function AdminPage() {
-  const session = await getSession();
-  if (!session) redirect("/login");
-  if (!(await isAdmin())) redirect("/login");
+  await requirePlatformSession();
 
   const panel = await panelAdmin();
 
@@ -159,17 +156,20 @@ export default async function AdminPage() {
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <PlanEditor
-                        tenantId={t.id}
-                        tenantName={t.name}
-                        iniciales={{
-                          plan: t.plan,
-                          estado: t.estado,
-                          vence: t.vence,
-                          monto: t.monto,
-                          nota: t.nota,
-                        }}
-                      />
+                      <div className="flex items-center justify-end gap-1.5">
+                        <MembersPanel tenantId={t.id} />
+                        <PlanEditor
+                          tenantId={t.id}
+                          tenantName={t.name}
+                          iniciales={{
+                            plan: t.plan,
+                            estado: t.estado,
+                            vence: t.vence,
+                            monto: t.monto,
+                            nota: t.nota,
+                          }}
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

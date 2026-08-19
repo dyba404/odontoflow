@@ -5,9 +5,11 @@ import { defineConfig, devices } from "@playwright/test";
 // (next start en http://localhost:3111).
 export default defineConfig({
   testDir: "./e2e",
-  // La suite de operación en vivo (e2e/vivo*) tiene su propio config:
-  // playwright.vivo.config.ts (no debe correr con la regresión).
-  testIgnore: ["**/vivo/**", "**/vivo-serie/**"],
+  // Las suites de operación en vivo (e2e/vivo*) y de soporte de plataforma
+  // (e2e/admin.spec.ts) tienen sus propios configs
+  // (playwright.vivo.config.ts y playwright.admin.config.ts) y no deben correr
+  // con la regresión.
+  testIgnore: ["**/vivo/**", "**/vivo-serie/**", "admin.spec.ts"],
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,

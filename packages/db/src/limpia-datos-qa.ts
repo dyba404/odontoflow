@@ -11,8 +11,9 @@ if (!process.env.DATABASE_URL && existsSync(envFile)) {
     if (m && m[1]) process.env[m[1]] = m[2] ?? "";
   }
 }
-const url = process.env.DATABASE_URL;
-if (!url) throw new Error("DATABASE_URL no definido");
+const urlEnv = process.env.DATABASE_URL;
+if (!urlEnv) throw new Error("DATABASE_URL no definido");
+const url: string = urlEnv;
 
 const PATRONES_PACIENTE = [
   "nombre LIKE 'Paciente E2E %'",

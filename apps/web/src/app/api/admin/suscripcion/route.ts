@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { getDb, teams, subscriptions } from "@odontoflow/db";
-import { getSession } from "@/lib/auth";
-import { isAdmin } from "@/lib/admin";
+import { ipReq } from "@/lib/rate-limit";
+import { adminGuard } from "@/lib/admin-guard";
 import type { PlanCode, PlanStatus } from "@odontoflow/core";
 
 export const dynamic = "force-dynamic";
@@ -11,11 +11,8 @@ const PLANES: PlanCode[] = ["free", "pro", "premium"];
 const ESTADOS: PlanStatus[] = ["activo", "por_renovar", "suspendido", "cancelado"];
 
 export async function PATCH(req: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "sin_sesion" }, { status: 401 });
-  if (!(await isAdmin())) {
-    return NextResponse.json({ error: "sin_permiso" }, { status: 403 });
-  }
+  const guard = await adminGuard("suscripcion", ipReq(req));
+  if (!guard.ok) return guard.response;
 
   let body: {
     tenantId?: string;

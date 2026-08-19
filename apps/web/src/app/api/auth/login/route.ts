@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { and, eq } from "drizzle-orm";
 import { getDb, users, memberships, teams, staffSchedules } from "@odontoflow/db";
-import { verifyPassword, createSession, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/lib/auth";
+import { verifyPassword, createSession, SESSION_COOKIE, sessionCookieBase } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { rateLimit, ipReq } from "@/lib/rate-limit";
 
@@ -50,6 +50,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "credenciales_invalidas" }, { status: 401 });
   }
 
+  if (user.lockedAt) {
+    return NextResponse.json({ error: "cuenta_bloqueada" }, { status: 403 });
+  }
+
   const membresias = await db
     .select({
       membershipId: memberships.id,
@@ -62,8 +66,24 @@ export async function POST(req: Request) {
     .from(memberships)
     .innerJoin(teams, eq(memberships.teamId, teams.id))
     .where(and(eq(memberships.userId, user.id), eq(memberships.active, true)));
+
   if (membresias.length === 0) {
-    return NextResponse.json({ error: "sin_acceso" }, { status: 403 });
+    if (!user.isPlatformAdmin) {
+      return NextResponse.json({ error: "sin_acceso" }, { status: 403 });
+    }
+
+    const { token, maxAgeSeconds } = await createSession({
+      userId: user.id,
+      userAgent: req.headers.get("user-agent"),
+      ip: ipReq(req),
+    });
+    const store = await cookies();
+    store.set(SESSION_COOKIE, token, sessionCookieBase(maxAgeSeconds));
+
+    return NextResponse.json({
+      ok: true,
+      redirect: user.mustChangePassword ? "/primer-acceso" : "/admin",
+    });
   }
 
   const memb =
@@ -84,7 +104,7 @@ export async function POST(req: Request) {
     }
   }
 
-  const { token } = await createSession({
+  const { token, maxAgeSeconds } = await createSession({
     userId: user.id,
     tenantId: memb.teamId,
     membershipId: memb.membershipId,
@@ -92,13 +112,7 @@ export async function POST(req: Request) {
   });
 
   const store = await cookies();
-  store.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  });
+  store.set(SESSION_COOKIE, token, sessionCookieBase(maxAgeSeconds));
 
   void logAudit({
     tenantId: memb.teamId,
@@ -109,5 +123,8 @@ export async function POST(req: Request) {
     entidadId: user.id,
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    ...(user.mustChangePassword ? { redirect: "/primer-acceso" } : {}),
+  });
 }

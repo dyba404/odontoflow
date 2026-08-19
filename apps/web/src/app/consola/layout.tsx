@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
+import { eq } from "drizzle-orm";
 import { hasPermission, type StaffRole } from "@odontoflow/core";
+import { getDb, users } from "@odontoflow/db";
 import { ConsoleShell } from "@/components/console/shell";
 import { UserMenu } from "@/components/console/user-menu";
 import type { NavGroup } from "@/components/console/sidebar";
@@ -18,6 +20,17 @@ export default async function ConsolaLayout({
 }: Readonly<{ children: ReactNode }>) {
   const session = await getSession();
   if (!session) redirect("/login");
+  if (session.mustChangePassword) redirect("/primer-acceso");
+
+  let impersonation: { adminEmail: string } | null = null;
+  if (session.impersonatedByUserId) {
+    const [admin] = await getDb()
+      .select({ email: users.email })
+      .from(users)
+      .where(eq(users.id, session.impersonatedByUserId))
+      .limit(1);
+    impersonation = { adminEmail: admin?.email ?? "soporte de plataforma" };
+  }
 
   const [solicitudes, citasHoy, sub] = await Promise.all([
     solicitudesActivas(session.teamId),
@@ -48,6 +61,7 @@ export default async function ConsolaLayout({
       userRole={ROLE_INFO[session.role].label}
       planLabel={planLabel}
       userMenu={<UserMenu userName={session.name} userRole={ROLE_INFO[session.role].label} />}
+      impersonation={impersonation}
     >
       {children}
     </ConsoleShell>

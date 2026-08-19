@@ -18,7 +18,9 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx src/seed.ts",
-    "db:clean": "tsx src/limpia-datos-qa.ts"
+    "db:seed:founder": "tsx src/seed-founder.ts",
+    "db:clean": "tsx src/limpia-datos-qa.ts",
+    "admin:change-password": "tsx src/cambiar-contrasena-admin.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",

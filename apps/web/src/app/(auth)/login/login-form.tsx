@@ -28,16 +28,21 @@ export function LoginForm() {
           const j = await r.json().catch(() => ({}));
           throw new Error(j.error ?? "error");
         }
-        router.push("/consola");
+        const j = await r.json().catch(() => ({}));
+        router.push(typeof j.redirect === "string" ? j.redirect : "/consola");
         router.refresh();
       })
       .catch((err: Error) => {
         toast.error(
           err.message === "credenciales_invalidas"
             ? "Correo o contraseña incorrectos"
-            : err.message === "fuera_de_turno"
-              ? "Estás fuera de tu horario de turno"
-              : "No se pudo iniciar sesión",
+            : err.message === "cuenta_bloqueada"
+              ? "Cuenta bloqueada. Contacta a soporte."
+              : err.message === "fuera_de_turno"
+                ? "Estás fuera de tu horario de turno"
+                : err.message === "sin_acceso"
+                  ? "Tu cuenta no tiene acceso a ningún consultorio"
+                  : "No se pudo iniciar sesión",
         );
         setPending(false);
       });
