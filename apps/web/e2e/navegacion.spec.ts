@@ -5,6 +5,78 @@ const ES_FICHA = /\/consola\/pacientes\/[0-9a-f-]+/;
 const ES_LISTADO = /\/consola\/pacientes/;
 const ES_AGENDA = /\/consola\/agenda/;
 
+// Regresion v1.6.1: en Next 15.5 los <Link> que solo cambian searchParams
+// (tabs de agenda, filtros de whatsapp, periodos del dashboard) no navegaban
+// en modo SPA: la URL no cambiaba y no habia fetch de servidor. Los reemplazos
+// usan router.push() en componentes cliente; aqui se ejercita el patron
+// completo sin recargas ni pestañas nuevas.
+test("navegacion SPA: agenda (tabs y flechas), whatsapp (filtros) y dashboard (periodos) con searchParams", async ({
+  browser,
+}) => {
+  const context = await browser.newContext();
+  const token = await loginPorApi(USUARIOS.owner.email);
+  await context.addCookies([{ name: "of_session", value: token, domain: "localhost", path: "/" }]);
+  const page = await context.newPage();
+
+  // --- Agenda: tabs Día/Semana/Mes ---
+  await page.goto("/consola/agenda", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { level: 2, name: "Agenda" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Semana", exact: true }).click();
+  await expect(page).toHaveURL(/vista=semana/);
+  await expect(page.getByText(/Semana del/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Mes", exact: true }).click();
+  await expect(page).toHaveURL(/vista=mes/);
+  await expect(page.getByText(/agosto 2026/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Día", exact: true }).click();
+  await expect(page).toHaveURL(/vista=dia/);
+  await expect(page.getByRole("heading", { level: 2, name: "Agenda" })).toBeVisible();
+
+  // --- Agenda: celda de un día en la vista semana (era un <Link> roto) ---
+  await page.getByRole("button", { name: "Semana", exact: true }).click();
+  await expect(page).toHaveURL(/vista=semana/);
+  await page.getByRole("button", { name: /^(Lun|Mar|Mié|Jue|Vie|Sáb|Dom) \d+$/i }).first().click();
+  await expect(page).toHaveURL(/vista=dia&fecha=\d{4}-\d{2}-\d{2}/);
+  await expect(page.getByRole("heading", { level: 2, name: "Agenda" })).toBeVisible();
+
+  // --- Agenda: flecha Siguiente cambia la fecha (SPA) ---
+  const urlAntes = page.url();
+  await page.getByRole("button", { name: "Siguiente" }).click();
+  await expect(page).not.toHaveURL(urlAntes);
+  await expect(page).toHaveURL(/vista=dia&fecha=\d{4}-\d{2}-\d{2}/);
+
+  // --- WhatsApp: filtros Todos/Entrantes/Salientes ---
+  await page.goto("/consola/whatsapp", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { level: 2, name: "WhatsApp" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Entrantes", exact: true }).click();
+  await expect(page).toHaveURL(/direccion=in/);
+  await expect(page.getByText("Entrante", { exact: true }).first()).toBeVisible();
+
+  await page.getByRole("button", { name: "Salientes", exact: true }).click();
+  await expect(page).toHaveURL(/direccion=out/);
+  await expect(page.getByText("Saliente", { exact: true }).first()).toBeVisible();
+
+  await page.getByRole("button", { name: "Todos", exact: true }).click();
+  await expect(page).toHaveURL(/\/consola\/whatsapp$/);
+
+  // --- Dashboard: periodos de dias ---
+  await page.goto("/consola/dashboard", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { level: 2, name: "Ingresos" })).toBeVisible();
+
+  await page.getByRole("button", { name: "7 días", exact: true }).click();
+  await expect(page).toHaveURL(/dias=7/);
+  await expect(page.getByText(/últimos 7 días/).first()).toBeVisible();
+
+  await page.getByRole("button", { name: "30 días", exact: true }).click();
+  await expect(page).toHaveURL(/dias=30/);
+  await expect(page.getByText(/últimos 30 días/).first()).toBeVisible();
+
+  await context.close();
+});
+
 function nombreDeLaTarjeta(page: import("@playwright/test").Page, indice: number) {
   return page
     .getByRole("link")

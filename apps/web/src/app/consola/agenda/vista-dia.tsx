@@ -52,10 +52,20 @@ interface Posicion {
   ancho: number;
 }
 
-function layoutCitas(citas: Cita[]): Map<string, Posicion> {
+interface MasInfo {
+  key: string;
+  pos: Posicion;
+  n: number;
+}
+
+const MAX_LANES = 4;
+
+function layoutCitas(citas: Cita[]): { pos: Map<string, Posicion>; mas: MasInfo[] } {
   const pos = new Map<string, Posicion>();
-  const activos: Array<{ fin: number }> = [];
+  const activos: Array<{ fin: number; cluster: number }> = [];
   const lanes: Array<{ fin: number }> = [];
+  const overflow = new Map<number, { min: number; max: number; n: number }>();
+  let cluster = 0;
   const orden = [...citas].sort(
     (a, b) => minutos(a.horaIni) - minutos(b.horaIni) || minutos(b.horaFin) - minutos(a.horaFin),
   );
@@ -63,23 +73,42 @@ function layoutCitas(citas: Cita[]): Map<string, Posicion> {
     const ini = minutos(c.horaIni);
     const fin = minutos(c.horaFin);
     while (activos.length > 0 && (activos[0]?.fin ?? Infinity) <= ini) activos.shift();
+    if (activos.length === 0) cluster++;
     const ocupados = new Set(
       lanes.filter((l) => l.fin > ini).map((l) => lanes.indexOf(l)),
     );
     let lane = 0;
     while (ocupados.has(lane)) lane++;
-    const n = Math.max(activos.length + 1, lane + 1);
-    const ancho = 100 / n;
-    pos.set(c.id, {
-      top: ((ini - INI_MS) / 60) * HORA_PX,
-      height: Math.max(((fin - ini) / 60) * HORA_PX, 28),
-      left: lane * ancho,
-      ancho,
-    });
-    activos.push({ fin });
+    const n = Math.min(Math.max(activos.length + 1, lane + 1), MAX_LANES + 1);
+    if (lane >= MAX_LANES) {
+      const o = overflow.get(cluster) ?? { min: ini, max: fin, n: 0 };
+      o.min = Math.min(o.min, ini);
+      o.max = Math.max(o.max, fin);
+      o.n++;
+      overflow.set(cluster, o);
+    } else {
+      const ancho = 100 / n;
+      pos.set(c.id, {
+        top: ((ini - INI_MS) / 60) * HORA_PX,
+        height: Math.max(((fin - ini) / 60) * HORA_PX, 28),
+        left: lane * ancho,
+        ancho,
+      });
+    }
+    activos.push({ fin, cluster });
     lanes[lane] = { fin };
   }
-  return pos;
+  const mas = [...overflow.entries()].map(([c, o]) => ({
+    key: `mas-${c}`,
+    pos: {
+      top: ((o.min - INI_MS) / 60) * HORA_PX,
+      height: Math.max(((o.max - o.min) / 60) * HORA_PX, 28),
+      left: (MAX_LANES * 100) / (MAX_LANES + 1),
+      ancho: 100 / (MAX_LANES + 1),
+    },
+    n: o.n,
+  }));
+  return { pos, mas };
 }
 
 function ChipCita({
@@ -113,7 +142,7 @@ function ChipCita({
       onDragStart={arrastrable ? onDragStart : undefined}
       onDragEnd={arrastrable ? onDragEnd : undefined}
       className={cn(
-        "absolute z-20 overflow-hidden rounded-md border-l-[3px] px-2 py-1 transition-shadow hover:shadow-md",
+        "absolute z-20 overflow-hidden rounded-md border-l-[3px] px-2 py-1 transition-shadow hover:shadow-md ring-1 ring-black/10",
         sinAsignar ? "border-l-muted-foreground/40 bg-muted/30" : "",
         atenuada && "opacity-45",
         arrastrable && "cursor-grab",
@@ -196,7 +225,7 @@ function ColumnaDia({
     e: DragEvent<HTMLDivElement>,
   ) => void;
 }) {
-  const pos = layoutCitas(citas);
+  const { pos, mas } = layoutCitas(citas);
   return (
     <div
       className="relative flex-1 overflow-hidden"
@@ -205,7 +234,11 @@ function ColumnaDia({
       onDrop={(e) => onDropColumna(colId, doctorDestino, e)}
     >
       {HORAS.map((h, i) => (
-        <div key={`${h}-${i}`} className="border-t border-dashed" style={{ height: HORA_PX }} />
+        <div
+          key={`${h}-${i}`}
+          className={cn("border-t border-dashed", i % 2 === 1 && "bg-muted/10")}
+          style={{ height: HORA_PX }}
+        />
       ))}
       {bloqueos.map((b) => {
         const ini = minutos(b.horaIni);
@@ -247,6 +280,20 @@ function ColumnaDia({
           />
         );
       })}
+      {mas.map((m) => (
+        <div
+          key={m.key}
+          className="pointer-events-none absolute z-10 flex items-center justify-center overflow-hidden rounded-md border border-dashed border-muted-foreground/50 bg-card/85 text-[10px] font-semibold tabular-nums text-muted-foreground"
+          style={{
+            top: m.pos.top,
+            height: m.pos.height,
+            left: `calc(${m.pos.left}% + 4px)`,
+            width: `calc(${m.pos.ancho}% - 8px)`,
+          }}
+        >
+          +{m.n} más
+        </div>
+      ))}
       {fantasma && fantasma.colId === colId ? (
         <div
           className="pointer-events-none absolute inset-x-1 z-30 rounded-md border-2 border-dashed border-primary/70 bg-primary/10 px-1 text-[10px] font-medium tabular-nums text-primary"
@@ -426,10 +473,10 @@ export function VistaDia({
           {HORAS.map((h) => (
             <div
               key={h}
-              className="-mt-2 text-right text-xs tabular-nums text-muted-foreground"
+              className="relative text-right text-xs tabular-nums text-muted-foreground"
               style={{ height: HORA_PX }}
             >
-              <span className="inline-block bg-card pr-1.5">
+              <span className="absolute right-0 top-0 -translate-y-1/2 bg-card pr-1.5">
                 {String(h).padStart(2, "0")}:00
               </span>
             </div>

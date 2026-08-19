@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { addDays, format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { LinkDia } from "./link-dia";
 import type { citasEnRango } from "@/lib/console-data";
 
 type Cita = Awaited<ReturnType<typeof citasEnRango>>[number];
@@ -32,10 +32,10 @@ export function VistaSemana({
           const esHoy = d.fechaISO === hoyISO;
           return (
             <div key={d.fechaISO} className={cn(i > 0 && "border-l")}>
-              <Link
-                href={`/consola/agenda?vista=dia&fecha=${d.fechaISO}`}
+              <LinkDia
+                fechaISO={d.fechaISO}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 px-2 py-2 transition-colors hover:bg-muted/50",
+                  "flex w-full flex-col items-center gap-0.5 px-2 py-2 transition-colors hover:bg-muted/50",
                   esHoy && "bg-accent",
                 )}
               >
@@ -48,7 +48,7 @@ export function VistaSemana({
                 >
                   {format(d.fecha, "d")}
                 </span>
-              </Link>
+              </LinkDia>
               <div className="min-h-32 space-y-1 p-1.5">
                 {d.citas.length === 0 ? (
                   <p className="py-3 text-center text-xs text-muted-foreground/60">—</p>

@@ -178,6 +178,22 @@ Salida: la suite cubre con presión real (paralelismo, cortes, offline, race con
 
 ---
 
+## v1.6.1 — Navegación SPA con searchParams, Vista Día legible, wa.me y limpieza QA
+
+Fixes de usabilidad y mantenimiento encontrados durante la auditoría de la regresión E2E de navegación:
+
+- [x] **Causa raíz de la navegación rota (Next 15.5):** los controles que solo cambian `searchParams` (tabs de agenda Día/Semana/Mes, flechas, celdas de la semana, filtros de WhatsApp, pills de periodos del dashboard) dejaban de navegar en modo SPA a partir de la segunda vez. Investigación en la fuente instalada: `requestOptimisticRouteCacheEntry` (segment-cache-impl) reutiliza la entrada optimista del mismo pathname con `renderedSearch`/`canonicalUrl` de la **primera** navegación; las siguientes re-reproducen esa primera URL (la entrada queda "envenenada"). El camino popstate/RESTORE quedó descartado (requiere tree propio en el estado de history)
+- [x] **Fix determinista en tres capas** — `useNavegar()` (`apps/web/src/lib/navegar.ts`): 1) `router.prefetch(url)` crea una entrada de ruta exacta; 2) `router.push(url)` navega en SPA con esa entrada; 3) fallback `location.assign` a los 500ms solo si la URL sigue igual al momento del click **y** no hubo más de un `history.pushState` en el medio (conteo de pushStates: distingue push colgado 0, entrada envenenada 1, y varias navegaciones rápidas ≥2 que no deben disparar nada aunque terminen en la misma URL). Se aplicó en `AgendaToolbar`, `LinkDia` (celdas de semana/mes), `WhatsappFiltros`/`WhatsappPaginacion` y `PeriodosPills` del dashboard
+- [x] **Vista Día legible:** agenda de citas limitada a 4 carriles con chip "+N más" cuando un cluster desborda, filas alternadas para seguir la rejilla y etiquetas de hora alineadas al margen; chips con borde sutil
+- [x] **"Llamar a la primera"** en la cola de solicitudes → enlace `https://wa.me/<celular>` con el número limpio de no-dígitos
+- [x] **Limpieza de datos QA acumulados:** `packages/db/src/limpia-datos-qa.ts` (`npm run db:clean`) borra pacientes/citas/pagos/comprobantes de prueba (patrones `Paciente E2E/Vivo/Publico`, `Recepcion`, `Contienda`, `Dueña E2E`, `Dueño Dup`, emails `@e2e.local`, `@equipo.local`, etc.) respetando el orden de FK (con `cita_id` en reminders y signed_consents)
+- [x] **Regresión E2E ampliada** (`e2e/navegacion.spec.ts`): mismo patrón sin recargas para agenda (tabs → flecha Siguiente → celda de la semana), filtros de WhatsApp y periodos del dashboard. El primer intento con `router.push` puro falló exactamente en el patrón (click Mes tras Semana quedaba en `vista=semana`), lo que destapó la causa raíz
+- [x] Verificado: typecheck + lint (0 warnings) + build verdes; **3/3** regresión de navegación, **9/9** vivo y **6/6** serie contra el build final; `db:clean` post-suites (6 pacientes, 5 citas, 3 pagos, 2 comprobantes); server standalone reiniciado (health 200)
+
+Salida: la consola vuelve a navegar 100% en SPA entre estados del mismo módulo (sin recargas ni pestañas nuevas), la Vista Día se lee con clusters de citas contenidos y "Llamar a la primera" abre WhatsApp con un toque; los datos QA de las suites ya no ensucian la agenda demo.
+
+---
+
 ## Backlog post-M5 → incluido en 1.0
 
 Topología detallada por módulo en `docs/05-modulos-topologia.md`.

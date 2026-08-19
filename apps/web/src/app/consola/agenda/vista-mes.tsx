@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { addDays, format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { LinkDia } from "./link-dia";
 import type { citasEnRango } from "@/lib/console-data";
 
 type Cita = Awaited<ReturnType<typeof citasEnRango>>[number];
@@ -57,11 +57,11 @@ export function VistaMes({
             const visibles = celda.citas.slice(0, 2);
             const resto = celda.citas.length - visibles.length;
             return (
-              <Link
+              <LinkDia
                 key={celda.fechaISO}
-                href={`/consola/agenda?vista=dia&fecha=${celda.fechaISO}`}
+                fechaISO={celda.fechaISO}
                 className={cn(
-                  "flex min-h-24 flex-col gap-1 p-1.5 transition-colors hover:bg-muted/40",
+                  "flex min-h-24 w-full flex-col gap-1 p-1.5 text-left transition-colors hover:bg-muted/40",
                   i % 7 !== 0 && "border-l",
                   i < 35 && "border-b",
                   otroMes && "bg-muted/20 text-muted-foreground",
@@ -105,7 +105,7 @@ export function VistaMes({
                     +{resto} más
                   </span>
                 ) : null}
-              </Link>
+              </LinkDia>
             );
           })}
         </div>

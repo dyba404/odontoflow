@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/console/page-header";
 import { IngresosChart } from "@/app/consola/dashboard/ingresos-chart";
+import { PeriodosPills } from "./dashboard-periodos";
 import { getSession } from "@/lib/auth";
 import { gatePlan } from "@/lib/plans";
 import { PlanGate } from "@/components/console/plan-gate";
@@ -98,23 +99,7 @@ export default async function IngresosPage({
       <PageHeader
         title="Ingresos"
         description={`Resumen de los últimos ${dias} días con números tabulares.`}
-        action={
-          <div className="flex items-center gap-1 rounded-full border bg-card p-1">
-            {DIAS_OPCIONES.map((d) => (
-              <Link
-                key={d}
-                href={`/consola/dashboard?dias=${d}`}
-                className={
-                  d === dias
-                    ? "rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground"
-                    : "rounded-full px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                }
-              >
-                {d} días
-              </Link>
-            ))}
-          </div>
-        }
+        action={<PeriodosPills dias={dias} />}
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

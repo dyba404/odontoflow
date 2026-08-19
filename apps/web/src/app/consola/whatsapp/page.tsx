@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Lock, MessageCircle } from "lucide-react";
 import { redirect } from "next/navigation";
 import { format, formatDistanceToNow } from "date-fns";
@@ -20,7 +19,7 @@ import {
 } from "@/components/ui/table";
 import { getSession } from "@/lib/auth";
 import { getDefaultTeam } from "@/lib/console-data";
-import { cn } from "@/lib/utils";
+import { WhatsappFiltros, WhatsappPaginacion } from "./whatsapp-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -84,44 +83,13 @@ export default async function WhatsAppPage({
   ]);
 
   const total = totalRow?.total ?? 0;
-  const anterior = offset - LIMITE >= 0 ? offset - LIMITE : null;
-  const siguiente = offset + LIMITE < total ? offset + LIMITE : null;
-  const hrefPage = (nuevoOffset: number) => {
-    const sp = new URLSearchParams();
-    if (direccion) sp.set("direccion", direccion);
-    if (nuevoOffset > 0) sp.set("offset", String(nuevoOffset));
-    const q = sp.toString();
-    return q ? `/consola/whatsapp?${q}` : "/consola/whatsapp";
-  };
-  const filtroHref = (d: string | null) =>
-    d ? `/consola/whatsapp?direccion=${d}` : "/consola/whatsapp";
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
         title="WhatsApp"
         description={`${total} mensajes registrados en la bandeja.`}
-        action={
-          <div className="flex items-center gap-1 rounded-full border bg-card p-1">
-            {([
-              { v: null, label: "Todos" },
-              { v: "in", label: "Entrantes" },
-              { v: "out", label: "Salientes" },
-            ] as const).map((o) => (
-              <Link
-                key={o.label}
-                href={filtroHref(o.v)}
-                className={cn(
-                  direccion === o.v
-                    ? "rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground"
-                    : "rounded-full px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
-                )}
-              >
-                {o.label}
-              </Link>
-            ))}
-          </div>
-        }
+        action={<WhatsappFiltros direccion={direccion} />}
       />
 
       {filas.length === 0 ? (
@@ -190,31 +158,7 @@ export default async function WhatsAppPage({
               ))}
             </TableBody>
           </Table>
-          {(anterior !== null || siguiente !== null) && (
-            <div className="flex items-center justify-between border-t p-3">
-              <span className="text-xs tabular-nums text-muted-foreground">
-                {offset + 1}–{Math.min(offset + LIMITE, total)} de {total}
-              </span>
-              <div className="flex gap-2">
-                {anterior !== null ? (
-                  <Link
-                    href={hrefPage(anterior)}
-                    className="inline-flex h-8 items-center justify-center rounded-md border border-input bg-card px-3 text-xs font-medium hover:bg-accent hover:text-accent-foreground"
-                  >
-                    Anteriores
-                  </Link>
-                ) : null}
-                {siguiente !== null ? (
-                  <Link
-                    href={hrefPage(siguiente)}
-                    className="inline-flex h-8 items-center justify-center rounded-md border border-input bg-card px-3 text-xs font-medium hover:bg-accent hover:text-accent-foreground"
-                  >
-                    Siguientes
-                  </Link>
-                ) : null}
-              </div>
-            </div>
-          )}
+          <WhatsappPaginacion direccion={direccion} offset={offset} total={total} />
         </Card>
       )}
     </div>

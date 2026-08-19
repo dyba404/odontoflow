@@ -3,10 +3,11 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { PageHeader } from "@/components/console/page-header";
 import { EmptyState } from "@/components/console/empty-state";
+import { cn } from "@/lib/utils";
 import { SolicitudActions } from "@/app/consola/solicitudes/solicitud-actions";
 import { getDefaultTeam, solicitudesActivas } from "@/lib/console-data";
 import {
@@ -42,11 +43,16 @@ export default async function SolicitudesPage() {
         title="Solicitudes en línea"
         description="Pacientes que reservaron desde la página pública. Confirma o ajusta cada una."
         action={
-          solicitudes.length > 0 ? (
-            <Button variant="outline" size="sm">
+          solicitudes.length > 0 && solicitudes[0] ? (
+            <a
+              href={`https://wa.me/${String(solicitudes[0].patientCelular ?? "").replace(/\D/g, "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
               <Phone className="size-4" />
               Llamar a la primera
-            </Button>
+            </a>
           ) : undefined
         }
       />

@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import {
   addDays,
   addMonths,
@@ -9,10 +8,7 @@ import {
   startOfWeek,
 } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/console/page-header";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { getSession } from "@/lib/auth";
 import {
   getDefaultTeam,
@@ -24,6 +20,7 @@ import {
 } from "@/lib/console-data";
 import { NuevaCitaDialog } from "./nueva-cita-dialog";
 import { BloquearDialog } from "./bloquear-dialog";
+import { AgendaToolbar } from "./agenda-toolbar";
 import { VistaDia } from "./vista-dia";
 import { VistaSemana } from "./vista-semana";
 import { VistaMes } from "./vista-mes";
@@ -40,12 +37,6 @@ type Bloqueos = Awaited<ReturnType<typeof bloqueosDia>>;
 const SIN_CITAS_DIA: CitasDia = [];
 const SIN_CITAS_RANGO: CitasRango = [];
 const SIN_BLOQUEOS: Bloqueos = [];
-
-const VISTAS: Array<{ id: Vista; label: string }> = [
-  { id: "dia", label: "Día" },
-  { id: "semana", label: "Semana" },
-  { id: "mes", label: "Mes" },
-];
 
 function hoyLima(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date());
@@ -126,8 +117,6 @@ export default async function AgendaPage({
   const siguiente =
     vista === "dia" ? addDays(fecha, 1) : vista === "semana" ? addWeeks(fecha, 1) : addMonths(fecha, 1);
 
-  const hrefVista = (v: Vista, f: string) => `/consola/agenda?vista=${v}&fecha=${f}`;
-
   return (
     <div className="mx-auto max-w-6xl space-y-4">
       <PageHeader
@@ -147,62 +136,19 @@ export default async function AgendaPage({
         }
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex items-center rounded-lg border bg-muted p-0.5">
-            {VISTAS.map((v) => (
-              <Link
-                key={v.id}
-                href={hrefVista(v.id, fechaISO)}
-                className={cn(
-                  "rounded-md px-3 py-1 text-xs font-medium transition-colors [@media(pointer:coarse)]:min-h-12 [@media(pointer:coarse)]:px-4 [@media(pointer:coarse)]:text-sm [@media(pointer:coarse)]:inline-flex [@media(pointer:coarse)]:items-center",
-                  v.id === vista
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {v.label}
-              </Link>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-1">
-            <Link
-              href={hrefVista(vista, format(anterior, "yyyy-MM-dd"))}
-              aria-label="Anterior"
-              className={cn(buttonVariants({ variant: "outline", size: "icon" }), "size-8 [@media(pointer:coarse)]:min-h-12 [@media(pointer:coarse)]:min-w-12")}
-            >
-              <ChevronLeft className="size-4" />
-            </Link>
-            <Link
-              href={hrefVista(vista, hoy)}
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-            >
-              Hoy
-            </Link>
-            <Link
-              href={hrefVista(vista, format(siguiente, "yyyy-MM-dd"))}
-              aria-label="Siguiente"
-              className={cn(buttonVariants({ variant: "outline", size: "icon" }), "size-8 [@media(pointer:coarse)]:min-h-12 [@media(pointer:coarse)]:min-w-12")}
-            >
-              <ChevronRight className="size-4" />
-            </Link>
-          </div>
-
-          <span className="min-w-40 text-center text-sm font-semibold">
-            {labelRango(vista, fecha, lunes, domingo)}
-          </span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          {doctoresVisibles.map((d) => (
-            <span key={d.id} className="inline-flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full" style={{ background: d.color }} />
-              {d.name}
-            </span>
-          ))}
-        </div>
-      </div>
+      <AgendaToolbar
+        vista={vista}
+        fechaISO={fechaISO}
+        anteriorISO={format(anterior, "yyyy-MM-dd")}
+        siguienteISO={format(siguiente, "yyyy-MM-dd")}
+        hoyISO={hoy}
+        label={labelRango(vista, fecha, lunes, domingo)}
+        doctores={doctoresVisibles.map((d) => ({
+          id: d.id,
+          name: d.name,
+          color: d.color ?? null,
+        }))}
+      />
 
       {vista === "dia" ? (
         <VistaDia
