@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { fmtPEN } from "@/lib/format";
+import { useNavegar } from "@/lib/navegar";
 import {
   Table,
   TableBody,
@@ -89,13 +90,14 @@ export function ComisionesClient({
   periodo: string;
 }) {
   const router = useRouter();
+  const ir = useNavegar();
   const [pending, start] = useTransition();
   const [mes, setMes] = useState(periodo);
 
   function cambiarMes(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!/^\d{4}-\d{2}$/.test(mes)) return;
-    router.push(`/consola/comisiones?periodo=${mes}`);
+    ir(`/consola/comisiones?periodo=${mes}`);
   }
 
   function guardarPorcentaje(membershipId: string, porcentaje: number) {

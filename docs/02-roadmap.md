@@ -194,6 +194,19 @@ Salida: la consola vuelve a navegar 100% en SPA entre estados del mismo módulo 
 
 ---
 
+## v1.6.2 — Pulido de v1.6.1: fix de navegación sin parches globales, chip "+N más" interactivo, cobertura y ergonomía
+
+Revisión del código introducido en v1.6.1 para corregir lo agresivo/huerverano:
+
+- [x] **`useNavegar()` reescrito (apps/web/src/lib/navegar.ts), sin parches globales:** fuera el envoltorio de `history.pushState` global y el contador global de eventos, que era invasivo y traía una recarga spurious al fallar. Lo de v1.6.1 se reemplaza por un token por click que cancela el anterior, con doble condición en el fallback `location.assign` (la URL sigue exactamente igual al click **y** no es ya la de destino): no hay recarga al pulsar "Hoy" estando en hoy ni con doble click. Envoltorio `useCallback` estable. Se aplica ahora también en la pestaña "Ver mes" de comisiones y en la rama de búsqueda del command-palette (las dos llamadas a `router.push(searchParams)` que no arreglaba v1.6.1)
+- [x] **Chip "+N más" de la Vista Día interactivo:** ahora es un botón real (antes reaccionaba a ningún evento). Al hacer click abre un popover con las citas omitidas por solapamiento (hora, paciente, servicio); se cierra con clic fuera o con la tecla ESC
+- [x] **Ergonomía táctil restaurada en los controles reescritos de v1.6.1:** los filtros de WhatsApp (todos/entrantes/salientes), la paginación "Siguientes"; los envoltorios del dashboard ahora llevan la altura táctil (≥48px) de `[@media(pointer:coarse)]:min-h-12` sin cambiar cómo se ven en escritorio (los tienen un `min-h-9` base)
+- [x] Verificado: typecheck + lint (0 warnings) + build verdes; **14/14** regresión, **9/9** vivo (escritorio + móvil Pixel 7) y **6/6** serie contra el build final; `db:clean` post-suites (7 pacientes, 6 citas, 4 pagos, 2 comprobantes)
+
+Salida: la mitigación para el bug de navegaciones con searchParams es autónomo, cubre todos los puntos que cambian searchParams, y las citas que se solapan en la Vista Día recuperan visibilidad y dimensiones táctiles.
+
+---
+
 ## Backlog post-M5 → incluido en 1.0
 
 Topología detallada por módulo en `docs/05-modulos-topologia.md`.

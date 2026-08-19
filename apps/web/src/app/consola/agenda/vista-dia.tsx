@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -55,7 +55,7 @@ interface Posicion {
 interface MasInfo {
   key: string;
   pos: Posicion;
-  n: number;
+  citas: Cita[];
 }
 
 const MAX_LANES = 4;
@@ -64,7 +64,7 @@ function layoutCitas(citas: Cita[]): { pos: Map<string, Posicion>; mas: MasInfo[
   const pos = new Map<string, Posicion>();
   const activos: Array<{ fin: number; cluster: number }> = [];
   const lanes: Array<{ fin: number }> = [];
-  const overflow = new Map<number, { min: number; max: number; n: number }>();
+  const overflow = new Map<number, { min: number; max: number; citas: Cita[] }>();
   let cluster = 0;
   const orden = [...citas].sort(
     (a, b) => minutos(a.horaIni) - minutos(b.horaIni) || minutos(b.horaFin) - minutos(a.horaFin),
@@ -81,10 +81,10 @@ function layoutCitas(citas: Cita[]): { pos: Map<string, Posicion>; mas: MasInfo[
     while (ocupados.has(lane)) lane++;
     const n = Math.min(Math.max(activos.length + 1, lane + 1), MAX_LANES + 1);
     if (lane >= MAX_LANES) {
-      const o = overflow.get(cluster) ?? { min: ini, max: fin, n: 0 };
+      const o = overflow.get(cluster) ?? { min: ini, max: fin, citas: [] };
       o.min = Math.min(o.min, ini);
       o.max = Math.max(o.max, fin);
-      o.n++;
+      o.citas.push(c);
       overflow.set(cluster, o);
     } else {
       const ancho = 100 / n;
@@ -106,7 +106,7 @@ function layoutCitas(citas: Cita[]): { pos: Map<string, Posicion>; mas: MasInfo[
       left: (MAX_LANES * 100) / (MAX_LANES + 1),
       ancho: 100 / (MAX_LANES + 1),
     },
-    n: o.n,
+    citas: o.citas,
   }));
   return { pos, mas };
 }
@@ -183,6 +183,71 @@ function ChipCita({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function MasChip({ m }: { m: MasInfo }) {
+  const [popup, setPopup] = useState<{ left: number; top: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!popup) return;
+    const onDown = (e: MouseEvent) => {
+      if (btnRef.current && !btnRef.current.contains(e.target as Node)) setPopup(null);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPopup(null);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [popup]);
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setPopup((p) => (p ? null : { left: r.left + r.width / 2, top: r.bottom + 4 }));
+        }}
+        aria-label={`${m.citas.length} citas superpuestas sin mostrar`}
+        className="absolute z-30 w-full cursor-pointer rounded-md border border-dashed border-muted-foreground/50 bg-card/85 text-[10px] font-semibold tabular-nums text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+        style={{
+          top: m.pos.top,
+          height: Math.max(m.pos.height, 24),
+          left: `calc(${m.pos.left}% + 4px)`,
+          width: `calc(${m.pos.ancho}% - 8px)`,
+        }}
+      >
+        +{m.citas.length} más
+      </button>
+      {popup ? (
+        <div
+          className="fixed z-50 w-52 rounded-lg border bg-card p-2.5 shadow-md"
+          style={{ left: Math.max(8, popup.left - 104), top: popup.top }}
+        >
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Citas superpuestas
+          </p>
+          <ul className="max-h-48 space-y-2 overflow-y-auto">
+            {m.citas.map((c) => (
+              <li key={c.id} className="border-b border-border-subtle pb-1.5 last:border-b-0 last:pb-0">
+                <p className="text-[10px] font-medium tabular-nums text-muted-foreground">
+                  {c.horaIni.slice(0, 5)} – {c.horaFin.slice(0, 5)}
+                </p>
+                <p className="truncate text-xs font-semibold">{c.patientNombre}</p>
+                <p className="truncate text-[10px] text-muted-foreground">{c.servicio}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -281,18 +346,7 @@ function ColumnaDia({
         );
       })}
       {mas.map((m) => (
-        <div
-          key={m.key}
-          className="pointer-events-none absolute z-10 flex items-center justify-center overflow-hidden rounded-md border border-dashed border-muted-foreground/50 bg-card/85 text-[10px] font-semibold tabular-nums text-muted-foreground"
-          style={{
-            top: m.pos.top,
-            height: m.pos.height,
-            left: `calc(${m.pos.left}% + 4px)`,
-            width: `calc(${m.pos.ancho}% - 8px)`,
-          }}
-        >
-          +{m.n} más
-        </div>
+        <MasChip key={m.key} m={m} />
       ))}
       {fantasma && fantasma.colId === colId ? (
         <div

@@ -19,6 +19,7 @@ export function WhatsappFiltros({ direccion }: { direccion: string | null }) {
           type="button"
           onClick={() => irA(o.v)}
           className={cn(
+            "min-h-9 [@media(pointer:coarse)]:min-h-12 [@media(pointer:coarse)]:text-sm",
             direccion === o.v
               ? "rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground"
               : "rounded-full px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
@@ -63,7 +64,7 @@ export function WhatsappPaginacion({
           <button
             type="button"
             onClick={() => irA(anterior)}
-            className="inline-flex h-8 items-center justify-center rounded-md border border-input bg-card px-3 text-xs font-medium hover:bg-accent hover:text-accent-foreground"
+            className="inline-flex h-8 items-center justify-center rounded-md border border-input bg-card px-3 text-xs font-medium hover:bg-accent hover:text-accent-foreground [@media(pointer:coarse)]:min-h-12"
           >
             Anteriores
           </button>
@@ -72,7 +73,7 @@ export function WhatsappPaginacion({
           <button
             type="button"
             onClick={() => irA(siguiente)}
-            className="inline-flex h-8 items-center justify-center rounded-md border border-input bg-card px-3 text-xs font-medium hover:bg-accent hover:text-accent-foreground"
+            className="inline-flex h-8 items-center justify-center rounded-md border border-input bg-card px-3 text-xs font-medium hover:bg-accent hover:text-accent-foreground [@media(pointer:coarse)]:min-h-12"
           >
             Siguientes
           </button>

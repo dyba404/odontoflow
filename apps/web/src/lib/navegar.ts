@@ -1,52 +1,53 @@
 "use client";
 
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 
-// Next 15.5 (>= 15.5.x) tiene un bug del router con navegaciones que cambian
-// SOLO searchParams: la entrada "optimista" de cache reutiliza el
+// Next 15.5 tiene un bug del router con navegaciones que cambian SOLO
+// searchParams: la entrada "optimista" de cache reutiliza el
 // renderedSearch/canonicalUrl de la primera navegacion del mismo pathname y
 // re-reproduce esa URL (ver requestOptimisticRouteCacheEntry en
-// segment-cache-impl). Se mitiga aqui con tres capas:
-//   1) router.prefetch(url)   -> crea una entrada de ruta EXACTA para la URL
-//   2) router.push(url)       -> navegacion SPA usando esa entrada si existe
-//   3) fallback location.assign -> si a los 500ms la URL sigue IGUAL a la del
-//      click (el push quedo en cola detras de un prefetch colgado, o la
-//      entrada optimista envenenada re-reprodujo la misma URL) y ademas no
-//      hubo mas de un history.pushState en el medio, se fuerza navegacion
-//      completa, que siempre funciona.
+// segment-cache-impl/cache.js ~L409). En la agenda se veia asi: el tab
+// Semana->Mes funcionaba la primera vez y nunca mas, ni con <Link> ni con
+// router.push.
 //
-// El conteo de pushState distingue los escenarios: un push exitoso cambia la
-// URL (se descarta por la primera condicion); un push envenenado/colgado deja
-// la URL intacta con 0-1 pushState (dispara el fallback); varias navegaciones
-// rapidas (ej. tabs) suman >=2 pushState y no deben disparar nada, aunque la
-// URL termine igual que al inicio (p.ej. Semana -> Mes -> Semana).
-let contadorPushState = 0;
-let parcheado = false;
+// Fix determinista sin parchear APIs globales (v1.6.2):
+//   1) router.prefetch(url) -> crea una entrada de ruta EXACTA para la URL
+//      destino, de modo que el push posterior usa esa entrada y no la
+//      optimista envenenada.
+//   2) router.push(url)    -> navegacion SPA normal.
+//   3) Fallback a los 600ms: SOLO si la URL sigue exactamente igual que antes
+//      del click Y no es ya la de destino (evita recargas spurious cuando se
+//      pulsa un control que apunta a la URL actual, p.ej. "Hoy" estando en
+//      hoy), se fuerza una navegacion completa, que siempre funciona.
+//
+// El token por click cancela el fallback del click anterior: con clics
+// rapidos (tabs Dia/Semana/Mes) solo queda activo el ultimo, y si alguno de
+// los pushes llego a cambiar la URL la condicion del fallback ya no se
+// cumple. No se envuelve history.pushState ni se cuentan eventos globales.
+let ultimoToken = 0;
 
 export function useNavegar() {
   const router = useRouter();
-  return (url: string) => {
-    const antes = window.location.href;
-    const destino = new URL(url, antes);
-    if (!parcheado) {
-      parcheado = true;
-      const original = window.history.pushState.bind(window.history);
-      window.history.pushState = ((data: unknown, unused: string, url?: string | URL | null) => {
-        contadorPushState += 1;
-        original(data, unused, url);
-      }) as typeof window.history.pushState;
-    }
-    const base = contadorPushState;
-    try {
-      router.prefetch(url);
-    } catch {
-      // prefetch es opcional; si falla, la navegacion push/fallback cubre.
-    }
-    router.push(url);
-    window.setTimeout(() => {
-      if (window.location.href === antes && contadorPushState - base <= 1) {
-        window.location.assign(destino.href);
+  return useCallback(
+    (url: string) => {
+      const antes = window.location.href;
+      const destino = new URL(url, antes).href;
+      const token = ++ultimoToken;
+      try {
+        router.prefetch(url);
+      } catch {
+        // prefetch es opcional; push/fallback cubren la navegacion.
       }
-    }, 500);
-  };
+      router.push(url);
+      window.setTimeout(() => {
+        if (token !== ultimoToken) return; // un click mas reciente ya decidio
+        const actual = window.location.href;
+        if (actual === antes && actual !== destino) {
+          window.location.assign(destino);
+        }
+      }, 600);
+    },
+    [router],
+  );
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useNavegar } from "@/lib/navegar";
 import {
   AlarmClock,
   CalendarDays,
@@ -59,6 +60,7 @@ export function CommandPalette({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const ir = useNavegar();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const requestIdRef = useRef(0);
@@ -134,9 +136,9 @@ export function CommandPalette({
     (item: PaletteItem) => {
       onClose();
       if (item.kind === "seccion") router.push(item.href);
-      else router.push(`/consola/pacientes?q=${encodeURIComponent(item.nombre)}`);
+      else ir(`/consola/pacientes?q=${encodeURIComponent(item.nombre)}`);
     },
-    [onClose, router],
+    [onClose, router, ir],
   );
 
   if (!open) return null;
