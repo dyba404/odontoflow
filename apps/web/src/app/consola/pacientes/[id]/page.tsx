@@ -31,6 +31,7 @@ import {
 import { getSession } from "@/lib/auth";
 import { planDeTenant, planEsProOMayor } from "@/lib/plans";
 import { fmtPEN, fmtFechaRelativa } from "@/lib/format";
+import { PortalLinkButton } from "./portal-link-button";
 
 export const dynamic = "force-dynamic";
 
@@ -234,6 +235,9 @@ export default async function FichaPacientePage({
                       gestacion: paciente.gestacion,
                     }}
                   />
+                ) : null}
+                {hasPermission(session.role, "patients.manage") ? (
+                  <PortalLinkButton patientId={paciente.id} />
                 ) : null}
               </div>
               <div className="mt-3 grid gap-1.5 text-sm text-muted-foreground sm:grid-cols-3">

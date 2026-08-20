@@ -274,6 +274,38 @@ ni cambios de roles.
 
 ---
 
+## v1.8.0 — Superficie pública HTTPS (Cloudflare Tunnel + Caddy) y portal del paciente desde la consola
+
+- [x] **Superficie pública sin puerto 3111 expuesto:** `web` deja de publicar puertos;
+      HTTPS entra por dos modos excluyentes según el host. Modo CGNAT (piloto en
+      casa): perfil `tunnel` con `cloudflared` en **modo token**
+      (`CLOUDFLARE_TUNNEL_TOKEN`, ingress configurado en Cloudflare Zero Trust,
+      TLS terminada en el edge) — validado 2026-08-19 en `https://app.marsmode.me`
+      (health 200). Modo IP pública (VPS/Azure): servicio `caddy` en 80/443
+      (+udp HTTP/3) con `deploy/Caddyfile` parametrizado
+      (`{$APP_DOMAIN:...}`/`{$WWW_DOMAIN:...}`, redir 301 www→app). Se retiró el
+      modo credentials-file (`deploy/cloudflared/config.yml`): sin credenciales
+      en repo ni host.
+- [x] **`packages/db/src/client.ts`:** el socket con sondeo TCP + revive WSL solo
+      se instala con `process.platform === "win32"`; en Docker/Linux la conexión
+      a `db:5432` usa la ruta estándar de `postgres-js`.
+- [x] **Portal del paciente desde la consola:** botón "Portal del paciente" en la
+      ficha (gate `patients.manage`) → `POST /api/pacientes/[id]/portal` devuelve
+      la URL `/<slug>/portal/<token>` reutilizando el token vigente de 30 días
+      (o creándolo); 401 sin sesión, paciente de otro tenant → 404.
+      E2E: `e2e/portal.spec.ts` en la regresión.
+- [x] Verificado: typecheck + lint (0 warnings) + build standalone fresco;
+      **regresión 15/15** (incluye el nuevo `portal.spec.ts`) contra el build
+      final; `docker compose -f docker-compose.prod.yml config` parsea con y sin
+      `--profile tunnel`; health local 200 y público
+      `https://app.marsmode.me/api/health` 200; `db:clean` post-regresión.
+
+Salida: el piloto queda publicado por HTTPS detrás de Cloudflare Tunnel (sin
+abrir puertos del router) y el staff puede entregar al paciente su enlace del
+portal con un click desde la ficha, sin SQL ni scripts.
+
+---
+
 ## Backlog post-M5 → incluido en 1.0
 
 Topología detallada por módulo en `docs/05-modulos-topologia.md`.
