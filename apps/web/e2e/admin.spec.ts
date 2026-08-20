@@ -10,10 +10,10 @@ import {
   verificarEntorno,
 } from "./vivo/helpers";
 
-// Suite v1.7.0: fundador, acciones de soporte e impersonación auditada.
-// Corre serial (npm run test:e2e:admin) contra un fundador E2E cuya contraseña
-// temporal re-establece el beforeAll (db:seed:founder) por cada proyecto
-// (desktop + móvil). Credenciales de TEST locales; nunca secretos de producción.
+// Suite v1.9.0: fundador, panel de plataforma multi-página (resumen/tenants/
+// usuarios/auditoría), acciones de soporte con motivo obligatorio y
+// suspensión bulk. Corre serial (npm run test:e2e:admin) contra un fundador
+// E2E cuya contraseña temporal re-establece el beforeAll por cada proyecto.
 
 const REPO_ROOT = resolve(process.cwd(), "../..");
 
@@ -52,8 +52,6 @@ async function esperarPuerto(port: number, timeoutMs: number) {
 }
 
 test.beforeAll(async () => {
-  // La BD de WSL/Docker a veces tarda en arrancar: esperamos el puerto y
-  // reintentamos el seed ante cortes transitorios del daemon.
   await esperarPuerto(5432, 120_000);
   let ultimoError: unknown;
   for (let intento = 0; intento < 3; intento++) {
@@ -75,7 +73,8 @@ test.beforeAll(async () => {
   throw ultimoError;
 });
 
-const clinica = { nombre: "", email: "" };
+const clinica = { nombre: "", email: "", slug: "" };
+let tenantIdClinica = "";
 let claveOwnerActualizada = "";
 let urlImpersonacionUsada = "";
 
@@ -148,23 +147,31 @@ async function loginUIError(page: Page, email: string, password: string, errorEs
   throw new Error(`no se vio ${errorEsperado} en login de ${email}`);
 }
 
-async function abrirMiembros(page: Page, nombreClinica: string) {
-  await page.goto("/admin", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "Administración de la plataforma" })).toBeVisible();
-  await descartarBannerPWA(page);
-  const fila = page.locator("tbody tr", { hasText: nombreClinica }).first();
-  await fila.getByRole("button", { name: "Miembros" }).click();
-  const lista = fila.locator("li");
-  await expect(lista.first()).toBeVisible({ timeout: 10_000 });
-  return lista;
-}
-
-/** En móvil el banner de instalación PWA (coarse pointer) tapa la fila: lo descartamos. */
+/** En móvil el banner de instalación PWA (coarse pointer) tapa filas: lo descartamos. */
 async function descartarBannerPWA(page: Page) {
   const cerrar = page.getByRole("button", { name: "Cerrar" }).first();
   if (await cerrar.isVisible().catch(() => false)) {
     await cerrar.click();
   }
+}
+
+/** Abre la ficha del tenant desde /admin/tenants y devuelve la lista de miembros. */
+async function abrirDetalle(page: Page, nombreClinica: string) {
+  await page.goto(`/admin/tenants?q=${encodeURIComponent(nombreClinica)}`, {
+    waitUntil: "domcontentloaded",
+  });
+  await expect(page.getByRole("heading", { name: "Tenants" })).toBeVisible();
+  await descartarBannerPWA(page);
+  await page
+    .locator("tbody tr", { hasText: nombreClinica })
+    .first()
+    .getByRole("link")
+    .first()
+    .click();
+  await expect(page.getByRole("heading", { name: nombreClinica })).toBeVisible();
+  const miembros = page.getByTestId("lista-miembros").locator("li");
+  await expect(miembros.first()).toBeVisible({ timeout: 10_000 });
+  return miembros;
 }
 
 function filaMiembro(lista: ReturnType<Page["locator"]>, email: string) {
@@ -176,7 +183,6 @@ test("1. login del fundador con password temporal obliga al primer cambio", asyn
 
   await loginUIHasta(page, FOUNDER_EMAIL, FOUNDER_PASS_TEMPORAL, /\/primer-acceso/);
 
-  // Irse directo al admin no debe funcionar mientras no cambie la contraseña
   await page.goto("/admin", { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(/\/primer-acceso/, { timeout: 15_000 });
 
@@ -185,16 +191,23 @@ test("1. login del fundador con password temporal obliga al primer cambio", asyn
   await page.locator("#pa-confirmar").fill(FOUNDER_PASS_NUEVA);
   await page.getByRole("button", { name: "Cambiar contraseña" }).click();
 
-  await expect(page).toHaveURL(/\/admin$/, { timeout: 15_000 });
+  await expect(page).toHaveURL(/\/admin\/resumen/, { timeout: 15_000 });
   await expect(page.getByRole("heading", { name: "Administración de la plataforma" })).toBeVisible();
 });
 
-test("2. /admin muestra los tenants y el panel expandible de miembros", async ({ page }) => {
+test("2. /admin redirige a resumen; tenants y detalle muestran miembros", async ({ page }) => {
   await sesionFundador(page, FOUNDER_PASS_NUEVA);
+
   await page.goto("/admin", { waitUntil: "domcontentloaded" });
+  await expect(page).toHaveURL(/\/admin\/resumen/);
+  await expect(page.getByRole("heading", { name: "Administración de la plataforma" })).toBeVisible();
+
+  await page.goto(`/admin/tenants?q=${encodeURIComponent(NOMBRE_DEMO)}`, {
+    waitUntil: "domcontentloaded",
+  });
   await expect(page.getByText(NOMBRE_DEMO).first()).toBeVisible();
 
-  const lista = await abrirMiembros(page, NOMBRE_DEMO);
+  const miembros = await abrirDetalle(page, NOMBRE_DEMO);
   for (const email of [
     "owner@demo.odontoflow.pe",
     "recepcion@demo.odontoflow.pe",
@@ -204,7 +217,7 @@ test("2. /admin muestra los tenants y el panel expandible de miembros", async ({
   ]) {
     await expect(page.getByText(email, { exact: true }).first()).toBeVisible();
   }
-  await expect(lista).toHaveCount(5);
+  await expect(miembros).toHaveCount(5);
 });
 
 test("3. reenvío de recuperación → correo en Mailpit → reset funcional y token de un uso", async ({
@@ -217,15 +230,15 @@ test("3. reenvío de recuperación → correo en Mailpit → reset funcional y t
 
   await sesionFundador(page, FOUNDER_PASS_NUEVA);
 
-  // El signup se hace en un contexto aislado para no pisar la cookie del fundador
   const ctxAlta = await browser.newContext();
   const pageAlta = await ctxAlta.newPage();
   const clinic = await altaClinicaPorUI(pageAlta, `ad${Date.now().toString(36)}`);
   await ctxAlta.close();
   clinica.nombre = clinic.nombreClinica;
   clinica.email = clinic.email;
+  clinica.slug = clinic.slug;
 
-  const lista = await abrirMiembros(page, clinica.nombre);
+  const lista = await abrirDetalle(page, clinica.nombre);
   const fila = filaMiembro(lista, clinica.email);
   await fila.getByRole("button", { name: "Recuperación" }).click();
   await expect(page.getByText(`Recuperación enviada a ${clinica.email}`)).toBeVisible({
@@ -246,7 +259,6 @@ test("3. reenvío de recuperación → correo en Mailpit → reset funcional y t
   await loginUIHasta(p2, clinica.email, claveOwnerActualizada, /\/consola/);
   await ctxLimpio.close();
 
-  // El token ya fue consumido: un segundo uso responde 400 token_invalido
   const resReuso = await page.request.post(`${BASE}/api/auth/recuperar/${token}`, {
     data: { password: "OtraClave2026!" },
   });
@@ -256,11 +268,9 @@ test("3. reenvío de recuperación → correo en Mailpit → reset funcional y t
 test("4. impersonación con banner permanente, botón Salir y sesión del objetivo", async ({ page }) => {
   test.skip(!clinica.email, "clínica E2E no registrada (depende del test 3)");
   await sesionFundador(page, FOUNDER_PASS_NUEVA);
-  const lista = await abrirMiembros(page, clinica.nombre);
+  const lista = await abrirDetalle(page, clinica.nombre);
   const fila = filaMiembro(lista, clinica.email);
 
-  // El click navega con window.location.assign apenas recibe el body: capturamos
-  // la URL del request a /api/admin/impersonar/{token} (no se pierde con la navegación).
   let urlImp = "";
   page.on("request", (req) => {
     const m = req.url().match(/\/api\/admin\/impersonar\/([a-f0-9]+)/);
@@ -278,18 +288,24 @@ test("4. impersonación con banner permanente, botón Salir y sesión del objeti
   await expect(banner).toContainText(FOUNDER_EMAIL);
 
   await page.getByRole("button", { name: "Salir" }).click();
-  await expect(page).toHaveURL(/\/admin$/, { timeout: 15_000 });
+  await expect(page).toHaveURL(/\/admin\/resumen/, { timeout: 15_000 });
   await expect(page.getByRole("heading", { name: "Administración de la plataforma" })).toBeVisible();
 });
 
-test("5. cuenta bloqueada no puede loguearse hasta desbloquearla", async ({ browser, page }) => {
+test("5. cuenta bloqueada no puede loguearse hasta desbloquearla (bloquear exige motivo)", async ({
+  browser,
+  page,
+}) => {
   test.skip(!clinica.email, "clínica E2E no registrada (depende del test 3)");
   await sesionFundador(page, FOUNDER_PASS_NUEVA);
-  const lista = await abrirMiembros(page, clinica.nombre);
+  const lista = await abrirDetalle(page, clinica.nombre);
   const fila = filaMiembro(lista, clinica.email);
 
-  page.on("dialog", (d) => void d.accept("Prueba de soporte E2E"));
   await fila.getByRole("button", { name: "Bloquear" }).click();
+  const dialogo = page.getByRole("dialog");
+  await expect(dialogo).toBeVisible();
+  await dialogo.locator("#motivo-miembro").fill("Prueba de soporte E2E");
+  await dialogo.getByRole("button", { name: "Bloquear" }).click();
   await expect(fila.getByText("Bloqueado", { exact: true }).first()).toBeVisible({ timeout: 10_000 });
 
   const ctxVictima = await browser.newContext();
@@ -308,10 +324,14 @@ test("6. membresía desactivada pierde acceso; token de impersonación reusado r
 }) => {
   test.skip(!clinica.email, "clínica E2E no registrada (depende del test 3)");
   await sesionFundador(page, FOUNDER_PASS_NUEVA);
-  const lista = await abrirMiembros(page, clinica.nombre);
+  const lista = await abrirDetalle(page, clinica.nombre);
   const fila = filaMiembro(lista, clinica.email);
 
   await fila.getByRole("button", { name: "Desactivar" }).click();
+  const dialogo = page.getByRole("dialog");
+  await expect(dialogo).toBeVisible();
+  await dialogo.locator("#motivo-miembro").fill("Desactivación de prueba");
+  await dialogo.getByRole("button", { name: "Desactivar" }).click();
   await expect(fila.getByText("Inactivo", { exact: true }).first()).toBeVisible({ timeout: 10_000 });
 
   const ctxVictima = await browser.newContext();
@@ -347,7 +367,7 @@ test("7. admin con membresía activa sigue entrando a /admin (sin lockout)", asy
   try {
     const ctx = await browser.newContext();
     const p = await ctx.newPage();
-    await loginUIHasta(p, FOUNDER_EMAIL, FOUNDER_PASS_NUEVA, /\/admin$/);
+    await loginUIHasta(p, FOUNDER_EMAIL, FOUNDER_PASS_NUEVA, /\/admin\/resumen/);
     await expect(
       p.getByRole("heading", { name: "Administración de la plataforma" }),
     ).toBeVisible();
@@ -355,4 +375,88 @@ test("7. admin con membresía activa sigue entrando a /admin (sin lockout)", asy
   } finally {
     membresiaFundador("borrar");
   }
+});
+
+test("8. búsqueda global de usuarios enlaza con la ficha del tenant", async ({ page }) => {
+  test.skip(!clinica.email, "clínica E2E no registrada (depende del test 3)");
+  await sesionFundador(page, FOUNDER_PASS_NUEVA);
+
+  await page.goto(`/admin/usuarios?q=${encodeURIComponent(clinica.email)}`, {
+    waitUntil: "domcontentloaded",
+  });
+  await expect(page.getByText(clinica.email).first()).toBeVisible();
+  await page.getByRole("link", { name: "Ver en tenant" }).first().click();
+  await expect(page.getByRole("heading", { name: clinica.nombre })).toBeVisible();
+  tenantIdClinica = page.url().split("/admin/tenants/")[1] ?? "";
+  expect(tenantIdClinica).toMatch(/^[a-f0-9-]+$/);
+});
+
+test("9. suspensión bulk exige motivo y aviso de owner; luego se puede reactivar", async ({
+  browser,
+  page,
+}) => {
+  test.skip(!clinica.email, "clínica E2E no registrada (depende del test 3)");
+  await sesionFundador(page, FOUNDER_PASS_NUEVA);
+  await abrirDetalle(page, clinica.nombre);
+
+  await page.getByRole("button", { name: "Suspender membresías" }).click();
+  const dialogo = page.getByRole("dialog");
+  await expect(dialogo).toBeVisible();
+
+  const confirmar = dialogo.getByRole("button", { name: "Suspender todas" });
+  await expect(confirmar).toBeDisabled();
+  await dialogo.locator(`#motivo-bulk-${tenantIdClinica}`).fill("E2E: suspensión bulk de prueba");
+  await expect(confirmar).toBeDisabled();
+  await dialogo.getByRole("checkbox").check();
+  await expect(confirmar).toBeEnabled();
+  await confirmar.click();
+
+  await expect(page.getByText(/Membresías .* desactivadas/)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Inactivo", { exact: true }).first()).toBeVisible({ timeout: 10_000 });
+
+  const ctxVictima = await browser.newContext();
+  const pv = await ctxVictima.newPage();
+  await loginUIError(pv, clinica.email, claveOwnerActualizada, /no tiene acceso/i);
+  await ctxVictima.close();
+
+  await page.getByRole("button", { name: "Activar" }).click();
+  await expect(page.getByText("Inactivo", { exact: true })).toHaveCount(0, { timeout: 10_000 });
+
+  await page.goto("/admin/auditoria?accion=soporte.membresias_desactivadas_bulk", {
+    waitUntil: "domcontentloaded",
+  });
+  await expect(page.locator("tbody tr").first()).toContainText(clinica.nombre);
+});
+
+test("10. APIs de soporte exigen motivo: membresía PATCH 400, bulk 400, suscripción 400", async ({
+  page,
+}) => {
+  test.skip(!tenantIdClinica, "tenant E2E no resuelto (depende del test 8)");
+  await sesionFundador(page, FOUNDER_PASS_NUEVA);
+
+  const resMiembros = await page.request.get(`${BASE}/api/admin/tenants/${tenantIdClinica}/members`);
+  expect(resMiembros.status()).toBe(200);
+  const { miembros } = (await resMiembros.json()) as {
+    miembros: Array<{ membershipId: string }>;
+  };
+  const membershipId = miembros[0]?.membershipId;
+  expect(membershipId).toBeTruthy();
+
+  const sinNota = await page.request.patch(`${BASE}/api/admin/memberships/${membershipId}`, {
+    data: { active: false },
+  });
+  expect(sinNota.status()).toBe(400);
+  expect(await sinNota.json()).toMatchObject({ error: "motivo_requerido" });
+
+  const bulkSinMotivo = await page.request.post(`${BASE}/api/admin/memberships/bulk`, {
+    data: { tenantId: tenantIdClinica, active: false },
+  });
+  expect(bulkSinMotivo.status()).toBe(400);
+  expect(await bulkSinMotivo.json()).toMatchObject({ error: "motivo_requerido" });
+
+  const susSinNota = await page.request.patch(`${BASE}/api/admin/suscripcion`, {
+    data: { tenantId: tenantIdClinica, estado: "suspendido" },
+  });
+  expect(susSinNota.status()).toBe(400);
+  expect(await susSinNota.json()).toMatchObject({ error: "motivo_requerido" });
 });

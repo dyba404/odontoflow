@@ -88,7 +88,16 @@ export async function PATCH(req: Request) {
     if (!ESTADOS.includes(body.estado as PlanStatus)) {
       return NextResponse.json({ error: "estado_invalido" }, { status: 400 });
     }
-    valores.estado = body.estado as PlanStatus;
+    const nuevoEstado = body.estado as PlanStatus;
+    const estadoPrevio = valores.estado;
+    if (
+      (nuevoEstado === "suspendido" || nuevoEstado === "cancelado") &&
+      estadoPrevio !== nuevoEstado &&
+      !body.nota?.trim()
+    ) {
+      return NextResponse.json({ error: "motivo_requerido" }, { status: 400 });
+    }
+    valores.estado = nuevoEstado;
   }
   if (body.vence !== undefined) {
     if (body.vence === null || body.vence === "") {

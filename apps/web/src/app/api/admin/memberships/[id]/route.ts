@@ -10,7 +10,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!guard.ok) return guard.response;
 
   const { id } = await params;
-  let body: { active?: boolean };
+  let body: { active?: boolean; nota?: string | null };
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -18,6 +18,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
   if (typeof body.active !== "boolean") {
     return NextResponse.json({ error: "active_requerido" }, { status: 400 });
+  }
+  const nota = body.nota?.trim() || null;
+  if (body.active === false && !nota) {
+    return NextResponse.json({ error: "motivo_requerido" }, { status: 400 });
   }
 
   const db = getDb();
@@ -35,7 +39,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     accion: body.active ? "soporte.membresia_activada" : "soporte.membresia_desactivada",
     entidad: "memberships",
     entidadId: memb.id,
-    payload: auditPayloadSoporte(guard.admin.email, { userId: memb.userId, active: body.active }),
+    payload: auditPayloadSoporte(guard.admin.email, {
+      userId: memb.userId,
+      active: body.active,
+      ...(nota ? { motivo: nota } : {}),
+    }),
   });
 
   return NextResponse.json({ ok: true, active: body.active });

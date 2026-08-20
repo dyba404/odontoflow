@@ -1,6 +1,7 @@
-import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, like, lte, or, sql } from "drizzle-orm";
 import { cache } from "react";
 import { getSession } from "@/lib/auth";
+import type { PlanCode, PlanStatus } from "@odontoflow/core";
 import {
   getDb,
   teams,
@@ -22,6 +23,7 @@ import {
   attachments,
   signedConsents,
   legalSettings,
+  sessions,
 } from "@odontoflow/db";
 
 export async function serviciosActivosConsola(teamId: string) {
@@ -569,8 +571,54 @@ export async function toothStatesPaciente(patientId: string) {
     .orderBy(asc(toothStates.toothFdi));
 }
 
-export async function panelAdmin() {
+const PLANES_VALIDOS: readonly (PlanCode)[] = ["free", "pro", "premium"];
+const ESTADOS_VALIDOS: readonly (PlanStatus)[] = ["activo", "por_renovar", "suspendido", "cancelado"];
+
+export interface PanelAdminFiltros {
+  q?: string | null;
+  plan?: string | null;
+  estado?: string | null;
+  page?: number;
+  perPage?: number;
+}
+
+function filtroEnum<T extends string>(validos: readonly T[], valor?: string | null): T | null {
+  const v = valor?.trim();
+  return v && (validos as readonly string[]).includes(v) ? (v as T) : null;
+}
+
+export async function panelAdmin(filtros: PanelAdminFiltros = {}) {
   const db = getDb();
+  const q = filtros.q?.trim() || null;
+  const plan = filtroEnum(PLANES_VALIDOS, filtros.plan);
+  const estado = filtroEnum(ESTADOS_VALIDOS, filtros.estado);
+  const perPage = Math.min(Math.max(filtros.perPage ?? 50, 5), 200);
+  const page = Math.max(Math.floor(filtros.page ?? 1), 1);
+
+  const whereQ = q
+    ? or(ilike(teams.name, `%${q}%`), ilike(teams.slug, `%${q}%`))
+    : undefined;
+  const wherePlan =
+    plan === "free"
+      ? or(isNull(subscriptions.plan), eq(subscriptions.plan, "free"))
+      : plan
+        ? eq(subscriptions.plan, plan)
+        : undefined;
+  const whereEstado =
+    estado === "activo"
+      ? or(isNull(subscriptions.estado), eq(subscriptions.estado, "activo"))
+      : estado
+        ? eq(subscriptions.estado, estado)
+        : undefined;
+  const where = and(whereQ, wherePlan, whereEstado);
+
+  const [totalRow] = await db
+    .select({ total: sql<number>`count(*)::int`.mapWith(Number) })
+    .from(teams)
+    .leftJoin(subscriptions, eq(subscriptions.tenantId, teams.id))
+    .where(where);
+  const total = totalRow?.total ?? 0;
+
   const tenants = await db
     .select({
       id: teams.id,
@@ -585,35 +633,53 @@ export async function panelAdmin() {
     })
     .from(teams)
     .leftJoin(subscriptions, eq(subscriptions.tenantId, teams.id))
-    .orderBy(asc(teams.createdAt));
+    .where(where)
+    .orderBy(desc(teams.createdAt))
+    .limit(perPage)
+    .offset((page - 1) * perPage);
+
+  const ids = tenants.map((t) => t.id);
   const porTenant = new Map<string, { miembros: number; pacientes: number }>();
   for (const t of tenants) porTenant.set(t.id, { miembros: 0, pacientes: 0 });
-  const membersRows = await db
-    .select({ teamId: memberships.teamId, total: sql<number>`count(${memberships.id})`.mapWith(Number) })
-    .from(memberships)
-    .where(eq(memberships.active, true))
-    .groupBy(memberships.teamId);
-  for (const r of membersRows) {
-    const c = porTenant.get(r.teamId);
-    if (c) c.miembros = r.total;
+  if (ids.length > 0) {
+    const membersRows = await db
+      .select({
+        teamId: memberships.teamId,
+        total: sql<number>`count(*)::int`.mapWith(Number),
+      })
+      .from(memberships)
+      .where(and(inArray(memberships.teamId, ids), eq(memberships.active, true)))
+      .groupBy(memberships.teamId);
+    for (const r of membersRows) {
+      const c = porTenant.get(r.teamId);
+      if (c) c.miembros = r.total;
+    }
+    const patientsRows = await db
+      .select({ teamId: patients.tenantId, total: sql<number>`count(*)::int`.mapWith(Number) })
+      .from(patients)
+      .where(inArray(patients.tenantId, ids))
+      .groupBy(patients.tenantId);
+    for (const r of patientsRows) {
+      const c = porTenant.get(r.teamId);
+      if (c) c.pacientes = r.total;
+    }
   }
-  const patientsRows = await db
-    .select({ teamId: patients.tenantId, total: sql<number>`count(${patients.id})`.mapWith(Number) })
-    .from(patients)
-    .groupBy(patients.tenantId);
-  for (const r of patientsRows) {
-    const c = porTenant.get(r.teamId);
-    if (c) c.pacientes = r.total;
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date());
+  let citasPorTenant = new Map<string, number>();
+  if (ids.length > 0) {
+    const citasHoy = await db
+      .select({ teamId: appointments.tenantId, total: sql<number>`count(*)::int`.mapWith(Number) })
+      .from(appointments)
+      .where(and(inArray(appointments.tenantId, ids), eq(appointments.fecha, today)))
+      .groupBy(appointments.tenantId);
+    citasPorTenant = new Map(citasHoy.map((r) => [r.teamId, r.total]));
   }
-  const [today] = [new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date())];
-  const citasHoy = await db
-    .select({ teamId: appointments.tenantId, total: sql<number>`count(${appointments.id})`.mapWith(Number) })
-    .from(appointments)
-    .where(eq(appointments.fecha, today))
-    .groupBy(appointments.tenantId);
-  const citasPorTenant = new Map(citasHoy.map((r) => [r.teamId, r.total]));
+
   return {
     today,
+    total,
+    page,
+    pages: Math.max(1, Math.ceil(total / perPage)),
     tenants: tenants.map((t) => ({
       ...t,
       miembros: porTenant.get(t.id)?.miembros ?? 0,
@@ -621,6 +687,175 @@ export async function panelAdmin() {
       citasHoy: citasPorTenant.get(t.id) ?? 0,
     })),
   };
+}
+
+export async function planEstadoFacets() {
+  const db = getDb();
+  const [facetsPlan, facetsEstado] = await Promise.all([
+    db.execute<{ plan: string; total: number }>(
+      sql`select coalesce(${subscriptions.plan}, 'free') as plan, count(*)::int as total
+          from ${teams}
+          left join ${subscriptions} on ${subscriptions.tenantId} = ${teams.id}
+          group by 1
+          order by 1`,
+    ),
+    db.execute<{ estado: string; total: number }>(
+      sql`select coalesce(${subscriptions.estado}, 'activo') as estado, count(*)::int as total
+          from ${teams}
+          left join ${subscriptions} on ${subscriptions.tenantId} = ${teams.id}
+          group by 1
+          order by 1`,
+    ),
+  ]);
+  return {
+    planes: Array.from(facetsPlan),
+    estados: Array.from(facetsEstado),
+  };
+}
+
+export async function adminUsuarios(filtros: {
+  q?: string | null;
+  page?: number;
+  perPage?: number;
+} = {}) {
+  const db = getDb();
+  const q = filtros.q?.trim() || null;
+  const perPage = Math.min(Math.max(filtros.perPage ?? 50, 5), 200);
+  const page = Math.max(Math.floor(filtros.page ?? 1), 1);
+  const whereQ = q
+    ? or(ilike(users.name, `%${q}%`), ilike(users.email, `%${q}%`))
+    : undefined;
+
+  const [totalRow] = await db
+    .select({ total: sql<number>`count(*)::int`.mapWith(Number) })
+    .from(users)
+    .where(whereQ);
+  const total = totalRow?.total ?? 0;
+
+  const rows = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      isPlatformAdmin: users.isPlatformAdmin,
+      lockedAt: users.lockedAt,
+      tenantId: teams.id,
+      tenantNombre: teams.name,
+      membershipId: memberships.id,
+      role: memberships.role,
+      membActive: memberships.active,
+    })
+    .from(users)
+    .leftJoin(
+      memberships,
+      and(eq(memberships.userId, users.id), eq(memberships.active, true)),
+    )
+    .leftJoin(teams, eq(teams.id, memberships.teamId))
+    .where(whereQ)
+    .orderBy(asc(users.createdAt))
+    .limit(perPage)
+    .offset((page - 1) * perPage);
+
+  return {
+    total,
+    page,
+    pages: Math.max(1, Math.ceil(total / perPage)),
+    usuarios: rows.map((r) => ({
+      ...r,
+      role: r.role as string | null,
+      membActive: r.membActive ?? null,
+    })),
+  };
+}
+
+export async function auditoriaSoporte(filtros: {
+  accion?: string | null;
+  page?: number;
+  perPage?: number;
+} = {}) {
+  const db = getDb();
+  const perPage = Math.min(Math.max(filtros.perPage ?? 50, 5), 100);
+  const page = Math.max(Math.floor(filtros.page ?? 1), 1);
+  const accion = filtros.accion?.trim() || null;
+  const where = accion
+    ? and(like(auditLogs.accion, "soporte.%"), eq(auditLogs.accion, accion))
+    : like(auditLogs.accion, "soporte.%");
+
+  const [[totalRow], accionesRows] = await Promise.all([
+    db
+      .select({ total: sql<number>`count(*)::int`.mapWith(Number) })
+      .from(auditLogs)
+      .where(where),
+    db
+      .selectDistinct({ accion: auditLogs.accion })
+      .from(auditLogs)
+      .where(like(auditLogs.accion, "soporte.%"))
+      .limit(100),
+  ]);
+  const total = totalRow?.total ?? 0;
+
+  const filas = await db
+    .select({
+      id: auditLogs.id,
+      accion: auditLogs.accion,
+      entidad: auditLogs.entidad,
+      entidadId: auditLogs.entidadId,
+      payload: auditLogs.payload,
+      createdAt: auditLogs.createdAt,
+      tenantNombre: teams.name,
+      tenantId: teams.id,
+      userName: users.name,
+    })
+    .from(auditLogs)
+    .innerJoin(teams, eq(teams.id, auditLogs.tenantId))
+    .leftJoin(users, eq(auditLogs.userId, users.id))
+    .where(where)
+    .orderBy(desc(auditLogs.createdAt), desc(auditLogs.id))
+    .limit(perPage)
+    .offset((page - 1) * perPage);
+
+  return {
+    total,
+    page,
+    pages: Math.max(1, Math.ceil(total / perPage)),
+    acciones: accionesRows.map((r) => r.accion).sort(),
+    filas,
+  };
+}
+
+export async function accionesRecientesTenant(tenantId: string, limite = 15) {
+  const db = getDb();
+  return db
+    .select({
+      id: auditLogs.id,
+      accion: auditLogs.accion,
+      entidad: auditLogs.entidad,
+      payload: auditLogs.payload,
+      createdAt: auditLogs.createdAt,
+      userName: users.name,
+    })
+    .from(auditLogs)
+    .leftJoin(users, eq(auditLogs.userId, users.id))
+    .where(and(eq(auditLogs.tenantId, tenantId), like(auditLogs.accion, "soporte.%")))
+    .orderBy(desc(auditLogs.createdAt), desc(auditLogs.id))
+    .limit(limite);
+}
+
+export async function ultimaSesionPorUsuario(tenantId: string): Promise<Map<string, string>> {
+  const mapa = new Map<string, string>();
+  const rows = await getDb().execute<{ user_id: string; created_at: Date | string }>(
+    sql`select distinct on (${sessions.userId}) ${sessions.userId} as user_id, ${sessions.createdAt} as created_at
+        from ${sessions}
+        where ${sessions.tenantId} = ${tenantId}
+        order by ${sessions.userId}, ${sessions.createdAt} desc`,
+  );
+  for (const r of rows) {
+    const fecha = r.created_at instanceof Date ? r.created_at : new Date(r.created_at);
+    if (!Number.isNaN(fecha.getTime())) {
+      mapa.set(r.user_id, fecha.toISOString());
+    }
+  }
+  return mapa;
 }
 
 export async function auditList(teamId: string, limite = 100) {

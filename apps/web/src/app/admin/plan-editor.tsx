@@ -47,6 +47,10 @@ export function PlanEditor({
   const [monto, setMonto] = useState(iniciales.monto ?? "");
   const [nota, setNota] = useState(iniciales.nota ?? "");
 
+  const requiereNota =
+    (estado === "suspendido" || estado === "cancelado") &&
+    (iniciales.estado ?? "activo") !== estado;
+
   function guardar() {
     start(async () => {
       const res = await fetch("/api/admin/suscripcion", {
@@ -133,7 +137,9 @@ export function PlanEditor({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor={`nota-${tenantId}`}>Nota interna</Label>
+            <Label htmlFor={`nota-${tenantId}`}>
+              Nota interna{requiereNota ? " (obligatoria para suspender/cancelar)" : ""}
+            </Label>
             <Input
               id={`nota-${tenantId}`}
               value={nota}
@@ -148,7 +154,11 @@ export function PlanEditor({
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>
             Cancelar
           </Button>
-          <Button type="button" onClick={guardar} disabled={pending}>
+          <Button
+            type="button"
+            onClick={guardar}
+            disabled={pending || (requiereNota && nota.trim() === "")}
+          >
             {pending ? "Guardando…" : "Guardar plan"}
           </Button>
         </div>

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { desc, eq } from "drizzle-orm";
-import { getDb, teams, memberships, users, sessions } from "@odontoflow/db";
+import { getDb, teams, memberships, users } from "@odontoflow/db";
 import { ipReq } from "@/lib/rate-limit";
 import { adminGuard } from "@/lib/admin-guard";
+import { ultimaSesionPorUsuario } from "@/lib/console-data";
 
 export const dynamic = "force-dynamic";
 
@@ -31,18 +32,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     .where(eq(memberships.teamId, id))
     .orderBy(desc(memberships.createdAt));
 
-  const ultimaSesion = new Map<string, Date | null>();
-  for (const r of rows) {
-    if (!ultimaSesion.has(r.userId)) ultimaSesion.set(r.userId, null);
-  }
-  const sesRows = await db
-    .select({ userId: sessions.userId, createdAt: sessions.createdAt })
-    .from(sessions)
-    .where(eq(sessions.tenantId, id))
-    .orderBy(desc(sessions.createdAt));
-  for (const s of sesRows) {
-    if (ultimaSesion.get(s.userId) == null) ultimaSesion.set(s.userId, s.createdAt);
-  }
+  const ultimaSesion = await ultimaSesionPorUsuario(id);
 
   const miembros = rows.map((r) => ({
     membershipId: r.membershipId,
