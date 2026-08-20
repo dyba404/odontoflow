@@ -74,12 +74,26 @@ self-service + impersonación auditada con banner. Nada de esto existe en odonto
  ├─ sesión plataforma: tenantId=null y        ├─ sesión impersonada: es la sesión del
  │   membershipId=null, válida SOLO si        │   objetivo con impersonated_by_user_id
  │   is_platform_admin (fail-closed)          │   → el layout/rutas ven al objetivo
- ├─ tenants (tabla existente) + miembros      └─ banner permanente en shell:
- │   expandibles por tenant con acciones:         "Operando como {name} · {clínica} · {admin}"
- │    · Reenviar recuperación (email)             + botón "Salir" → vuelve al /admin
- │    · Bloquear/desbloquear miembro (memberships.active=false → sin_acceso al login)
- │    · Bloquear/desbloquear usuario (users.locked_at → ni login ni recuperación)
+ ├─ layout con sidebar (v1.9.0):              └─ banner permanente en shell:
+ │    · /admin → redirige a /admin/resumen        "Operando como {name} · {clínica} · {admin}"
+ │    · /admin/resumen: KPIs + estado de          + botón "Salir" → vuelve a /admin
+ │      instancia (db/correo/lycet)
+ │    · /admin/tenants: búsqueda + filtros
+ │      plan/estado + paginación server-side
+ │      → /admin/tenants/[id]: miembros,
+ │      plan (nota obligatoria al suspender/
+ │      cancelar), auditoría reciente
+ │    · /admin/usuarios: búsqueda global
+ │      paginada → enlace a la ficha
+ │    · /admin/auditoria: feed cross-tenant
+ │      de soporte.* con filtro por acción
+ │  Acciones por miembro (dialog con motivo):
+ │    · Reenviar recuperación (email)
+ │    · Bloquear/desbloquear usuario (users.locked_at)
+ │    · Desactivar/activar membresía
  │    · Impersonar → token de 1 uso (15 min)
+ │    · Suspender membresías en bloque (motivo +
+ │      confirmación de impacto en el owner)
  └─ auditoría: audit_logs del tenant del objetivo, payload via:"soporte_plataforma"
 ```
 
@@ -163,11 +177,13 @@ JSON estándar `{ok}` / `{error}` con códigos snake_case como el resto del repo
 
 | Endpoint | Método | Comportamiento |
 |---|---|---|
-| `tenants/[id]/members` | GET | Miembros del tenant: nombre, email, rol, `memberships.active`, `users.locked_at`, última sesión (max `sessions.created_at` por user+tenant) |
+| `tenants/[id]/members` | GET | Miembros del tenant: nombre, email, rol, `memberships.active`, `users.locked_at`, última sesión (máx `sessions.created_at` por user+tenant; desde v1.9.0 vía `DISTINCT ON` server-side: `ultimaSesionPorUsuario` en `lib/console-data.ts`, sin escaneo JS de todas las sesiones) |
 | `password-reset` | POST `{userId}` | Réplica server-side de `recuperar/solicitar` (token 1h + `enviarEmailPasswordReset`); si `MAIL_MODE=smtp-dev`/Resend no configurado → error `email_no_configurado`; audit `soporte.recuperacion_enviada` en el tenant del user |
 | `users/[id]/lock` | POST `{reason}` | `locked_at=now`, `locked_reason`; borra todas las `sessions` del usuario; audit `soporte.usuario_bloqueado` (en cada tenant del usuario) |
 | `users/[id]/unlock` | POST | `locked_at=null`, `locked_reason=null`; audit `soporte.usuario_desbloqueado` |
-| `memberships/[id]` | PATCH `{active: boolean}` | Flip de `memberships.active` (el login ya lo valida en login/route.ts:64); audit |
+| `memberships/[id]` | PATCH `{active: boolean, nota?}` | Flip de `memberships.active`; desde v1.9.0 **motivo (`nota`) obligatorio si se desactiva**; audit |
+| `memberships/bulk` | POST `{tenantId, active, motivo}` | (v1.9.0) Activa/desactiva en bloque las membresías de un tenant; motivo obligatorio y auditado como `soporte.membresias_desactivadas_bulk` / `..._activadas_bulk` |
+| `suscripcion` | PATCH | Cambio de plan/estado/vence/monto/nota; desde v1.9.0 **motivo obligatorio al pasar a `suspendido` o `cancelado`**; audit `soporte.suscripcion_actualizada` |
 | `impersonate` | POST `{userId}` | Resuelve el tenant objetivo (primera membresía activa del user; si hay `tenantId` en el body, validarlo). Crea `impersonation_requests` con `randomHex(24)`, TTL 15 min. Respuesta `{ url }`. Audit `soporte.impersonacion_solicitada`. Rechaza admins como objetivo |
 | `../impersonar/[token]` | GET | Público pero rate-limited (`impersonar:<ip>`, 10/min). Valida token no usado y no expirado; audiencia: crea la sesión del objetivo con `impersonated_by_user_id` + TTL 8h; guarda el token de la sesión admin actual en cookie `of_admin_return` (httpOnly, maxAge 8h+5min); marca `used_at`; redirect `/consola`; audit `soporte.impersonacion_inicio` en el tenant |
 | `auth/end-impersonation` | POST | Sesión actual debe tener `impersonated_by_user_id`; destructiva; restaura sesión admin desde `of_admin_return` (validar que siga viva en DB); borra ambas referencias de cookie; audit `soporte.impersonacion_fin` en el tenant |
@@ -237,9 +253,10 @@ bloqueado/desbloqueado, membresía activa/inactiva, impersonación solicitada/in
 
 ## 6. E2E y verificación
 
-Nueva suite `apps/web/e2e/admin.spec.ts` (integrada al `npm run test:e2e` existente,
-config `playwright.config.ts`; matriz ya corre desktop + mobile — el banner debe verse
-en ambos):
+Nueva suite `apps/web/e2e/admin.spec.ts` (config propio `playwright.admin.config.ts`,
+serial, proyectos `admin` desktop + `admin-movil` Pixel 7; se excluye de la regresión
+vía `testIgnore` en `playwright.config.ts`. Desde v1.9.0: 10 casos × 2 proyectos =
+20 tests, navega el panel multi-página y exige motivo en los dialogs):
 
 1. Login del fundador → redirige a `/primer-acceso` (password temporal) → cambiar
    contraseña → ahora sí `/admin` visible.

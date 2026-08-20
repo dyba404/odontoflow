@@ -346,6 +346,61 @@ planes e impersonación están limpiados.
 
 ---
 
+## v1.9.0 — Panel de plataforma multi-página + cuotas Free + horários pasados bloqueados
+
+Lote de administración multi-página, cuotas y bloque de horas pasadas. Otro
+punto de partida de `/admin`, ya no una tabla plana sino un panel estilo
+super admin con cuatro secciones (Resumen · Tenants · Usuarios · Auditoría).
+
+- [x] **Slots pasados bloqueados en la reserva pública:** `GET slots` calcula
+      `nowMin` desde `tenant.timezone` vía `nowLocalPartsIn` para fechas de hoy
+      (descarta slots ya vencidos + bloquea `fecha < hoy`); `POST solicitudes`
+      rechaza `fecha_pasada` y `hora_pasada` (≥30 min de lead); `POST gestionar`
+      (reprogramar con link mágico) cierra el bypass de `doctorId` añadiendo
+      la misma validación y pasa `nowMin` a `computeSlots`. Wizard público dice
+      "ya no quedan horarios para hoy" cuando el día quedó vacío. Consola mantiene
+      backfill (`nowMin: null`) porque el staff puede agendar cualquier hora.
+- [x] **Cuotas Free (2 miembros / 200 pacientes / 100 citas al mes):**
+      `PLAN_LIMITS` en `lib/plans.ts` con helpers `limitePlanAlcanzado` y
+      `respuestaLimitePlan` (402). Enforcement server-side en invitar personal,
+      aceptar invitación, POST pacientes (solo la creación), POST citas y POST
+      solicitudes (citas del mes + pacientes nuevos). Uso visible con barra de
+      progreso en `/consola/config/suscripcion` (dueño). Pro/premium sin límite.
+- [x] **Banner de solicitudes pendientes en Sala de espera:** contador de
+      solicitudes `estado=solicitada` con link a `/consola/solicitudes`, gate
+      `appointments.edit`, dentro de `AutoRefresh` (se refresca cada 5 s).
+- [x] **Panel `/admin` multi-página (layout + sidebar activa):**
+      - `/admin` redirige a `/admin/resumen` (KPIs escalares + estado de
+        instancia db/correo/lycet + acciones de soporte 30 días).
+      - `/admin/tenants` con búsqueda `q`, filtros plan/estado con facets y
+        paginación server-side; orden por `createdAt desc` (nuevos primero).
+      - `/admin/tenants/[id]` con Miembros (lista real reusando APIs existentes
+        + fix `DISTINCT ON` de última sesión) · editor de plan (nota obligatoria
+        al suspender/cancelar) · acción reportada en audit.
+      - `/admin/usuarios` búsqueda global paginada con enlace a la ficha del tenant.
+      - `/admin/auditoria` feed cross-tenant de `soporte.%` con filtro por acción.
+      - Suspensión bulk de membresías exige motivo y confirmación de impacto
+        sobre el owner; sitio de acción auditado como
+        `soporte.membresias_desactivadas_bulk` / `..._activadas_bulk`.
+      - Bloquear/desbloquear usuario y desactivar/reactivar membresía pasan a
+        dialog con motivo obligatorio (fin del `window.prompt`).
+- [x] **Test:** `admin.spec.ts` actualizado a la navegación nueva (10 casos ×
+      desktop + Pixel 7 = 20 tests). Incluyen: redirección, detalle del tenant,
+      correo de recuperación con Mailpit, impersonación con banner y botón
+      Salir, bloqueo/desbloqueo con motivo, reactivación, admin con membresía
+      sin lockout, búsqueda global, bulk y motivo obligatorio en las 4 APIs.
+- [x] Verificado: typecheck + lint (0 warnings) + build standalone fresco;
+      core 31/31, **admin 20/20**, regresión 15/15, vivo 10/10 y vivo-serie 6/6
+      contra el build final; health `{db, correo, lycet}` true; `db:clean`
+      post-suites.
+
+Salida: `/admin` deja de ser una tabla de tenants y pasa a ser un panel de
+operador con secciones, búsqueda server-side y auditoría de soporte — con la
+misma confiabilidad (motivo obligatorio, audit) que ya tienen las acciones de
+v1.7.0. Free queda con límite real de uso para cerrar ventas a Pro.
+
+---
+
 ## Backlog post-M5 → incluido en 1.0
 
 Topología detallada por módulo en `docs/05-modulos-topologia.md`.

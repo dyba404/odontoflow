@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-import { getDb, subscriptions } from "@odontoflow/db";
+import { and, eq, gte, lt, ne, sql } from "drizzle-orm";
+import { getDb, appointments, memberships, patients, subscriptions } from "@odontoflow/db";
 
 export type PlanCode = "free" | "pro" | "premium";
 
@@ -96,4 +96,126 @@ export function respuestaPlanInsuficiente(bloqueo: GateBloqueo) {
     },
     { status: 402 },
   );
+}
+
+export interface PlanLimits {
+  maxMembers: number | null;
+  maxPatients: number | null;
+  maxCitasMes: number | null;
+}
+
+export const PLAN_LIMITS: Record<PlanCode, PlanLimits> = {
+  free: { maxMembers: 2, maxPatients: 200, maxCitasMes: 100 },
+  pro: { maxMembers: null, maxPatients: null, maxCitasMes: null },
+  premium: { maxMembers: null, maxPatients: null, maxCitasMes: null },
+};
+
+export type LimitKind = "members" | "patients" | "citas_mes";
+
+export interface LimitReached {
+  limite: number;
+  actual: number;
+  plan: PlanCode;
+}
+
+function firstCount(rows: Array<{ n: number }>): number {
+  return rows[0]?.n ?? 0;
+}
+
+async function countMembers(tenantId: string): Promise<number> {
+  const rows = await getDb()
+    .select({ n: sql<number>`count(*)::int`.mapWith(Number) })
+    .from(memberships)
+    .where(and(eq(memberships.teamId, tenantId), eq(memberships.active, true)))
+    .limit(1);
+  return firstCount(rows);
+}
+
+async function countPatients(tenantId: string): Promise<number> {
+  const rows = await getDb()
+    .select({ n: sql<number>`count(*)::int`.mapWith(Number) })
+    .from(patients)
+    .where(eq(patients.tenantId, tenantId))
+    .limit(1);
+  return firstCount(rows);
+}
+
+async function countCitasMes(tenantId: string, mes: string): Promise<number> {
+  const base = /^(\d{4})-(\d{2})$/.exec(mes);
+  if (!base) return 0;
+  const inicio = `${base[1]}-${base[2]}-01`;
+  const anio = Number(base[1]);
+  const numMes = Number(base[2]);
+  const fin =
+    numMes === 12
+      ? `${anio + 1}-01-01`
+      : `${anio}-${String(numMes + 1).padStart(2, "0")}-01`;
+  const rows = await getDb()
+    .select({ n: sql<number>`count(*)::int`.mapWith(Number) })
+    .from(appointments)
+    .where(
+      and(
+        eq(appointments.tenantId, tenantId),
+        gte(appointments.fecha, inicio),
+        lt(appointments.fecha, fin),
+        ne(appointments.estado, "cancelada"),
+      ),
+    )
+    .limit(1);
+  return firstCount(rows);
+}
+
+// Devuelve null si hay cupo; en free retorna el tope alcanzado. pro/premium
+// no tienen limite (null en PLAN_LIMITS). mes aplica solo a "citas_mes".
+export async function limitePlanAlcanzado(
+  tenantId: string,
+  kind: LimitKind,
+  mes?: string,
+): Promise<LimitReached | null> {
+  const plan = await planDeTenant(tenantId);
+  const limites = PLAN_LIMITS[plan];
+  if (kind === "members") {
+    if (limites.maxMembers === null) return null;
+    const actual = await countMembers(tenantId);
+    return actual >= limites.maxMembers ? { limite: limites.maxMembers, actual, plan } : null;
+  }
+  if (kind === "patients") {
+    if (limites.maxPatients === null) return null;
+    const actual = await countPatients(tenantId);
+    return actual >= limites.maxPatients ? { limite: limites.maxPatients, actual, plan } : null;
+  }
+  if (limites.maxCitasMes === null) return null;
+  const actual = await countCitasMes(tenantId, (mes ?? "").slice(0, 7));
+  return actual >= limites.maxCitasMes ? { limite: limites.maxCitasMes, actual, plan } : null;
+}
+
+export function respuestaLimitePlan(kind: LimitKind, r: LimitReached): NextResponse {
+  return NextResponse.json(
+    {
+      error: "limite_plan_alcanzado",
+      recurso: kind,
+      limite: r.limite,
+      actual: r.actual,
+      plan_actual: PLAN_NOMBRE[r.plan],
+    },
+    { status: 402 },
+  );
+}
+
+export interface UsoPlan {
+  plan: PlanCode;
+  limites: PlanLimits;
+  miembros: number;
+  pacientes: number;
+  citasMes: number;
+}
+
+export async function usoPlan(tenantId: string, mes: string): Promise<UsoPlan> {
+  const [plan, miembros, pacientes, citasMes] = await Promise.all([
+    planDeTenant(tenantId),
+    countMembers(tenantId),
+    countPatients(tenantId),
+    countCitasMes(tenantId, mes.slice(0, 7)),
+  ]);
+  return { plan, limites: PLAN_LIMITS[plan], miembros, pacientes, citasMes };
 }

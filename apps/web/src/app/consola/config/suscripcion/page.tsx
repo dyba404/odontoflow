@@ -1,4 +1,4 @@
-import { CreditCard, Lock, Sparkles, Check } from "lucide-react";
+import { CreditCard, Lock, Sparkles, Check, Gauge } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +6,8 @@ import { PageHeader } from "@/components/console/page-header";
 import { EmptyState } from "@/components/console/empty-state";
 import { RenovarYape } from "@/app/consola/config/suscripcion/renovar-yape";
 import { getDefaultTeam, suscripcionTeam } from "@/lib/console-data";
-import { getSession } from "@/lib/auth";
+import { getSession, hoyTenant } from "@/lib/auth";
+import { usoPlan } from "@/lib/plans";
 import { fmtPEN } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -59,6 +60,40 @@ const ESTADO_LABEL: Record<string, string> = {
   cancelado: "Cancelado",
 };
 
+function usoPlanNombre(plan: string): string {
+  return PLANES.find((p) => p.codigo === plan)?.nombre ?? plan;
+}
+
+function UsoItem({
+  label,
+  valor,
+  limite,
+}: {
+  label: string;
+  valor: number;
+  limite: number | null;
+}) {
+  const alLimite = limite !== null && valor >= limite;
+  const pct = limite ? Math.min(100, Math.round((valor / limite) * 100)) : null;
+  return (
+    <div className="rounded-lg border bg-muted/30 p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={alLimite ? "mt-1 text-lg font-semibold tabular-nums text-amber-600" : "mt-1 text-lg font-semibold tabular-nums"}>
+        {limite === null ? `${valor}` : `${valor} / ${limite}`}
+      </p>
+      {pct !== null ? (
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border">
+          <div
+            className={alLimite ? "h-full bg-amber-500" : "h-full bg-primary"}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      ) : null}
+      {alLimite ? <p className="mt-1.5 text-[11px] text-amber-600">Límite alcanzado</p> : null}
+    </div>
+  );
+}
+
 export default async function SuscripcionConfigPage() {
   const [team, session] = await Promise.all([getDefaultTeam(), getSession()]);
   if (!team || !session) redirect("/login");
@@ -81,7 +116,10 @@ export default async function SuscripcionConfigPage() {
     );
   }
 
-  const sub = await suscripcionTeam(team.id);
+  const [sub, uso] = await Promise.all([
+    suscripcionTeam(team.id),
+    usoPlan(team.id, await hoyTenant(team.timezone)),
+  ]);
   const planActual = sub?.plan ?? "free";
 
   return (
@@ -119,6 +157,26 @@ export default async function SuscripcionConfigPage() {
             ) : null}
             <RenovarYape nombrePlan={PLANES.find((p) => p.codigo === planActual)?.nombre ?? "Odontoflow"} />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-5">
+          <div className="flex items-center gap-2">
+            <Gauge className="size-4 text-muted-foreground" />
+            <p className="text-sm font-semibold">Uso del plan {usoPlanNombre(uso.plan)}</p>
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <UsoItem label="Miembros activos" valor={uso.miembros} limite={uso.limites.maxMembers} />
+            <UsoItem label="Pacientes" valor={uso.pacientes} limite={uso.limites.maxPatients} />
+            <UsoItem label="Citas este mes" valor={uso.citasMes} limite={uso.limites.maxCitasMes} />
+          </div>
+          {uso.plan === "free" ? (
+            <p className="mt-4 text-xs text-muted-foreground">
+              Al llegar a un límite puedes seguir consultando tu información, pero la creación
+              de nuevos registros requiere el plan Pro.
+            </p>
+          ) : null}
         </CardContent>
       </Card>
 

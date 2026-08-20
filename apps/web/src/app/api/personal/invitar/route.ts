@@ -4,6 +4,7 @@ import { getDb, invitations, memberships, users } from "@odontoflow/db";
 import type { StaffRole } from "@odontoflow/core";
 import { guardStaff, guardError } from "@/lib/auth";
 import { randomHex } from "@/lib/audit";
+import { limitePlanAlcanzado, respuestaLimitePlan } from "@/lib/plans";
 import { appBaseUrl, mailConfigurado } from "@/lib/mail";
 import { enviarEmailInvitacion } from "@/lib/notify";
 
@@ -48,6 +49,9 @@ export async function POST(req: Request) {
   }
 
   const db = getDb();
+
+  const limiteMiembros = await limitePlanAlcanzado(g.team.id, "members");
+  if (limiteMiembros) return respuestaLimitePlan("members", limiteMiembros);
 
   const [membro] = await db
     .select({ id: memberships.id })

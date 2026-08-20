@@ -12,6 +12,7 @@ import {
 } from "@odontoflow/db";
 import { hashPassword, verifyPassword, createSession, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { limitePlanAlcanzado, respuestaLimitePlan } from "@/lib/plans";
 
 export async function POST(req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -80,10 +81,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   }
 
   const [membExistente] = await db
-    .select({ id: memberships.id })
+    .select({ id: memberships.id, active: memberships.active })
     .from(memberships)
     .where(and(eq(memberships.teamId, team.id), eq(memberships.userId, userId)))
     .limit(1);
+
+  if (!membExistente || !membExistente.active) {
+    const limiteMiembros = await limitePlanAlcanzado(team.id, "members");
+    if (limiteMiembros) return respuestaLimitePlan("members", limiteMiembros);
+  }
 
   let membershipId: string;
   if (membExistente) {

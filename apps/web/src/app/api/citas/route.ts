@@ -5,6 +5,7 @@ import { guardStaff, guardError, hoyTenant } from "@/lib/auth";
 import { computeSlots } from "@/lib/db";
 import { logAuditSesion } from "@/lib/audit";
 import { sucursalActiva } from "@/lib/branch";
+import { limitePlanAlcanzado, respuestaLimitePlan } from "@/lib/plans";
 import { horaFinDesde, horarioOcupado, normalizarHora } from "./solape";
 
 export async function POST(req: Request) {
@@ -39,6 +40,9 @@ export async function POST(req: Request) {
   if (fecha < hoy) {
     return NextResponse.json({ error: "fecha_pasada" }, { status: 400 });
   }
+
+  const limiteCitas = await limitePlanAlcanzado(g.team.id, "citas_mes", hoy.slice(0, 7));
+  if (limiteCitas) return respuestaLimitePlan("citas_mes", limiteCitas);
 
   const horaIni = normalizarHora(horaIniRaw);
   if (!horaIni) {

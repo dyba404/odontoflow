@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, asc, eq, ilike, or } from "drizzle-orm";
 import { getDb, patients } from "@odontoflow/db";
 import { guardStaff, guardError } from "@/lib/auth";
+import { limitePlanAlcanzado, respuestaLimitePlan } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 
@@ -85,6 +86,9 @@ export async function POST(req: Request) {
       { status: 409 },
     );
   }
+
+  const limitePacientes = await limitePlanAlcanzado(g.team.id, "patients");
+  if (limitePacientes) return respuestaLimitePlan("patients", limitePacientes);
 
   const [row] = await db
     .insert(patients)
