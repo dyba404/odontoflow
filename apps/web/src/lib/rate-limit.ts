@@ -27,9 +27,16 @@ export function rateLimit(
 }
 
 export function ipReq(req: Request): string {
+  // Producción: cloudflared → web:3111. La IP real del cliente viene en
+  // CF-Connecting-IP, que el edge de Cloudflare inyecta y NO puede ser
+  // forjada por el visitante (unir un túnel garantiza que el origen solo
+  // recibe tráfico del connector). X-Forwarded-For queda como fallback:
+  // los visitantes pueden inyectarlo libremente SI alcanzan la app sin
+  // pasar por Cloudflare, aunque la web de producción no publica puertos.
   return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    req.headers.get("x-real-ip") ??
+    req.headers.get("cf-connecting-ip")?.trim() ||
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip")?.trim() ||
     "desconocido"
   );
 }

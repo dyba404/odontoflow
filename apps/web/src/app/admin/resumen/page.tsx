@@ -14,6 +14,7 @@ import Link from "next/link";
 import { getDb, teams, users, appointments, patients, auditLogs } from "@odontoflow/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/console/page-header";
+import { InfraHealthCard } from "@/app/admin/resumen/infra-health-card";
 import { requirePlatformSession } from "@/lib/guard-sesion";
 import { mailConfigurado } from "@/lib/mail";
 import { lycetConfigurado } from "@/lib/lycet";
@@ -107,6 +108,8 @@ export default async function AdminResumenPage() {
           </p>
         </CardContent>
       </Card>
+
+      <InfraHealthCard db={db} />
     </div>
   );
 }

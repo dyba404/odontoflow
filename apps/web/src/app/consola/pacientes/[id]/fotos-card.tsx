@@ -235,7 +235,7 @@ export function FotosCard({
                           {fotos.map((f) => (
                             <a
                               key={f.id}
-                              href={`/api/adjuntos/${f.id}`}
+                              href={`/api/adjuntos/${f.id}?variant=preview`}
                               target="_blank"
                               rel="noreferrer"
                               title={f.nombre}
@@ -264,7 +264,7 @@ export function FotosCard({
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element -- el optimizador de next/image no puede acceder al endpoint autenticado /api/adjuntos */}
                               <img
-                                src={`/api/adjuntos/${f.id}`}
+                                src={`/api/adjuntos/${f.id}?variant=thumb`}
                                 alt={f.nombre}
                                 loading="lazy"
                                 draggable={false}

@@ -8,7 +8,7 @@ import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { guardStaff, guardError } from "@/lib/auth";
 import { gatePlan, respuestaPlanInsuficiente } from "@/lib/plans";
 import { logAuditSesion } from "@/lib/audit";
-import { attachmentsRoot } from "@/lib/attachments";
+import { attachmentsRoot, generarVariantes } from "@/lib/attachments";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME = [
@@ -103,6 +103,13 @@ export async function POST(req: Request) {
   await mkdir(dir, { recursive: true });
   await writeFile(filePath, buffer);
 
+  // Variantes de imagen (thumb 256 / preview 1600 en WebP) para servir
+  // rápido en móvil. Solo imágenes; best-effort (el original queda intacto).
+  let conVariantes = false;
+  if (MIME_FOTO.includes(mime)) {
+    conVariantes = await generarVariantes(buffer, filePath);
+  }
+
   let fotoOrden: number | null = null;
   if (fotoTipo) {
     const condiciones = [
@@ -154,7 +161,10 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json({ ok: true, id: row!.id }, { status: 201 });
+  return NextResponse.json(
+    { ok: true, id: row!.id, variantes: conVariantes },
+    { status: 201 },
+  );
 }
 
 export async function GET(

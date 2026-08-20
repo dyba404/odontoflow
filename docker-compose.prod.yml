@@ -16,6 +16,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obligatorio (ver .env.prod.example)}
       POSTGRES_DB: ${POSTGRES_DB:-odontoflow}
     # Sin puertos publicados a la máquina: solo accesible desde la red interna.
+    mem_limit: 768m
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -33,6 +34,7 @@ services:
     environment:
       CLIENT_TOKEN: ${LYCET_TOKEN:?LYCET_TOKEN obligatorio (no uses el default 123456)}
       CORS_ALLOW_ORIGIN: .
+    mem_limit: 512m
     # Sin puerto publicado: web lo llama por la red interna (http://lycet:8000).
     volumes:
       - lycetdata:/var/www/html/data
@@ -77,9 +79,14 @@ services:
       ADMIN_EMAILS: ${ADMIN_EMAILS:-}
       LOCAL_MASTER_KEY: ${LOCAL_MASTER_KEY:?LOCAL_MASTER_KEY obligatorio (define UNA vez, ver .env.prod.example)}
       WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
+      # Tamaño del pool postgres-js (packages/db/src/client.ts). Default 10.
+      DB_POOL_MAX: ${DB_POOL_MAX:-10}
     volumes:
       # La app guarda adjuntos en <cwd>/.data/attachments => /app/apps/web/.data/attachments.
       - attachments:/app/apps/web/.data
+    # Límite de memoria para que un heap hinchado de Node no mate a Postgres
+    # en la máquina única del piloto.
+    mem_limit: 1536m
     healthcheck:
       # /api/health valida app + conexión a DB (devuelve 503 sin DB).
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3111/api/health >/dev/null 2>&1 || exit 1"]
@@ -103,6 +110,7 @@ services:
       - "80:80"
       - "443:443"
       - "443:443/udp"
+    mem_limit: 128m
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -124,6 +132,7 @@ services:
     depends_on:
       web:
         condition: service_healthy
+    mem_limit: 256m
     dns:
       - 1.1.1.1
       - 8.8.8.8
@@ -163,9 +172,23 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-odontoflow}
       DATABASE_HOST: ${DATABASE_HOST:-db}
       DATABASE_PORT: "5432"
+      # Opcionales: pings de monitoreo (healthchecks.io) para los respaldos.
+      HEALTHCHECK_DB: ${HEALTHCHECK_DB:-}
+      HEALTHCHECK_OFFSITE: ${HEALTHCHECK_OFFSITE:-}
+      # Opcional: destino off-site de /backups para backup-offsite.sh (ej: b2:odontoflow).
+      RCLONE_REMOTE: ${RCLONE_REMOTE:-}
+      # HOME del usuario no privilegiado: rclone busca $HOME/.config/rclone/rclone.conf.
+      HOME: /home/supercronic
+    mem_limit: 512m
     volumes:
       # ./backups del host: pg_dump diario, retención 30 días (gitignored).
       - ./backups:/backups
+      # Fuentes de los tar.gz de backup-offsite.sh (adjuntos de web y data fiscal
+      # de Lycet). Solo lectura: cron jamás debe poder escribir estos volúmenes.
+      - attachments:/mnt/attachments:ro
+      - lycetdata:/mnt/fiscal:ro
+      # Opcional: config de rclone desde el usuario del host (B2/S3 con su app key).
+      - ${HOME:-/root}/.config/rclone:/home/supercronic/.config/rclone:ro
 
 volumes:
   pgdata:

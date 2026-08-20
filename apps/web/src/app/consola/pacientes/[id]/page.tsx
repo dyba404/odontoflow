@@ -477,7 +477,7 @@ export default async function FichaPacientePage({
                   <li key={a.id} className="flex items-center justify-between gap-3 py-2.5">
                     <div className="min-w-0">
                       <Link
-                        href={`/api/adjuntos/${a.id}`}
+                        href={`/api/adjuntos/${a.id}?variant=preview`}
                         target="_blank"
                         className="truncate text-sm font-medium hover:underline"
                       >

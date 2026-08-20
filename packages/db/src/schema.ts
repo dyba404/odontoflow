@@ -14,6 +14,7 @@ import {
   uniqueIndex,
   jsonb,
   bigserial,
+  bigint,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -1099,3 +1100,19 @@ export const legalSettings = pgTable("legal_settings", {
   updatedBy: uuid("updated_by").references(() => users.id),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// Registro de infraestructura: los scripts de respaldo (pg_dump / adjuntos
+// off-site) escriben aquí vía /api/cron/backup-log con el CRON_SECRET, y el
+// panel /admin/resumen muestra la última ejecución de cada uno.
+export const infraBackups = pgTable(
+  "infra_backups",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    kind: text("kind").notNull(),
+    status: text("status").notNull(),
+    sizeBytes: bigint("size_bytes", { mode: "number" }),
+    detail: text("detail"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("infra_backups_kind_created_idx").on(t.kind, t.createdAt)],
+);

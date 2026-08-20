@@ -401,6 +401,41 @@ v1.7.0. Free queda con límite real de uso para cerrar ventas a Pro.
 
 ---
 
+## v1.10 → v2.0.0 — Programa de escala + plataforma clínica (plan maestro)
+
+Plan completo en `docs/09-vision-v2.md` e infra en `docs/08-plan-escala.md`.
+Investigación base: 8 repos de referencia en `.references/` (dentalpin BSL,
+dentalops MIT, react-advanced-odontogram MIT, medplum Apache, openemr GPL,
+danphe MIT, mediflow-ai MIT). Resumen por ola:
+
+- [ ] **v1.10 Blindaje (Ola 1):** backup adjuntos+fiscal off-site (rclone→B2 +
+      healthchecks.io dead-man's switch), thumbnails sharp (256px/1600px WebP),
+      pool DB configurable a 10, rate-limit con IP real + webhook WhatsApp
+      protegido, crons de envíos en paralelo (batch 5) + timeout 1200s, límites
+      de memoria por contenedor, sección "Salud de infra" en `/admin/resumen`.
+      Se despacha junto con el tag v1.9.0 en un solo ship.
+- [ ] **v1.11 Storage (Ola 2):** interfaz `Storage` (local↔S3/R2), uploads
+      presignados directos, script backfill; se activa con credenciales al
+      llegar a ~50 clínicas.
+- [ ] **v1.12 Dos máquinas (Ola 3):** VPS EU Hetzner (app + cron) + VPS DB con
+      PgBouncer/PITR, máquina del operador como segundo connector del túnel
+      (standby caliente); se ejecuta al llegar a ~100 clínicas.
+- [ ] **v2.0.0 Ola 4 — Núcleo clínico:** F0 fundamentos (event bus
+      transaccional + RBAC v2 + fechas wall-clock), F1 odontograma
+      (react-advanced-odontogram), F2 periodontograma, F3 planes de tratamiento
+      v2 con pipeline, F4 presupuestos v2 + firma + link público 2FA, F5
+      consentimientos firmados, F6 blindaje agenda (GiST + máquina de estados),
+      F7 allocations de pago.
+- [ ] **v2.0.0 Ola 5 — Portal P1-P5:** reprogramar desde portal, instrucciones
+      post-op, intake digital pre-cita, mensajería bidireccional, cuentas
+      familiares.
+- [ ] **v2.0.0 Ola 6 — Retención S1-S5:** no-show recovery, producción por
+      doctor, series recurrentes, referidos, digest matutino.
+- [ ] **v2.1 — Copilot agéntico:** build en v2.0.0, ship separado (registry de
+      tools, paridad RBAC, redacción PHI, confirmación de writes, BudgetGuard).
+
+---
+
 ## Backlog post-M5 → incluido en 1.0
 
 Topología detallada por módulo en `docs/05-modulos-topologia.md`.

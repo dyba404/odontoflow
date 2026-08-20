@@ -49,6 +49,15 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  // Límite global: el tráfico llega desde las IPs del edge de Cloudflare,
+  // por eso el cap es compartido (no por IP) y alto: una clínica activa no
+  // supera ni 1 webhook/min. Evita amplificación de envíos si la ruta
+  // pública se satura a propósito.
+  const global = rateLimit(`wa-webhook:global`, 600);
+  if (!global.allowed) {
+    return NextResponse.json({ ok: true }, { status: 200 });
+  }
+
   let payload: unknown;
   try {
     payload = await req.json();
@@ -56,9 +65,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  const entry = (payload as { entry?: Array<{ changes?: Array<{ value?: unknown }> }> }).entry;
+  if (Array.isArray(entry) && entry.length > 25) {
+    return NextResponse.json({ ok: true });
+  }
+
   try {
     const db = getDb();
-    const entry = (payload as { entry?: Array<{ changes?: Array<{ value?: unknown }> }> }).entry;
     for (const e of entry ?? []) {
       for (const change of e.changes ?? []) {
         const value = change.value as {

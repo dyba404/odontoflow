@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { and, eq } from "drizzle-orm";
 import { getDb, attachments } from "@odontoflow/db";
 import { guardStaff, guardError } from "@/lib/auth";
 import { gatePlan, respuestaPlanInsuficiente } from "@/lib/plans";
 import { logAuditSesion } from "@/lib/audit";
+import { VARIANTES, variantesDe } from "@/lib/attachments";
 
 const MIME_FOTO = ["image/jpeg", "image/png", "image/webp"];
 const FOTO_TIPOS = ["antes", "despues", "progreso"] as const;
@@ -12,7 +13,7 @@ const FOTO_TIPOS = ["antes", "despues", "progreso"] as const;
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -20,6 +21,12 @@ export async function GET(
   if (!g.ok) return NextResponse.json({ error: guardError(g) }, { status: g.status });
   const planCheck = await gatePlan(g.team.id, "ficha_avanzada");
   if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
+
+  const url = new URL(req.url);
+  const variantParam = url.searchParams.get("variant");
+  const variant = VARIANTES.includes(variantParam as (typeof VARIANTES)[number])
+    ? (variantParam as (typeof VARIANTES)[number])
+    : null;
 
   const [att] = await getDb()
     .select()
@@ -30,8 +37,37 @@ export async function GET(
     return NextResponse.json({ error: "no_encontrado" }, { status: 404 });
   }
 
+  // La variante se sirve sin auditar (es una descarga ligera de previsualización
+  // de la misma ficha ya autenticada); el original sí queda auditado.
+  const path = variant ? variantesDe(att.storagePath)[variant] : att.storagePath;
+
   try {
-    const data = await readFile(att.storagePath);
+    if (variant) {
+      try {
+        await stat(path);
+      } catch {
+        // Variante no generada (upload previo o fallo sharp): fallback original.
+        return servirOriginal(att);
+      }
+    }
+    const data = await readFile(path);
+    const nombre = att.nombre.replace(/["\\]/g, "_");
+    return new NextResponse(new Uint8Array(data), {
+      status: 200,
+      headers: {
+        "Content-Type": variant ? "image/webp" : att.mime || "application/octet-stream",
+        "Content-Disposition": `inline; filename="${encodeURIComponent(nombre)}"`,
+        "Cache-Control": "private, max-age=300",
+      },
+    });
+  } catch {
+    return NextResponse.json({ error: "archivo_no_existente" }, { status: 410 });
+  }
+}
+
+async function servirOriginal(att: typeof attachments.$inferSelect) {
+  try {
+    const data = await readFile(att.storagePath!);
     const nombre = att.nombre.replace(/["\\]/g, "_");
     return new NextResponse(new Uint8Array(data), {
       status: 200,

@@ -59,11 +59,17 @@ export async function POST(
   const reservaUrl = `${appBaseUrl()}/${g.team.slug}/reserva`;
   let enviadosOk = 0;
 
-  for (const p of rows) {
-    if (!p.email) continue;
-    const titulo = campana.titulo.replaceAll("{{nombre}}", p.nombre);
-    const mensaje = campana.mensaje.replaceAll("{{nombre}}", p.nombre);
-    const html = `<!doctype html>
+  const conEmail = rows.filter((p) => p.email);
+  const LOTE = 5;
+  // Envíos por lote de 5 en paralelo: un tercio del tiempo del loop serial
+  // sin saturar el proveedor (Resend tiene límites de tasa).
+  for (let i = 0; i < conEmail.length; i += LOTE) {
+    const lote = conEmail.slice(i, i + LOTE);
+    const resultados = await Promise.all(
+      lote.map(async (p) => {
+        const titulo = campana.titulo.replaceAll("{{nombre}}", p.nombre);
+        const mensaje = campana.mensaje.replaceAll("{{nombre}}", p.nombre);
+        const html = `<!doctype html>
 <html lang="es">
 <body style="margin:0;padding:0;background:#f6f5f3;font-family:Arial,Helvetica,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f5f3;padding:24px 0;">
@@ -87,12 +93,14 @@ export async function POST(
   </table>
 </body>
 </html>`;
-    const texto = `${titulo}\n\n${mensaje}\n\nReserva una cita: ${reservaUrl}\n\n— ${g.team.name} (Odontoflow)`;
-    const r = await sendMail({ to: p.email, subject: titulo, html, text: texto });
-    if (r.ok) enviadosOk += 1;
+        const texto = `${titulo}\n\n${mensaje}\n\nReserva una cita: ${reservaUrl}\n\n— ${g.team.name} (Odontoflow)`;
+        return sendMail({ to: p.email!, subject: titulo, html, text: texto });
+      }),
+    );
+    for (const r of resultados) if (r.ok) enviadosOk += 1;
   }
 
-  const totalConEmail = rows.filter((p) => p.email).length;
+  const totalConEmail = conEmail.length;
   const estado = totalConEmail > 0 && enviadosOk === 0 ? "error" : "completada";
 
   await db
@@ -112,7 +120,7 @@ export async function POST(
     ok: true,
     enviadosOk,
     total: totalConEmail,
-    sinEmail: audiencia.length - rows.length + rows.filter((p) => !p.email).length,
+    sinEmail: audiencia.length - totalConEmail,
     estado,
   });
 }

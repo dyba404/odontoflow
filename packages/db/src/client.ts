@@ -126,11 +126,17 @@ type DbOptions = postgres.Options<{}> & {
   socket?: (options: postgres.Options<{}>) => Promise<Socket>;
 };
 
+function poolMax(): number {
+  const raw = Number(process.env.DB_POOL_MAX);
+  if (!Number.isFinite(raw) || raw < 1 || raw > 100) return 10;
+  return Math.floor(raw);
+}
+
 function buildDb() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL no definido (ver .env.local.example)");
   const options: DbOptions = {
-    max: 4,
+    max: poolMax(),
     idle_timeout: 20,
     // Forzar reconexion periodica: WSL se suspende por inactividad y deja
     // sockets muertos; con max_lifetime el pool los renueva solo.

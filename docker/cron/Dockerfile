@@ -13,9 +13,10 @@ ENV SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.
 
 # La verificación de checksum hace fallar el build si el binario descargado no coincide.
 # postgresql-client aporta pg_dump para el respaldo diario (backup-db.sh).
+# rclone sube /backups off-site cuando RCLONE_REMOTE está definido (backup-offsite.sh).
 # su-exec permite arrancar como root (chown del bind mount /backups) y bajar
 # privilegios antes de ejecutar el planificador.
-RUN apk add --no-cache curl ca-certificates tzdata postgresql-client su-exec \
+RUN apk add --no-cache curl ca-certificates tzdata postgresql-client su-exec rclone \
     && curl -fsSL -o "/tmp/${SUPERCRONIC}" "${SUPERCRONIC_URL}" \
     && echo "${SUPERCRONIC_SHA256}  /tmp/${SUPERCRONIC}" | sha256sum -c - \
     && chmod +x "/tmp/${SUPERCRONIC}" \
@@ -29,9 +30,11 @@ RUN mkdir -p /backups
 
 WORKDIR /etc/supercronic
 COPY crontab ./crontab
+COPY hc.sh ./hc.sh
 COPY backup-db.sh ./backup-db.sh
+COPY backup-offsite.sh ./backup-offsite.sh
 COPY entrypoint.sh ./entrypoint.sh
-RUN chmod +x ./backup-db.sh ./entrypoint.sh
+RUN chmod +x ./backup-db.sh ./backup-offsite.sh ./entrypoint.sh
 
 # Arranca como root solo para garantizar escritura en /backups (el bind mount
 # lo crea root en el host) y enseguida baja a usuario sin privilegios.
