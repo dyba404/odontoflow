@@ -11,6 +11,7 @@ import {
   sessionCookieBase,
 } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { appBaseUrl } from "@/lib/mail";
 import { rateLimit, ipReq } from "@/lib/rate-limit";
 
 export async function GET(req: Request, { params }: { params: Promise<{ token: string }> }) {
@@ -77,6 +78,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
     payload: { via: "soporte_plataforma", adminEmail: admin.email, email: target.email },
   });
 
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3111";
+  const base = appBaseUrl();
   return NextResponse.redirect(`${base}/consola`);
 }

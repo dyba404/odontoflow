@@ -306,6 +306,46 @@ portal con un click desde la ficha, sin SQL ni scripts.
 
 ---
 
+## v1.8.1 — Pulido v1.7.0→v1.8.0: auditoría faltante, admin con membresía y limpieza
+
+Lote de pulido sobre lo avanzado en v1.7.0/v1.7.1/v1.8.0 (sin features nuevas).
+
+- [x] **Auditoría faltante (v1.7.0):** `PATCH /api/admin/suscripcion` era la única
+      acción de soporte sin `logAudit`; ahora registra
+      `soporte.suscripcion_actualizada` en el tenant afectado con
+      `via: "soporte_plataforma"` (plan/estado/vence y el plan/estado previo
+      si cambió), igual que el resto de `/api/admin/*`.
+- [x] **Admin con membresía sin lockout:** si una cuenta `is_platform_admin`
+      llega a tener membresía activa, el login crea sesión plataforma cuando no
+      viene `teamSlug` (o no hay membresías) y sesión tenant solo con
+      `teamSlug` — el operador nunca pierde `/admin`. E2E nuevo en
+      `admin.spec.ts` (test 7: fundador con membresía creada/borrada vía
+      `packages/db/src/membresia-fundador-e2e.ts` entra igual a `/admin`).
+- [x] **Limpieza:** `lib/admin.ts` eliminado (`isAdmin()` huérfano con
+      semántica contradicha por el diseño real de sesiones); `lib/plans.ts`
+      deduplicado (`planDeTenant` y `planDeTenantSinCache` sobre una misma
+      query); `cron/recordatorios` resuelve el plan una sola vez por tenant
+      (map precargado en vez de doble `planDeTenantSinCache`);
+      `api/admin/impersonate` e `impersonar/[token]` usan `appBaseUrl()` en vez
+      del fallback inline `NEXT_PUBLIC_APP_URL ?? localhost:3111` (y el
+      fallback de `appBaseUrl()` queda en 3111, alineado con toda la app).
+- [x] **Docs:** modalidad Caddy en el modo túnel documentada en
+      `01-topologia.md` (arranca igual, loopea ACME sin puertos abiertos;
+      esperado, no rompe) y regla 8 (admin con membresía) en
+      `07-soporte-plataforma.md`.
+- [x] Verificado: typecheck + lint (0 warnings) + build standalone fresco;
+      **admin 14/14** (12 previos + test 7 nuevo, desktop + Pixel 7) y
+      **regresión 15/15** contra el build final; crons `recordatorios/diario/
+      recall` 200 con la resolución de planes nueva; health
+      `{db, correo, lycet}: true`; `db:clean` post-suites.
+
+Salida: el código posterior a v1.7.0 queda sin deuda observada: todas las
+acciones de soporte auditadas, el operador no puede quedar fuera de `/admin`
+aunque forme parte de un tenant, y los duplicados/fallbacks inconsistentes de
+planes e impersonación están limpiados.
+
+---
+
 ## Backlog post-M5 → incluido en 1.0
 
 Topología detallada por módulo en `docs/05-modulos-topologia.md`.

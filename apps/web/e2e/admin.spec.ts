@@ -326,3 +326,33 @@ test("6. membresía desactivada pierde acceso; token de impersonación reusado r
   const res = await page.request.get(urlImpersonacionUsada);
   expect(res.status()).toBe(410);
 });
+
+test("7. admin con membresía activa sigue entrando a /admin (sin lockout)", async ({ browser, page }) => {
+  function membresiaFundador(accion: "crear" | "borrar") {
+    execSync(`npx tsx packages/db/src/membresia-fundador-e2e.ts ${accion}`, {
+      cwd: REPO_ROOT,
+      env: { ...process.env, FOUNDER_EMAIL },
+      shell: true,
+      stdio: "pipe",
+      windowsHide: true,
+      timeout: 60_000,
+    });
+  }
+
+  await sesionFundador(page, FOUNDER_PASS_NUEVA);
+  await page.goto("/admin", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Administración de la plataforma" })).toBeVisible();
+
+  membresiaFundador("crear");
+  try {
+    const ctx = await browser.newContext();
+    const p = await ctx.newPage();
+    await loginUIHasta(p, FOUNDER_EMAIL, FOUNDER_PASS_NUEVA, /\/admin$/);
+    await expect(
+      p.getByRole("heading", { name: "Administración de la plataforma" }),
+    ).toBeVisible();
+    await ctx.close();
+  } finally {
+    membresiaFundador("borrar");
+  }
+});

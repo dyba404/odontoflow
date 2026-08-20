@@ -52,7 +52,7 @@ export function planSuficiente(actual: PlanCode, requerido: PlanCode): boolean {
   return ORDEN_PLAN[actual] >= ORDEN_PLAN[requerido];
 }
 
-export const planDeTenant = cache(async (tenantId: string): Promise<PlanCode> => {
+async function planDeTenantRaw(tenantId: string): Promise<PlanCode> {
   const [sub] = await getDb()
     .select({ plan: subscriptions.plan, estado: subscriptions.estado })
     .from(subscriptions)
@@ -61,17 +61,12 @@ export const planDeTenant = cache(async (tenantId: string): Promise<PlanCode> =>
   if (!sub) return "free";
   if (sub.estado === "suspendido" || sub.estado === "cancelado") return "free";
   return sub.plan;
-});
+}
+
+export const planDeTenant = cache(planDeTenantRaw);
 
 export async function planDeTenantSinCache(tenantId: string): Promise<PlanCode> {
-  const [sub] = await getDb()
-    .select({ plan: subscriptions.plan, estado: subscriptions.estado })
-    .from(subscriptions)
-    .where(eq(subscriptions.tenantId, tenantId))
-    .limit(1);
-  if (!sub) return "free";
-  if (sub.estado === "suspendido" || sub.estado === "cancelado") return "free";
-  return sub.plan;
+  return planDeTenantRaw(tenantId);
 }
 
 export function planEsProOMayor(plan: PlanCode): boolean {

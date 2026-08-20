@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { getDb, teams, subscriptions } from "@odontoflow/db";
+import { logAudit } from "@/lib/audit";
 import { ipReq } from "@/lib/rate-limit";
-import { adminGuard } from "@/lib/admin-guard";
+import { adminGuard, auditPayloadSoporte } from "@/lib/admin-guard";
 import type { PlanCode, PlanStatus } from "@odontoflow/core";
 
 export const dynamic = "force-dynamic";
@@ -70,6 +71,13 @@ export async function PATCH(req: Request) {
     valores.nota = actual.nota;
   }
 
+  const antes = {
+    plan: valores.plan,
+    estado: valores.estado,
+    vence: valores.vence,
+    monto: valores.monto,
+  };
+
   if (body.plan !== undefined) {
     if (!PLANES.includes(body.plan as PlanCode)) {
       return NextResponse.json({ error: "plan_invalido" }, { status: 400 });
@@ -120,6 +128,23 @@ export async function PATCH(req: Request) {
         updatedAt: valores.updatedAt,
       },
     });
+
+  await logAudit({
+    tenantId,
+    usuarioId: guard.admin.userId,
+    rol: null,
+    accion: "soporte.suscripcion_actualizada",
+    entidad: "subscriptions",
+    entidadId: tenantId,
+    payload: auditPayloadSoporte(guard.admin.email, {
+      plan: valores.plan,
+      estado: valores.estado,
+      vence: valores.vence,
+      ...(antes.plan !== valores.plan || antes.estado !== valores.estado
+        ? { plan_antes: antes.plan, estado_antes: antes.estado }
+        : {}),
+    }),
+  });
 
   return NextResponse.json({ ok: true, tenantId });
 }

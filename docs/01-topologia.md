@@ -61,6 +61,11 @@ excluyentes según la conectividad del host** —
    el TLS lo termina el edge de Cloudflare y no hay ningún archivo de
    credenciales en el repo ni en el host. Validado 2026-08-19 como
    `https://app.marsmode.me`.
+   Nota esperada en este modo: `caddy` arranca igual con el `up` e intenta ACME
+   contra `APP_DOMAIN` sin puertos 80/443 abiertos → loopea con errores de
+   certificate en su log. No rompe nada (falla el challenge, `restart:
+   unless-stopped` lo mantiene listo) y es el comportamiento esperado: Caddy es
+   la superficie del modo IP pública y queda preparado para VPS/Azure.
 
 - Migraciones / seed: la imagen standalone de `web` no incluye `drizzle-kit` (devDep
   que npm poda), por eso hay un servicio de un solo uso `migrate` (profile `tools`,

@@ -39,13 +39,17 @@ export async function POST(req: Request) {
     timezone: teams.timezone,
   }).from(teams);
 
+  const planPorTenant = new Map<string, boolean>();
+  for (const team of clinics) {
+    planPorTenant.set(team.id, planEsProOMayor(await planDeTenantSinCache(team.id)));
+  }
+
   let enviados = 0;
   let omitidos = 0;
   let reintentos = 0;
 
   for (const team of clinics) {
-    const plan = await planDeTenantSinCache(team.id);
-    if (!planEsProOMayor(plan)) {
+    if (!planPorTenant.get(team.id)) {
       omitidos++;
       continue;
     }
@@ -124,8 +128,7 @@ export async function POST(req: Request) {
 
   const desde = new Date(Date.now() - 48 * 3600_000);
   for (const team of clinics) {
-    const plan = await planDeTenantSinCache(team.id);
-    if (!planEsProOMayor(plan)) continue;
+    if (!planPorTenant.get(team.id)) continue;
     const fallidos = await db
       .select({
         id: reminders.id,

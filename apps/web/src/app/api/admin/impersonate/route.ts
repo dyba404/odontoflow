@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { getDb, users, memberships, impersonationRequests } from "@odontoflow/db";
 import { randomHex, logAudit } from "@/lib/audit";
+import { appBaseUrl } from "@/lib/mail";
 import { ipReq } from "@/lib/rate-limit";
 import { adminGuard, auditPayloadSoporte } from "@/lib/admin-guard";
 
@@ -65,6 +66,5 @@ export async function POST(req: Request) {
     payload: auditPayloadSoporte(guard.admin.email, { email: user.email }),
   });
 
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3111";
-  return NextResponse.json({ ok: true, url: `${base}/api/admin/impersonar/${token}` });
+  return NextResponse.json({ ok: true, url: `${appBaseUrl()}/api/admin/impersonar/${token}` });
 }

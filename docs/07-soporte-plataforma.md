@@ -94,6 +94,11 @@ Reglas de seguridad innegociables:
    `recuperar/solicitar`: hoy no chequea lock — debe hacerlo).
 7. Fundador con `must_change_password=true` no puede entrar a `/admin` ni a ninguna otra
    parte hasta cambiarla.
+8. **Admin con membresía (v1.8.1):** si una cuenta `is_platform_admin` llega a
+   tener membresía activa en un tenant, el login crea sesión plataforma cuando
+   **no** viene `teamSlug` (o no hay membresías) y sesión tenant solo si el
+   login llega con `teamSlug`. Así el operador nunca pierde el acceso a
+   `/admin` aunque forme parte de un tenant como staff.
 
 ## 5. Cambios por capa (checklist del implementador)
 

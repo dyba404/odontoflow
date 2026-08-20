@@ -67,11 +67,7 @@ export async function POST(req: Request) {
     .innerJoin(teams, eq(memberships.teamId, teams.id))
     .where(and(eq(memberships.userId, user.id), eq(memberships.active, true)));
 
-  if (membresias.length === 0) {
-    if (!user.isPlatformAdmin) {
-      return NextResponse.json({ error: "sin_acceso" }, { status: 403 });
-    }
-
+  if (user.isPlatformAdmin && !body.teamSlug) {
     const { token, maxAgeSeconds } = await createSession({
       userId: user.id,
       userAgent: req.headers.get("user-agent"),
@@ -84,6 +80,10 @@ export async function POST(req: Request) {
       ok: true,
       redirect: user.mustChangePassword ? "/primer-acceso" : "/admin",
     });
+  }
+
+  if (membresias.length === 0) {
+    return NextResponse.json({ error: "sin_acceso" }, { status: 403 });
   }
 
   const memb =
