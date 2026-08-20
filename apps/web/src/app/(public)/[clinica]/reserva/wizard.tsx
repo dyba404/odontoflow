@@ -214,8 +214,12 @@ export function WizardReserva({ clinicaSlug, clinicaName, servicios, doctores }:
       if (!r.ok) {
         throw new Error(
           j.error === "slot_no_disponible"
-            ? "Ese horario acaba de ocuparse. Elige otro."
-            : j.error ?? "error_envio",
+            ? "Ese horario acaba de ocuparse. Revisa los horarios disponibles."
+            : j.error === "hora_pasada"
+              ? "Ese horario ya pasó. Elige un horario más tarde."
+              : j.error === "fecha_pasada"
+                ? "Esa fecha ya pasó. Elige otra fecha."
+                : j.error ?? "error_envio",
         );
       }
       setResultado({ fecha: j.cita.fecha, hora: `${j.cita.horaIni}–${j.cita.horaFin}` });
@@ -422,7 +426,9 @@ export function WizardReserva({ clinicaSlug, clinicaName, servicios, doctores }:
               <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border py-8 text-center">
                 <CalendarClock className="size-6 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  No hay horarios ese día. Prueba otra fecha.
+                  {fecha === fechaISO(0)
+                    ? "Ya no quedan horarios disponibles para hoy. Prueba mañana u otra fecha."
+                    : "No hay horarios ese día. Prueba otra fecha."}
                 </p>
               </div>
             )}

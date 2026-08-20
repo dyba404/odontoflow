@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { generateSlots, dayOfWeekIn, minToTime, parseTimeToMin } from "./slots.js";
+import { generateSlots, dayOfWeekIn, minToTime, parseTimeToMin, nowLocalPartsIn } from "./slots.js";
 
 const SUNDAY = "2026-08-16";
 
@@ -141,4 +141,53 @@ test("slot expone startMin/endMin (duración real, sin buffer) y cadenas HH:MM",
   assert.equal(first.startTime, "08:00");
   assert.equal(first.endTime, "08:45");
   assert.equal(parseTimeToMin(first.startTime), first.startMin);
+});
+
+const MONDAY = "2026-08-17";
+const VENTANA_DIA = [{ dayOfWeek: 1, startMin: 480, endMin: 1080 }];
+
+test("nowLocalPartsIn devuelve fecha y minuto local en la zona horaria", () => {
+  const r = nowLocalPartsIn(new Date("2026-08-19T18:37:00Z"), "America/Lima");
+  assert.equal(r.date, "2026-08-19");
+  assert.equal(r.min, 13 * 60 + 37);
+});
+
+test("nowMin=null no filtra por hora (backfill de consola)", () => {
+  const sinFiltro = generateSlots({
+    date: MONDAY,
+    durationMin: 30,
+    nowMin: null,
+    windows: VENTANA_DIA,
+    busy: [],
+  });
+  assert.equal(sinFiltro[0]?.startMin, 480);
+});
+
+test("nowMin descarta horas pasadas: primer slot >= ahora + leadTime", () => {
+  const nowMin = 10 * 60 + 7;
+  const slots = generateSlots({
+    date: MONDAY,
+    durationMin: 30,
+    leadTimeMin: 30,
+    nowMin,
+    windows: VENTANA_DIA,
+    busy: [],
+  });
+  const first = slots[0]!;
+  assert.ok(first.startMin >= nowMin + 30, `primer slot ${first.startTime} antes del lead time`);
+  assert.equal(first.startMin % 15, 0);
+  for (const s of slots) {
+    assert.ok(s.startMin >= nowMin + 30);
+  }
+});
+
+test("nowMin a media tarde deja sin slots el resto del dia", () => {
+  const slots = generateSlots({
+    date: MONDAY,
+    durationMin: 30,
+    nowMin: 1079,
+    windows: VENTANA_DIA,
+    busy: [],
+  });
+  assert.deepEqual(slots, []);
 });

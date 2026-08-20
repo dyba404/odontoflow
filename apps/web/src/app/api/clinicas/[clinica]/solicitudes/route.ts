@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
+import { nowLocalPartsIn, parseTimeToMin } from "@odontoflow/core";
 import {
   getDb,
   appointments,
@@ -11,6 +12,7 @@ import {
 import { isSlotStillFree } from "@/lib/db";
 import { rateLimit, ipReq } from "@/lib/rate-limit";
 import { logAudit } from "@/lib/audit";
+import { limitePlanAlcanzado, respuestaLimitePlan } from "@/lib/plans";
 
 export interface RequestPayload {
   serviceId: string;
@@ -64,11 +66,22 @@ export async function POST(
 
   const db = getDb();
 
-  const teamRows = await db.select({ id: teams.id }).from(teams).where(eq(teams.slug, clinica)).limit(1);
+  const teamRows = await db.select({ id: teams.id, timezone: teams.timezone }).from(teams).where(eq(teams.slug, clinica)).limit(1);
   const team = teamRows[0];
   if (!team) {
     return NextResponse.json({ error: "clinica_no_encontrada" }, { status: 404 });
   }
+
+  const hoy = nowLocalPartsIn(new Date(), team.timezone);
+  if (date < hoy.date) {
+    return NextResponse.json({ error: "fecha_pasada" }, { status: 400 });
+  }
+  if (date === hoy.date && parseTimeToMin(startTime) < hoy.min + 30) {
+    return NextResponse.json({ error: "hora_pasada" }, { status: 400 });
+  }
+
+  const limiteCitas = await limitePlanAlcanzado(team.id, "citas_mes", hoy.date.slice(0, 7));
+  if (limiteCitas) return respuestaLimitePlan("citas_mes", limiteCitas);
 
   const svcRows = await db
     .select()
@@ -98,6 +111,9 @@ export async function POST(
     .limit(1);
   patient = existing[0];
   if (!patient) {
+    const limitePacientes = await limitePlanAlcanzado(team.id, "patients");
+    if (limitePacientes) return respuestaLimitePlan("patients", limitePacientes);
+
     const created = await db
       .insert(patients)
       .values({

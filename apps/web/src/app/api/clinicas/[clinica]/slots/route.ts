@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { nowLocalPartsIn } from "@odontoflow/core";
 import { computeSlots } from "@/lib/db";
 import { getTenantBySlug, listDoctors } from "@/lib/db";
+import { getSession } from "@/lib/auth";
 import { rateLimit, ipReq } from "@/lib/rate-limit";
 
 export async function GET(
@@ -35,10 +37,16 @@ export async function GET(
   }
 
   const doctores = await listDoctors(tenant.teamId);
+  const hoy = nowLocalPartsIn(new Date(), tenant.timezone);
+  if (date < hoy.date) {
+    return NextResponse.json({ error: "fecha_pasada" }, { status: 400 });
+  }
+  const sesion = await getSession();
   const slotData = await computeSlots(tenant.teamId, {
     serviceId,
     date,
     doctorMembershipId: doctorMembershipId || null,
+    nowMin: !sesion && date === hoy.date ? hoy.min : null,
   });
   if (!slotData) {
     return NextResponse.json({ error: "servicio_invalido" }, { status: 400 });

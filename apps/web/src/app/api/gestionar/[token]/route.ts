@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
+import { nowLocalPartsIn, parseTimeToMin } from "@odontoflow/core";
 import { getDb, appointments, services } from "@odontoflow/db";
 import { resolveMagicToken } from "@/lib/magic-link";
 import { computeSlots } from "@/lib/db";
@@ -104,6 +105,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     if (!horaIni) {
       return NextResponse.json({ error: "hora_invalida" }, { status: 400 });
     }
+    const ahoraParts = nowLocalPartsIn(new Date(), ctx.team.timezone);
+    if (fecha === ahoraParts.date && parseTimeToMin(horaIni) < ahoraParts.min + 30) {
+      return NextResponse.json({ error: "hora_pasada" }, { status: 400 });
+    }
 
     const [service] = await db
       .select()
@@ -138,6 +143,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
       date: fecha,
       doctorMembershipId: doctorId ?? null,
       excluirCitaId: ctx.appointment.id,
+      nowMin: fecha === ahoraParts.date ? ahoraParts.min : null,
     });
     const libre =
       (doctorId

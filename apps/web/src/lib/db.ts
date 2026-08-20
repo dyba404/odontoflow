@@ -123,6 +123,7 @@ export async function computeSlots(
     date: string;
     doctorMembershipId?: string | null;
     excluirCitaId?: string;
+    nowMin?: number | null;
   },
 ): Promise<SlotsResult | null> {
   const db = getDb();
@@ -223,7 +224,7 @@ export async function computeSlots(
       bufferMin: service.bufferMin,
       stepMin: 15,
       leadTimeMin: 30,
-      nowMin: null,
+      nowMin: opts.nowMin ?? null,
       windows,
       busy,
       maxSlots: 40,
