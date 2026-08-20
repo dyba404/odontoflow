@@ -77,8 +77,6 @@ services:
       ADMIN_EMAILS: ${ADMIN_EMAILS:-}
       LOCAL_MASTER_KEY: ${LOCAL_MASTER_KEY:?LOCAL_MASTER_KEY obligatorio (define UNA vez, ver .env.prod.example)}
       WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
-    ports:
-      - "${WEB_PORT:-3111}:3111"
     volumes:
       # La app guarda adjuntos en <cwd>/.data/attachments => /app/apps/web/.data/attachments.
       - attachments:/app/apps/web/.data
@@ -89,6 +87,46 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+
+  caddy:
+    image: caddy:2
+    container_name: odontoflow-caddy-prod
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    environment:
+      # Placeholders del Caddyfile: {$APP_DOMAIN:...} / {$WWW_DOMAIN:...}.
+      APP_DOMAIN: ${APP_DOMAIN:-app.marsmode.me}
+      WWW_DOMAIN: ${WWW_DOMAIN:-www.marsmode.me}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  # Cloudflare Tunnel (solo si el equipo está detrás de CGNAT: piloto en casa).
+  # Modo token: se crea el tunnel en Cloudflare Zero Trust y su token va en
+  # CLOUDFLARE_TUNNEL_TOKEN; el ingress se configura en el dashboard
+  # (app.domain -> http://web:3111; el TLS lo termina el edge de Cloudflare,
+  # tal como corrió el piloto). NO hay archivos de credenciales en el repo.
+  # Caddy queda fuera del túnel (es para VPS/Azure con IP pública).
+  # Uso: docker compose -f docker-compose.prod.yml --profile tunnel up -d
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: odontoflow-cloudflared-prod
+    restart: unless-stopped
+    profiles: ["tunnel"]
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN requerido para el perfil tunnel}
+    depends_on:
+      web:
+        condition: service_healthy
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
 
   # Solo herramientas: no arranca con `up` (profile tools).
   # La imagen standalone de `web` no incluye drizzle-kit ni las migraciones SQL,
@@ -133,3 +171,5 @@ volumes:
   pgdata:
   lycetdata:
   attachments:
+  caddy_data:
+  caddy_config:

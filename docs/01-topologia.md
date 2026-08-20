@@ -41,17 +41,38 @@ Host (VPS / máquina de despliegue)
 ├── lycet  sidecar Greenter (facturación electrónica SUNAT), red interna
 ├── web    Next.js standalone (apps/web/Dockerfile), puerto :3111
 │           DATABASE_URL → db:5432 · LYCET_URL → http://lycet:8000/api/v1
-└── cron   supercronic v0.2.49 (docker/cron/) — crontab con CRON_TZ=America/Lima
-            POST http://web:3111/api/cron/<job> con Bearer $CRON_SECRET
+├── cron   supercronic v0.2.49 (docker/cron/) — crontab con CRON_TZ=America/Lima
+│           POST http://web:3111/api/cron/<job> con Bearer $CRON_SECRET
+├── caddy  reverse proxy (deploy/Caddyfile) — publica :80/:443 hacia web:3111
+└── cloudflared — SOLO perfil `tunnel` (piloto detrás de CGNAT; ver abajo)
 ```
+
+Superficie pública (lo que ve internet): por fuera no existe el puerto 3111
+(`web` ya no publica puertos); la app se alcanza por HTTPS: **modos mutuamente
+excluyentes según la conectividad del host** —
+
+1. **VPS/Azure con IP pública**: `caddy` escucha 80/443, TLS con Let's Encrypt,
+   `reverse_proxy web:3111`. Dominios parametrizados: `APP_DOMAIN` publica la
+   app y `WWW_DOMAIN` la redirige 301 (placeholders en `deploy/Caddyfile`:
+   `{$APP_DOMAIN:app.marsmode.me}`).
+2. **Detrás de CGNAT (piloto en casa)**: perfil `tunnel` → contenedor
+   `cloudflared` **en modo token** (`CLOUDFLARE_TUNNEL_TOKEN`); el ingress se
+   configura en el dashboard de Cloudflare Zero Trust (`hostname → http://web:3111`),
+   el TLS lo termina el edge de Cloudflare y no hay ningún archivo de
+   credenciales en el repo ni en el host. Validado 2026-08-19 como
+   `https://app.marsmode.me`.
 
 - Migraciones / seed: la imagen standalone de `web` no incluye `drizzle-kit` (devDep
   que npm poda), por eso hay un servicio de un solo uso `migrate` (profile `tools`,
   usa el stage `build` del mismo Dockerfile) con el workspace completo:
   `docker compose -f docker-compose.prod.yml run --rm migrate npm run db:migrate`
   (y `... run --rm migrate npm run db:seed`).
-- Health check: `GET /api/health` en :3111 → 200/503.
+- Health check: `GET /api/health` en :3111 → 200/503 (checable también vía el
+  dominio público).
 - El cron corre solo desde `compose up`; no hay que programar nada en el host.
+- `packages/db/src/client.ts`: el socket propio de WSL (sondeo TCP + revive de
+  Docker en Windows) se instala **solo** con `process.platform === "win32"`;
+  dentro de Docker/Linux se usa la conexión estándar de `postgres-js` a `db:5432`.
 
 Los 6 jobs de `cron` (rutas en `apps/web/src/app/api/cron/*`):
 

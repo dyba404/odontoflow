@@ -1,0 +1,7 @@
+{$APP_DOMAIN:app.marsmode.me} {
+    reverse_proxy web:3111
+}
+
+{$WWW_DOMAIN:www.marsmode.me} {
+    redir https://{$APP_DOMAIN:app.marsmode.me}{uri} permanent
+}

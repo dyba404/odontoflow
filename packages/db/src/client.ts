@@ -137,8 +137,10 @@ function buildDb() {
     max_lifetime: 300,
     connect_timeout: 15,
     onnotice: () => {},
-    socket: () => dbSocketWithRevive(),
   };
+  if (process.platform === "win32") {
+    options.socket = () => dbSocketWithRevive();
+  }
   const client = postgres(url, options as postgres.Options<{}>);
   return drizzle(client, { schema });
 }
