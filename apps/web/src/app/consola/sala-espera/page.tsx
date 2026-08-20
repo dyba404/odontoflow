@@ -1,11 +1,15 @@
 import type { AppointmentStatus } from "@odontoflow/core";
+import { hasPermission } from "@odontoflow/core";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Inbox } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/console/page-header";
 import { AvanzarEstado } from "@/app/consola/sala-espera/avanzar-estado";
 import { AutoRefresh } from "@/app/consola/sala-espera/auto-refresh";
-import { getDefaultTeam, citasDelDia, doctoresConColor } from "@/lib/console-data";
+import { getSession } from "@/lib/auth";
+import { getDefaultTeam, citasDelDia, doctoresConColor, solicitudesActivas } from "@/lib/console-data";
 
 export const dynamic = "force-dynamic";
 
@@ -50,8 +54,11 @@ const COLUMNAS: Columna[] = [
 ];
 
 export default async function SalaEsperaPage() {
-  const team = await getDefaultTeam();
-  if (!team) redirect("/login");
+  const [team, session] = await Promise.all([getDefaultTeam(), getSession()]);
+  if (!team || !session) redirect("/login");
+
+  const veSolicitudes = hasPermission(session.role, "appointments.edit");
+  const pendientes = veSolicitudes ? (await solicitudesActivas(team.id)).length : 0;
 
   const [citas, doctores] = await Promise.all([
     citasDelDia(team.id, hoyLima()),
@@ -71,6 +78,22 @@ export default async function SalaEsperaPage() {
       />
 
       <AutoRefresh>
+        {pendientes > 0 && (
+          <Link
+            href="/consola/solicitudes"
+            className="flex items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 transition-colors hover:bg-amber-100"
+          >
+            <span className="flex items-center gap-2 font-medium">
+              <Inbox className="size-4 shrink-0" />
+              {pendientes === 1
+                ? "Hay 1 solicitud pendiente por confirmar"
+                : `Hay ${pendientes} solicitudes pendientes por confirmar`}
+            </span>
+            <span className="shrink-0 font-medium underline underline-offset-2">
+              Ver solicitudes
+            </span>
+          </Link>
+        )}
         <div className="grid gap-4 lg:grid-cols-3">
           {COLUMNAS.map((col) => {
             const items = enFila.filter((c) => c.estado === col.estado);
