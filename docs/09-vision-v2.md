@@ -130,17 +130,28 @@ stack (Next.js route handlers + postgres-js + Drizzle):
    Spec E2E dedicado de paridad por rol.
 
 3. **Máquina de estados de cita (F6).** Verbatim del service de dentalpin:
-   ```
-   scheduled    → {confirmed, checked_in, cancelled, no_show}
-   confirmed    → {checked_in, cancelled, no_show}
-   checked_in   → {in_treatment, cancelled}   ← requiere consultorio asignado
-   in_treatment → {completed, cancelled}
-   terminales: completed, cancelled, no_show (conjunto vacío)
-   ```
-   Const compartida server+client + **test de paridad** (mismo mapa, CI).
-   Errores: `InvalidTransition`, `AlreadyInState`, `ConsultorioRequired`.
-   `current_status_since` → "esperando 12 min" en sala de espera (absorbe el
-   banner v1.9.0). Eventos append-only por transición.
+    ```
+    scheduled    → {confirmed, checked_in, cancelled, no_show}
+    confirmed    → {checked_in, cancelled, no_show}
+    checked_in   → {in_treatment, cancelled}   ← requiere consultorio asignado
+    in_treatment → {completed, cancelled}
+    terminales: completed, cancelled, no_show (conjunto vacío)
+    ```
+    Const compartida server+client + **test de paridad** (mismo mapa, CI).
+    Errores: `InvalidTransition`, `AlreadyInState`, `ConsultorioRequired`.
+    `current_status_since` → "esperando 12 min" en sala de espera (absorbe el
+    banner v1.9.0). Eventos append-only por transición.
+
+    **Decisión de implementación (2026-08-21, aprobada por el dueño):** la
+    máquina canónica de arriba NO se implementó como reemplazo del flujo de
+    sala existente. Se implementó una máquina de sala paralela y aditiva:
+    `appointments.sala_estado` (`anunciado→en_box→en_espera_pago→atendido→
+    retirado`) + `room` (consultorio, requerido para `en_box`) +
+    `current_status_since` + `appointment_status_events` append-only por
+    transición de estado de cita. Motivo: el flujo de sala de espera v1.x ya
+    estaba operativo y testeado (check-in/llamado/deshacer); reemplazarlo por
+    la máquina canónica era riesgoso sin ganar funcionalidad visible. El
+    constraint GiST anti-doble-reserva ya existía desde la migración 0003.
 
 4. **Semántica wall-clock (`lib/dates.ts`).** Datetimes naive entrantes =
    reloj de pared de la clínica (America/Lima por ahora, campo en tenant para

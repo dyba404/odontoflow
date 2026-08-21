@@ -420,15 +420,20 @@ danphe MIT, mediflow-ai MIT). Resumen por ola:
 - [ ] **v1.12 Dos máquinas (Ola 3):** VPS EU Hetzner (app + cron) + VPS DB con
       PgBouncer/PITR, máquina del operador como segundo connector del túnel
       (standby caliente); se ejecuta al llegar a ~100 clínicas.
-- [ ] **v2.0.0 Ola 4 — Núcleo clínico:** F0 fundamentos (event bus
-      transaccional + RBAC v2 + fechas wall-clock) ✅ completado, F1 odontograma
-      ✅ completado (librería vendoreada en `src/vendor/react-advanced-odontogram`,
+- [x] **v2.0.0 Ola 4 — Núcleo clínico:** F0 fundamentos (event bus
+      transaccional + RBAC v2 + fechas wall-clock) ✅, F1 odontograma
+      ✅ (librería vendoreada en `src/vendor/react-advanced-odontogram`,
       ficha usa la versión profesional v2 con autosave + historial), F2 periodontograma
-      ✅ completado (PerioChart integrado en el shell; snapshots inmutables
-      `perio_records` gating Pro), F3 planes de tratamiento
-      v2 con pipeline, F4 presupuestos v2 + firma + link público 2FA, F5
-      consentimientos firmados, F6 blindaje agenda (GiST + máquina de estados),
-      F7 allocations de pago.
+      ✅ (PerioChart integrado en el shell; snapshots inmutables
+      `perio_records` gating Pro), F3 planes de tratamiento v2 ✅ (pipeline
+      draft→pending→active→completed→archived|closed con closure_reason,
+      ítems con secuencia y sesiones, snapshot de catálogo), F4 presupuestos v2
+      ✅ (firma + link público 2FA + BudgetAccessLog IP hasheada + PDF firmado
+      con document_hash + recordatorios 7/14d), F5 consentimientos firmados ✅
+      (templates + firma con hash/IP/UA), F6 sala/consultorios ✅ (máquina de
+      sala paralela: sala_estado + room + appointment_status_events; decisión
+      documentada en 09-vision-v2.md), F7 allocations de pago ✅
+      (payment_allocations + reconcile + computePaidSummary único).
 - [ ] **v2.0.0 Ola 5 — Portal P1-P5:** reprogramar desde portal, instrucciones
       post-op, intake digital pre-cita, mensajería bidireccional, cuentas
       familiares.
