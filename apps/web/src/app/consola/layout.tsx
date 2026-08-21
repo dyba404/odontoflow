@@ -110,6 +110,12 @@ function buildNav({
     can("patients.manage")
       ? { href: "/consola/pacientes", label: "Pacientes", icon: "pacientes" }
       : null,
+    can("quotes.manage")
+      ? { href: "/consola/planes", label: "Planes de tratamiento", icon: "historial" }
+      : null,
+    can("records.edit")
+      ? { href: "/consola/consentimientos", label: "Consentimientos", icon: "historial" }
+      : null,
     can("patients.manage")
       ? { href: "/consola/whatsapp", label: "WhatsApp", icon: "whatsapp" }
       : null,

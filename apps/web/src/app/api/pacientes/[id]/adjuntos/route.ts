@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import { join, sep } from "node:path";
+import { join } from "node:path";
 import { fileTypeFromBuffer } from "file-type";
 import { getDb, attachments, patients } from "@odontoflow/db";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
@@ -9,6 +8,7 @@ import { guardStaff, guardError } from "@/lib/auth";
 import { gatePlan, respuestaPlanInsuficiente } from "@/lib/plans";
 import { logAuditSesion } from "@/lib/audit";
 import { attachmentsRoot, generarVariantes } from "@/lib/attachments";
+import { getStorage } from "@/lib/storage";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME = [
@@ -95,13 +95,15 @@ export async function POST(req: Request) {
 
   const id = randomUUID();
   const ext = detected?.ext ?? "bin";
-  const dir = join(attachmentsRoot(), g.team.id);
-  const filePath = join(dir, `${id}.${ext}`);
-  if (!filePath.startsWith(attachmentsRoot() + sep)) {
-    return NextResponse.json({ error: "ruta_invalida" }, { status: 400 });
-  }
-  await mkdir(dir, { recursive: true });
-  await writeFile(filePath, buffer);
+  // storage.storage es local durante el buildeo: storagePath = ruta absoluta.
+  // Con STORAGE_DRIVER=s3, storagePath pasa a ser la object key (sin archivo local).
+  const storage = getStorage();
+  const storagePath = join(g.team.id, `${id}.${ext}`);
+  const filePath =
+    storage.driver === "local"
+      ? join(attachmentsRoot(), storagePath)
+      : storagePath;
+  await storage.put(filePath, buffer, mime, buffer.length);
 
   // Variantes de imagen (thumb 256 / preview 1600 en WebP) para servir
   // rápido en móvil. Solo imágenes; best-effort (el original queda intacto).
@@ -142,6 +144,7 @@ export async function POST(req: Request) {
       nombre: file.name || `adjunto.${ext}`,
       mime,
       sizeBytes: buffer.length,
+      storage: storage.driver,
       storagePath: filePath,
       nota: typeof nota === "string" && nota.trim() ? nota.trim() : null,
       createdBy: g.user.id,

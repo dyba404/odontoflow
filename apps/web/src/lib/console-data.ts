@@ -17,6 +17,7 @@ import {
   blockedSlots,
   cashClosures,
   toothStates,
+  odontogramCharts,
   clinicalRecords,
   receipts,
   auditLogs,
@@ -24,6 +25,7 @@ import {
   signedConsents,
   legalSettings,
   sessions,
+  perioRecords,
 } from "@odontoflow/db";
 
 export async function serviciosActivosConsola(teamId: string) {
@@ -569,6 +571,35 @@ export async function toothStatesPaciente(patientId: string) {
     .from(toothStates)
     .where(eq(toothStates.patientId, patientId))
     .orderBy(asc(toothStates.toothFdi));
+}
+
+export async function odontogramaChartPaciente(teamId: string, patientId: string) {
+  const db = getDb();
+  const [chart] = await db
+    .select({
+      id: odontogramCharts.id,
+      status: odontogramCharts.status,
+      plan: odontogramCharts.plan,
+      version: odontogramCharts.version,
+      updatedAt: odontogramCharts.updatedAt,
+    })
+    .from(odontogramCharts)
+    .where(and(eq(odontogramCharts.tenantId, teamId), eq(odontogramCharts.patientId, patientId)))
+    .limit(1);
+  return chart ?? null;
+}
+
+export async function periodoRegistrosPaciente(teamId: string, patientId: string) {
+  const db = getDb();
+  return db
+    .select({
+      id: perioRecords.id,
+      nota: perioRecords.nota,
+      createdAt: perioRecords.createdAt,
+    })
+    .from(perioRecords)
+    .where(and(eq(perioRecords.tenantId, teamId), eq(perioRecords.patientId, patientId)))
+    .orderBy(desc(perioRecords.createdAt));
 }
 
 const PLANES_VALIDOS: readonly (PlanCode)[] = ["free", "pro", "premium"];

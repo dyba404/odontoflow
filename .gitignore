@@ -26,6 +26,9 @@ apps/web/.data/
 # Respaldos pg_dump locales
 backups/
 
+# Tarballs npm descargados (la librería vive vendoreada en apps/web/src/vendor/)
+*.tgz
+
 # Playwright (artefactos de E2E)
 apps/web/test-results/
 apps/web/playwright-report/

@@ -134,6 +134,34 @@
       "when": 1787214902344,
       "tag": "0018_hard_mockingbird",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787245876315,
+      "tag": "0019_heavy_red_wolf",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1787251878294,
+      "tag": "0020_windy_jack_murdock",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1787261652680,
+      "tag": "0021_perpetual_warlock",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1787266780638,
+      "tag": "0022_warm_aqueduct",
+      "breakpoints": true
     }
   ]
 }

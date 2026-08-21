@@ -8,12 +8,15 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "next lint --dir src",
+    "test:unit": "node --test --import tsx \"src/lib/storage.test.ts\" \"src/lib/events.test.ts\"",
     "test:e2e": "playwright test",
     "test:e2e:vivo": "playwright test --config playwright.vivo.config.ts --workers=3 --project vivo --project movil-vivo",
     "test:e2e:vivo-serie": "playwright test --config playwright.vivo.config.ts --project vivo-serie",
     "test:e2e:admin": "playwright test --config playwright.admin.config.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1114.0",
+    "@aws-sdk/s3-request-presigner": "^3.1114.0",
     "@odontoflow/core": "*",
     "@odontoflow/db": "^0.1.0",
     "@odontoflow/ui": "*",
@@ -33,6 +36,7 @@
     "postcss": "^8.4.31",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
+    "react-advanced-odontogram": "^2.4.0",
     "react-dom": "^19.0.0",
     "recharts": "^3.10.1",
     "resend": "^6.20.0",

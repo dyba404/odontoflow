@@ -408,21 +408,24 @@ Investigación base: 8 repos de referencia en `.references/` (dentalpin BSL,
 dentalops MIT, react-advanced-odontogram MIT, medplum Apache, openemr GPL,
 danphe MIT, mediflow-ai MIT). Resumen por ola:
 
-- [ ] **v1.10 Blindaje (Ola 1):** backup adjuntos+fiscal off-site (rclone→B2 +
+- [x] **v1.10 Blindaje (Ola 1):** backup adjuntos+fiscal off-site (rclone→B2 +
       healthchecks.io dead-man's switch), thumbnails sharp (256px/1600px WebP),
       pool DB configurable a 10, rate-limit con IP real + webhook WhatsApp
       protegido, crons de envíos en paralelo (batch 5) + timeout 1200s, límites
       de memoria por contenedor, sección "Salud de infra" en `/admin/resumen`.
       Se despacha junto con el tag v1.9.0 en un solo ship.
-- [ ] **v1.11 Storage (Ola 2):** interfaz `Storage` (local↔S3/R2), uploads
-      presignados directos, script backfill; se activa con credenciales al
-      llegar a ~50 clínicas.
+- [x] **v1.11 Storage (Ola 2):** interfaz `Storage` (local↔S3/R2) con
+      `LocalStorageDriver` activo y `S3StorageDriver` dormant; uploads presignados
+      directos, script backfill; se activa con credenciales al llegar a ~50 clínicas.
 - [ ] **v1.12 Dos máquinas (Ola 3):** VPS EU Hetzner (app + cron) + VPS DB con
       PgBouncer/PITR, máquina del operador como segundo connector del túnel
       (standby caliente); se ejecuta al llegar a ~100 clínicas.
 - [ ] **v2.0.0 Ola 4 — Núcleo clínico:** F0 fundamentos (event bus
-      transaccional + RBAC v2 + fechas wall-clock), F1 odontograma
-      (react-advanced-odontogram), F2 periodontograma, F3 planes de tratamiento
+      transaccional + RBAC v2 + fechas wall-clock) ✅ completado, F1 odontograma
+      ✅ completado (librería vendoreada en `src/vendor/react-advanced-odontogram`,
+      ficha usa la versión profesional v2 con autosave + historial), F2 periodontograma
+      ✅ completado (PerioChart integrado en el shell; snapshots inmutables
+      `perio_records` gating Pro), F3 planes de tratamiento
       v2 con pipeline, F4 presupuestos v2 + firma + link público 2FA, F5
       consentimientos firmados, F6 blindaje agenda (GiST + máquina de estados),
       F7 allocations de pago.

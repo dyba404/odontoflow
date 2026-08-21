@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { getDb, appointments } from "@odontoflow/db";
+import { getDb, appointments, appointmentStatusEvents } from "@odontoflow/db";
 import { canTransition, assertTransition } from "@odontoflow/core";
 import type { AppointmentStatus, Permission } from "@odontoflow/core";
 import { guardStaff, guardError } from "@/lib/auth";
@@ -80,8 +80,16 @@ export async function POST(
   let faltantes: string[] = [];
   await db
     .update(appointments)
-    .set({ estado, updatedAt: new Date() })
+    .set({ estado, currentStatusSince: new Date(), updatedAt: new Date() })
     .where(eq(appointments.id, id));
+
+  await db.insert(appointmentStatusEvents).values({
+    tenantId: g.team.id,
+    appointmentId: id,
+    estadoFrom: appt.estado,
+    estadoTo: estado,
+    changedBy: g.user.id,
+  });
 
   void logAuditSesion({
     tenantId: g.team.id,

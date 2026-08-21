@@ -1,10 +1,8 @@
-import { join, resolve } from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
 
-export function attachmentsRoot(): string {
-  const base = process.env.ATTACHMENTS_DIR ?? join(process.cwd(), ".data", "attachments");
-  return resolve(base);
-}
+// La raíz ahora vive en lib/storage.ts (junto a los drivers); se re-exporta
+// para no romper a los importadores existentes.
+export { attachmentsRoot } from "@/lib/storage";
 
 // Derivados de imágenes: thumb (lista/móvil) y preview (visor). Se generan
 // en upload junto al original; variantes = rutas hermanas con sufijo.

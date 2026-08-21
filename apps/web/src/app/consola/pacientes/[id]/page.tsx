@@ -12,7 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/console/empty-state";
 import { StatusBadge } from "@/components/status-badge";
-import { Odontograma } from "./odontograma";
+import { OdontogramaV2 } from "./odontograma-v2";
+import { Periodontograma } from "./periodontograma";
+import { PlanesCard } from "./planes-card";
+import { ConsentV2Card } from "./consent-v2-card";
+import { AsignacionesPaciente } from "@/app/consola/cuotas/asignaciones-paciente";
 import { NotaForm } from "./nota-form";
 import { AdjuntosUploader } from "./adjuntos-uploader";
 import { ConsentDialog } from "./consent-dialog";
@@ -25,6 +29,8 @@ import {
   fichaPaciente,
   registrosPaciente,
   toothStatesPaciente,
+  odontogramaChartPaciente,
+  periodoRegistrosPaciente,
   adjuntosDePaciente,
   consentimientosDePaciente,
 } from "@/lib/console-data";
@@ -52,18 +58,6 @@ const METODO_LABEL: Record<string, string> = {
   tarjeta_online: "Tarjeta online",
   otro: "Otro",
 };
-
-const LEYENDA = [
-  { label: "Sano", swatch: "border border-stone-400 bg-transparent" },
-  { label: "Cariado", swatch: "border border-amber-600 bg-amber-600/20" },
-  { label: "Tratado", swatch: "border border-teal-600 bg-teal-600/25" },
-  { label: "Corona", swatch: "border border-violet-600 bg-violet-600/25" },
-  {
-    label: "Extraído",
-    swatch: "border border-stone-400 bg-[repeating-linear-gradient(45deg,#fafaf9,#fafaf9_2px,#a8a29e_2px,#a8a29e_3px)]",
-  },
-  { label: "Ausente", swatch: "border border-red-500 bg-red-500/10" },
-];
 
 function fechaLarga(fecha: string): string {
   return format(new Date(`${fecha}T12:00:00`), "cccc, d 'de' MMMM 'de' yyyy", { locale: es });
@@ -112,8 +106,14 @@ export default async function FichaPacientePage({
     toothStatesPaciente(ficha.paciente.id),
     registrosPaciente(ficha.paciente.id),
   ]);
+  const chart = await odontogramaChartPaciente(team.id, ficha.paciente.id);
   const canEdit = hasPermission(session.role, "records.edit");
   const pro = planEsProOMayor(await planDeTenant(team.id));
+  const periRegs = (
+    pro
+      ? await periodoRegistrosPaciente(team.id, ficha.paciente.id)
+      : []
+  ).map((r) => ({ id: r.id, nota: r.nota, creadoEl: r.createdAt.toISOString() }));
 
   const [adjuntos, consentimientos] = await Promise.all([
     adjuntosDePaciente(team.id, id),
@@ -205,7 +205,6 @@ export default async function FichaPacientePage({
 
   const totalPagado = pagos.reduce((acc, p) => acc + Number(p.monto), 0);
   const ultimaVisita = citas[0]?.fecha ?? null;
-  const hallazgos = dientes.filter((d) => d.estado !== "sano").length;
   let ultimaActualizacion: Date | null = null;
   for (const d of dientes) {
     const dt = new Date(d.updatedAt);
@@ -539,36 +538,83 @@ export default async function FichaPacientePage({
       <Card>
         <CardHeader className="space-y-3 p-5 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-sm font-medium">Odontograma FDI</CardTitle>
+            <CardTitle className="text-sm font-medium">Odontograma clínico</CardTitle>
             <span className="text-xs text-muted-foreground">
-              {hallazgos} {hallazgos === 1 ? "diente con hallazgos" : "dientes con hallazgos"} ·{" "}
               {ultimaActualizacion
                 ? `Actualizado ${formatDistanceToNow(new Date(ultimaActualizacion), { addSuffix: true, locale: es })}`
                 : "Sin registros todavía"}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            {LEYENDA.map((l) => (
-              <span key={l.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className={`size-3 rounded-[3px] ${l.swatch}`} />
-                {l.label}
-              </span>
-            ))}
-          </div>
         </CardHeader>
         <CardContent className="p-5 pt-0">
-          <Odontograma
-            estados={dientes.map((d) => ({
-              toothFdi: d.toothFdi,
-              estado: d.estado,
-              nota: d.nota,
-              updatedAt: d.updatedAt.toISOString(),
-            }))}
-            canEdit={canEdit}
+          <OdontogramaV2
             patientId={paciente.id}
+            canEdit={canEdit}
+            chartInicial={
+              chart
+                ? { status: chart.status, plan: chart.plan, version: chart.version }
+                : null
+            }
           />
         </CardContent>
       </Card>
+
+      {pro ? (
+        <Card>
+          <CardHeader className="space-y-3 p-5 pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <CardTitle className="text-sm font-medium">Periodontograma</CardTitle>
+              <span className="text-xs text-muted-foreground">
+                {periRegs.length > 0
+                  ? `${periRegs.length} episodio${periRegs.length === 1 ? "" : "s"} registrado${periRegs.length === 1 ? "" : "s"}`
+                  : "Sin episodios todavía"}
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent className="p-5 pt-0">
+            <Periodontograma
+              patientId={paciente.id}
+              canEdit={canEdit}
+              registros={periRegs}
+            />
+          </CardContent>
+        </Card>
+      ) : (
+        <ProHint titulo="Periodontograma digital" />
+      )}
+
+      {pro ? (
+        <Card>
+          <CardHeader className="p-5 pb-4">
+            <CardTitle className="text-sm font-medium">Planes de tratamiento</CardTitle>
+          </CardHeader>
+          <CardContent className="p-5 pt-0">
+            <PlanesCard patientId={paciente.id} />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {pro ? (
+        <Card>
+          <CardHeader className="p-5 pb-4">
+            <CardTitle className="text-sm font-medium">Consentimientos firmados (v2)</CardTitle>
+          </CardHeader>
+          <CardContent className="p-5 pt-0">
+            <ConsentV2Card patientId={paciente.id} canEdit={canEdit} />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {pro ? (
+        <Card>
+          <CardHeader className="p-5 pb-4">
+            <CardTitle className="text-sm font-medium">Pagos asignados</CardTitle>
+          </CardHeader>
+          <CardContent className="p-5 pt-0">
+            <AsignacionesPaciente patientId={paciente.id} nombrePaciente={paciente.nombre} />
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }
