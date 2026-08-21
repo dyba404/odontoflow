@@ -99,8 +99,38 @@ export function permissionsFor(role: StaffRole): ReadonlyArray<Permission> {
   return ALL[role];
 }
 
+/**
+ * RBAC v2: matching con wildcards. Un grant puede ser:
+ *  · `"*"`                        → todo
+ *  · `"modulo.*"`                  → prefijo con punto (`agenda.*` cubre `agenda.view_all`)
+ *  · `"modulo.recurso.accion"`      → string exacto
+ * `requested` siempre es un string concreto. Sin coincidencia → false.
+ */
+export function matchPermission(granted: string, requested: string): boolean {
+  if (granted === "*") return true;
+  if (granted === requested) return true;
+  if (granted.endsWith(".*")) {
+    const prefijo = granted.slice(0, -2); // sin el ".*"
+    return requested.startsWith(`${prefijo}.`);
+  }
+  return false;
+}
+
+/** Lista plana de permisos de un rol (para el frontend). */
+export function expandPermissions(role: StaffRole): ReadonlyArray<string> {
+  return permissionsFor(role) as ReadonlyArray<string>;
+}
+
+/** Chequeo por string con soporte de wildcards (RBAC v2). */
+export function can(role: StaffRole, permission: string): boolean {
+  for (const g of permissionsFor(role) as ReadonlyArray<string>) {
+    if (matchPermission(g, permission)) return true;
+  }
+  return false;
+}
+
 export function hasPermission(role: StaffRole, permission: Permission): boolean {
-  return permissionsFor(role).includes(permission);
+  return can(role, permission);
 }
 
 export interface AccessContext {

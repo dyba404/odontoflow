@@ -36,7 +36,10 @@ export function dayOfWeekIn(date: string): number {
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
 }
 
-export function nowLocalPartsIn(now: Date, timezone: string): { date: string; min: number } {
+export function nowLocalPartsIn(
+  now: Date,
+  timezone: string,
+): { date: string; min: number } {
   const dtf = new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone,
     year: "numeric",

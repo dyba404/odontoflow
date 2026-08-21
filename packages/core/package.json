@@ -14,7 +14,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "echo ok",
-    "test": "node --test --import tsx \"src/slots.test.ts\" \"src/appointment-state.test.ts\" \"src/permissions.test.ts\""
+    "test": "node --test --import tsx \"src/slots.test.ts\" \"src/appointment-state.test.ts\" \"src/permissions.test.ts\" \"src/dates.test.ts\""
   },
   "devDependencies": {
     "eslint": "^9.39.5",

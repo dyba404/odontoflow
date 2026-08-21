@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { hasPermission, canAccess, permissionsFor } from "./permissions.js";
+import { hasPermission, can, matchPermission, canAccess, permissionsFor } from "./permissions.js";
 import type { AccessContext } from "./permissions.js";
 
 const ctx = (insideShift: boolean): AccessContext => ({
@@ -49,4 +49,29 @@ test("canAccess: restricción activa + dentro de turno => permitido", () => {
 
 test("canAccess: sin restricción, fuera de turno sigue permitido", () => {
   assert.equal(canAccess(ctx(false), false), true);
+});
+
+test("matchPermission: wildcard total", () => {
+  assert.equal(matchPermission("*", "whatever.thing"), true);
+  assert.equal(matchPermission("*", "single"), true);
+});
+
+test("matchPermission: wildcard por módulo (prefijo con punto)", () => {
+  assert.equal(matchPermission("agenda.*", "agenda.view_all"), true);
+  assert.equal(matchPermission("agenda.*", "agenda.view_own"), true);
+  assert.equal(matchPermission("agenda.*", "agenda"), false);
+  assert.equal(matchPermission("agenda.*", "agendaExtra.view_all"), false);
+});
+
+test("matchPermission: exacto", () => {
+  assert.equal(matchPermission("agenda.view_all", "agenda.view_all"), true);
+  assert.equal(matchPermission("agenda.view_all", "agenda.view_own"), false);
+});
+
+test("RBAC v2 no rompe permisos existentes", () => {
+  for (const rol of ["owner", "receptionist", "assistant", "doctor"] as const) {
+    for (const perm of permissionsFor(rol)) {
+      assert.equal(can(rol, perm), true, `${rol} debe poder ${perm}`);
+    }
+  }
 });
