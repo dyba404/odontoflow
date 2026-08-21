@@ -60,6 +60,8 @@ export interface PresupuestoResumen {
   expiraEn: string | null;
   nota: string | null;
   items: ItemPresupuesto[];
+  tieneLink?: boolean;
+  linkBloqueado?: boolean;
 }
 
 export function PresupuestoDetalleDialog({
@@ -75,6 +77,11 @@ export function PresupuestoDetalleDialog({
   const [cargandoCuotas, setCargandoCuotas] = useState(false);
   const [generando, setGenerando] = useState(false);
   const [n, setN] = useState("2");
+  const [linkUrl, setLinkUrl] = useState<string | null>(null);
+  const [linkBloqueado, setLinkBloqueado] = useState(presupuesto.linkBloqueado ?? false);
+  const [creandoLink, setCreandoLink] = useState(false);
+  const [linkModo, setLinkModo] = useState<"phone_last4" | "dob" | "manual_code">("phone_last4");
+  const [linkValor, setLinkValor] = useState("");
 
   useEffect(() => {
     setEstado(presupuesto.estado);
@@ -100,6 +107,13 @@ export function PresupuestoDetalleDialog({
       .finally(() => {
         if (activo) setCargandoCuotas(false);
       });
+    fetch(`/api/presupuestos-v2/${presupuesto.id}/link`)
+      .then(async (r) => {
+        const j = await r.json().catch(() => ({}));
+        if (!activo) return;
+        if (r.ok) setLinkUrl(j.url ?? null);
+      })
+      .catch(() => {});
     return () => {
       activo = false;
     };
@@ -161,6 +175,47 @@ export function PresupuestoDetalleDialog({
 
   const totalCuotas = cuotas.reduce((acc, c) => acc + Number(c.monto), 0);
   const totalPagado = cuotas.reduce((acc, c) => acc + Number(c.pagado), 0);
+
+  function generarLink() {
+    if (!linkValor.trim()) {
+      toast.error("Ingresa el valor de verificación");
+      return;
+    }
+    start(async () => {
+      const res = await fetch(`/api/presupuestos-v2/${presupuesto.id}/link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ modo: linkModo, valor: linkValor.trim() }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(`No se pudo generar el link: ${j.error ?? "error"}`);
+        return;
+      }
+      setLinkUrl(j.url ?? null);
+      setLinkBloqueado(false);
+      setCreandoLink(false);
+      setLinkValor("");
+      toast.success("Link público generado");
+      router.refresh();
+    });
+  }
+
+  function desbloquearLink() {
+    start(async () => {
+      const res = await fetch(`/api/presupuestos-v2/${presupuesto.id}/desbloquear`, {
+        method: "POST",
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(`No se pudo desbloquear: ${j.error ?? "error"}`);
+        return;
+      }
+      setLinkBloqueado(false);
+      toast.success("Link desbloqueado");
+      router.refresh();
+    });
+  }
 
   return (
     <>
@@ -226,6 +281,105 @@ export function PresupuestoDetalleDialog({
               </tbody>
             </table>
           </div>
+
+          {(estado === "borrador" || estado === "enviado") && (
+            <div className="space-y-3 rounded-lg border p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  <Send className="size-4 text-primary" />
+                  Link público de aceptación
+                </span>
+                {linkBloqueado ? (
+                  <Badge variant="red">Bloqueado por seguridad</Badge>
+                ) : linkUrl ? (
+                  <Badge variant="green">Activo</Badge>
+                ) : null}
+              </div>
+
+              {linkUrl ? (
+                <div className="space-y-2">
+                  <code className="block break-all rounded-md border bg-muted/40 px-3 py-2 text-xs">
+                    {linkUrl}
+                  </code>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        navigator.clipboard.writeText(linkUrl).then(
+                          () => toast.success("Link copiado"),
+                          () => toast.error("No se pudo copiar"),
+                        );
+                      }}
+                    >
+                      Copiar link
+                    </Button>
+                    {linkBloqueado ? (
+                      <Button size="sm" variant="outline" onClick={desbloquearLink} disabled={pending}>
+                        {pending ? "Desbloqueando…" : "Desbloquear"}
+                      </Button>
+                    ) : null}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    El paciente verifica su identidad antes de ver y firmar el presupuesto.
+                  </p>
+                </div>
+              ) : creandoLink ? (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {(
+                      [
+                        { id: "phone_last4", label: "Últimos 4 del celular" },
+                        { id: "dob", label: "Fecha de nacimiento" },
+                        { id: "manual_code", label: "Código propio" },
+                      ] as const
+                    ).map((o) => (
+                      <Button
+                        key={o.id}
+                        size="sm"
+                        variant={linkModo === o.id ? "default" : "outline"}
+                        onClick={() => setLinkModo(o.id)}
+                      >
+                        {o.label}
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1 space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground" htmlFor="link-valor">
+                        {linkModo === "phone_last4"
+                          ? "Últimos 4 dígitos del celular del paciente"
+                          : linkModo === "dob"
+                            ? "Fecha de nacimiento (AAAA-MM-DD)"
+                            : "Código (4-20 caracteres)"}
+                      </label>
+                      <Input
+                        id="link-valor"
+                        value={linkValor}
+                        onChange={(e) => setLinkValor(e.target.value)}
+                        placeholder={linkModo === "phone_last4" ? "1234" : linkModo === "dob" ? "1990-01-31" : "••••"}
+                      />
+                    </div>
+                    <Button size="sm" onClick={generarLink} disabled={pending || !linkValor.trim()}>
+                      {pending ? "Generando…" : "Generar"}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setCreandoLink(false)} disabled={pending}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setCreandoLink(true)} disabled={pending}>
+                    <Send className="size-4" /> Generar link de aceptación
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    El paciente podrá ver y firmar el presupuesto desde su celular con verificación de identidad.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {(estado === "borrador" || estado === "enviado") && (
             <div className="flex flex-wrap gap-2">

@@ -955,6 +955,8 @@ export const quotes = pgTable(
     parentBudgetId: uuid("parent_budget_id").references((): AnyPgColumn => quotes.id),
     linkToken: text("link_token"),
     linkTwoFactor: jsonb("link_two_factor"),
+    linkFailCount: integer("link_fail_count").notNull().default(0),
+    linkLockedAt: timestamp("link_locked_at", { withTimezone: true }),
     createdBy: uuid("created_by").references(() => users.id),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1090,7 +1092,8 @@ export const budgetSignatures = pgTable(
     firmanteRol: text("firmante_rol").notNull().default("paciente"),
     signatureData: text("signature_data").notNull(),
     signatureSha256: text("signature_sha256").notNull(),
-    ip: text("ip"),
+    documentHash: text("document_hash"),
+    ipHash: text("ip_hash"),
     userAgent: text("user_agent"),
     attachmentId: uuid("attachment_id").references(() => attachments.id),
     signedAt: timestamp("signed_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1098,6 +1101,29 @@ export const budgetSignatures = pgTable(
   },
   (t) => [
     index("budget_signatures_quote_idx").on(t.quoteId),
+  ],
+);
+
+// Registro de accesos al link público del presupuesto (visión §2.2(5)).
+// Privacidad: ip_hash SHA-256, NUNCA la IP cruda; purga 90d en cron diario.
+export const budgetAccessLogs = pgTable(
+  "budget_access_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    quoteId: uuid("quote_id")
+      .notNull()
+      .references(() => quotes.id, { onDelete: "cascade" }),
+    evento: text("evento").notNull(),
+    ipHash: text("ip_hash").notNull(),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("budget_access_logs_quote_idx").on(t.quoteId),
+    index("budget_access_logs_created_idx").on(t.createdAt),
   ],
 );
 

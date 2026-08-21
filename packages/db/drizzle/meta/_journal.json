@@ -162,6 +162,13 @@
       "when": 1787266780638,
       "tag": "0022_warm_aqueduct",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1787343363285,
+      "tag": "0023_silent_centennial",
+      "breakpoints": true
     }
   ]
 }

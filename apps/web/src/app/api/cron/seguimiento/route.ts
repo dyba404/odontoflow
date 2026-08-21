@@ -7,8 +7,8 @@ import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
-const DIAS_PRIMERO = 3;
-const DIAS_FINAL = 7;
+const DIAS_PRIMERO = 7;
+const DIAS_FINAL = 14;
 
 function bearerValido(req: Request): boolean {
   const esperado = process.env.CRON_SECRET;
@@ -51,6 +51,7 @@ export async function POST(req: Request) {
           enviadoA: quotes.updatedAt,
           seg1: quotes.seguimiento1At,
           seg2: quotes.seguimiento2At,
+          linkToken: quotes.linkToken,
           pacienteNombre: patients.nombre,
           pacienteEmail: patients.email,
         })
@@ -62,6 +63,9 @@ export async function POST(req: Request) {
         if (!q.pacienteEmail || !q.pacienteNombre) continue;
         const desdeEnvio = Date.now() - new Date(q.enviadoA).getTime();
         const dias = desdeEnvio / (24 * 3600_000);
+        const presupuestoUrl = q.linkToken
+          ? `${appBaseUrl()}/s/presupuesto/${q.linkToken}`
+          : null;
 
         if (dias >= DIAS_FINAL && !q.seg2) {
           const tpl = plantillaPresupuestoSeguimiento({
@@ -72,6 +76,7 @@ export async function POST(req: Request) {
             total: Number(q.total),
             esFinal: true,
             reservaUrl: `${appBaseUrl()}/${team.slug}/reserva`,
+            presupuestoUrl,
           });
           const r = await sendMail({
             to: q.pacienteEmail,
@@ -95,6 +100,7 @@ export async function POST(req: Request) {
             total: Number(q.total),
             esFinal: false,
             reservaUrl: `${appBaseUrl()}/${team.slug}/reserva`,
+            presupuestoUrl,
           });
           const r = await sendMail({
             to: q.pacienteEmail,

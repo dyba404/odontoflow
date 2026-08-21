@@ -53,14 +53,18 @@ export function PresupuestoPublico({ token }: { token: string }) {
           j.error === "two_factor_incorrecto"
             ? "Código incorrecto. Verifica e intenta de nuevo."
             : j.error === "demasiados_intentos"
-              ? "Demasiados intentos. Espera 15 minutos."
-              : j.error === "presupuesto_vencido"
-                ? "Este presupuesto ya venció. Contacta a la clínica."
-                : j.error === "presupuesto_ya_aceptado"
-                  ? "Este presupuesto ya fue aceptado."
-                  : j.error === "link_no_valido"
-                    ? "El enlace no es válido."
-                    : "No se pudo completar la operación.",
+              ? "Demasiados intentos. Espera 15 minutos o contacta a la clínica."
+              : j.error === "link_bloqueado"
+                ? "Este enlace fue bloqueado por seguridad. Contacta a la clínica para desbloquearlo."
+                : j.error === "verificacion_requerida"
+                  ? "Primero verifica tu identidad."
+                  : j.error === "presupuesto_vencido"
+                    ? "Este presupuesto ya venció. Contacta a la clínica."
+                    : j.error === "presupuesto_ya_aceptado"
+                      ? "Este presupuesto ya fue aceptado."
+                      : j.error === "link_no_valido"
+                        ? "El enlace no es válido."
+                        : "No se pudo completar la operación.",
         );
         return null;
       }

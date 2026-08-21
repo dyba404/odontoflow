@@ -96,6 +96,8 @@ export default async function PresupuestosPage() {
       estado: quotes.estado,
       expiraEn: quotes.expiraEn,
       nota: quotes.nota,
+      linkToken: quotes.linkToken,
+      linkLockedAt: quotes.linkLockedAt,
       createdAt: quotes.createdAt,
     })
     .from(quotes)
@@ -193,6 +195,8 @@ export default async function PresupuestosPage() {
                         expiraEn: p.expiraEn,
                         nota: p.nota,
                         items: p.itemsArr,
+                        tieneLink: Boolean(p.linkToken),
+                        linkBloqueado: Boolean(p.linkLockedAt),
                       }}
                     />
                   </TableCell>

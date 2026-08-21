@@ -1,57 +1,31 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-import { getDb, quotes, teams, budgetSignatures } from "@odontoflow/db";
+import { cookies } from "next/headers";
+import { and, eq, gte, sql } from "drizzle-orm";
+import { getDb, quotes, teams, budgetSignatures, budgetAccessLogs, attachments } from "@odontoflow/db";
+import { join } from "node:path";
+import {
+  MAX_FALLOS_ACUMULADOS,
+  MAX_FALLOS_VENTANA,
+  VENTANA_MS,
+  compararHash2fa,
+  firmarCookiePresupuesto,
+  hashIp,
+  hashValor2fa,
+  nombreCookiePresupuesto,
+  opcionesCookiePresupuesto,
+  verificarCookiePresupuesto,
+} from "@/lib/budget-link";
+import { pdfPresupuestoFirmado } from "@/lib/presupuesto-pdf";
+import { attachmentsRoot, getStorage } from "@/lib/storage";
+import { ipReq } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
-const intentos = new Map<string, { n: number; bloqueadoHasta: number }>();
-const MAX_INTENTOS = 5;
+type TwoFactor = { modo?: string; valorHash?: string } | null;
 
-type RateLimiter = { n: number; bloqueadoHasta: number };
-
-function rateLimitOk(token: string): boolean {
-  const ahora = Date.now();
-  let reg = intentos.get(token) as RateLimiter | undefined;
-  if (!reg) {
-    reg = { n: 0, bloqueadoHasta: 0 };
-    intentos.set(token, reg);
-  }
-  if (reg.bloqueadoHasta > ahora) return false;
-  if (reg.bloqueadoHasta > 0 && reg.bloqueadoHasta <= ahora) {
-    reg.n = 0;
-    reg.bloqueadoHasta = 0;
-  }
-  return true;
-}
-
-function registrarFallo(token: string): boolean {
-  const reg = intentos.get(token);
-  if (!reg) return false;
-  reg.n += 1;
-  if (reg.n >= MAX_INTENTOS) {
-    reg.bloqueadoHasta = Date.now() + 15 * 60 * 1000;
-    return true;
-  }
-  return false;
-}
-
-function limpiar(token: string) {
-  intentos.delete(token);
-}
-
-function verificar2fa(
-  twoFactor: { modo?: string; valorHash?: string } | null,
-  body: { last4?: string; dob?: string; codigo?: string },
-): "ok" | "fail" {
-  const modo = twoFactor?.modo;
-  const valorHash = twoFactor?.valorHash;
-  if (!modo || !valorHash) return "fail";
-  const valor =
-    modo === "phone_last4" ? body.last4 : modo === "dob" ? body.dob : body.codigo;
-  if (!valor) return "fail";
-  const h = createHash("sha256").update(valor.trim().toLowerCase()).digest("hex");
-  return h === valorHash ? "ok" : "fail";
+function ipDe(req: Request): string {
+  return ipReq(req);
 }
 
 async function buscarQuote(token: string) {
@@ -60,6 +34,7 @@ async function buscarQuote(token: string) {
     .select({
       quote: quotes,
       clinicaNombre: teams.name,
+      clinicaSlug: teams.slug,
     })
     .from(quotes)
     .leftJoin(teams, eq(quotes.tenantId, teams.id))
@@ -68,14 +43,55 @@ async function buscarQuote(token: string) {
   return row ?? null;
 }
 
+async function logAcceso(
+  tenantId: string,
+  quoteId: string,
+  evento: string,
+  req: Request,
+) {
+  try {
+    await getDb().insert(budgetAccessLogs).values({
+      tenantId,
+      quoteId,
+      evento,
+      ipHash: hashIp(ipDe(req)),
+      userAgent: req.headers.get("user-agent")?.slice(0, 300) ?? null,
+    });
+  } catch {
+    // best-effort: el log nunca debe romper el flujo
+  }
+}
+
+/** Fallos en ventana rodante de 15 min (persistente, no en memoria). */
+async function fallosEnVentana(quoteId: string): Promise<number> {
+  const desde = new Date(Date.now() - VENTANA_MS);
+  const [row] = await getDb()
+    .select({ n: sql<number>`count(*)::int` })
+    .from(budgetAccessLogs)
+    .where(
+      and(
+        eq(budgetAccessLogs.quoteId, quoteId),
+        eq(budgetAccessLogs.evento, "2fa_fallo"),
+        gte(budgetAccessLogs.createdAt, desde),
+      ),
+    );
+  return row?.n ?? 0;
+}
+
+function verificar2fa(twoFactor: TwoFactor, body: { last4?: string; dob?: string; codigo?: string }): boolean {
+  const modo = twoFactor?.modo;
+  const valorHash = twoFactor?.valorHash;
+  if (!modo || !valorHash) return false;
+  const valor = modo === "phone_last4" ? body.last4 : modo === "dob" ? body.dob : body.codigo;
+  if (!valor) return false;
+  return compararHash2fa(valorHash, hashValor2fa(modo, valor));
+}
+
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ token: string }> },
 ) {
   const { token } = await params;
-  if (!rateLimitOk(token)) {
-    return NextResponse.json({ error: "demasiados_intentos" }, { status: 429 });
-  }
 
   let body: {
     accion?: "verificar" | "aceptar";
@@ -96,22 +112,60 @@ export async function POST(
   if (!row) return NextResponse.json({ error: "link_no_valido" }, { status: 404 });
 
   const q = row.quote;
+  const db = getDb();
+
+  // Orden de rechazo (visión §2.2(5)): locked → expired → método → rate-limit → comparar.
+  if (q.linkLockedAt) {
+    await logAcceso(q.tenantId, q.id, "acceso_bloqueado", req);
+    return NextResponse.json({ error: "link_bloqueado" }, { status: 423 });
+  }
+
   if (q.expiraEn && q.expiraEn < new Date().toISOString().slice(0, 10)) {
+    await logAcceso(q.tenantId, q.id, "acceso_vencido", req);
     return NextResponse.json({ error: "presupuesto_vencido" }, { status: 410 });
   }
 
-  const estado2fa = verificar2fa(q.linkTwoFactor as never, body);
-  if (estado2fa !== "ok") {
-    const bloqueado = registrarFallo(token);
-    return NextResponse.json(
-      { error: bloqueado ? "demasiados_intentos" : "two_factor_incorrecto" },
-      { status: bloqueado ? 429 : 401 },
+  // "aceptar" exige la cookie firmada de verificación previa (path acotado).
+  if (body.accion === "aceptar") {
+    const store = await cookies();
+    const cookieOk = verificarCookiePresupuesto(
+      token,
+      store.get(nombreCookiePresupuesto(token))?.value,
     );
-  }
+    if (!cookieOk) {
+      await logAcceso(q.tenantId, q.id, "aceptar_sin_verificacion", req);
+      return NextResponse.json({ error: "verificacion_requerida" }, { status: 401 });
+    }
+  } else {
+    // "verificar": rate-limit por fallos en ventana rodante + comparar 2FA.
+    const fallos = await fallosEnVentana(q.id);
+    if (fallos >= MAX_FALLOS_VENTANA) {
+      await logAcceso(q.tenantId, q.id, "rate_limit", req);
+      return NextResponse.json({ error: "demasiados_intentos" }, { status: 429 });
+    }
 
-  if (body.accion !== "aceptar") {
-    limpiar(token);
-    return NextResponse.json({
+    const dosFaOk = verificar2fa(q.linkTwoFactor as TwoFactor, body);
+    if (!dosFaOk) {
+      await logAcceso(q.tenantId, q.id, "2fa_fallo", req);
+      const [actualizado] = await db
+        .update(quotes)
+        .set({ linkFailCount: sql`${quotes.linkFailCount} + 1` })
+        .where(eq(quotes.id, q.id))
+        .returning({ linkFailCount: quotes.linkFailCount });
+      const total = actualizado?.linkFailCount ?? 0;
+      if (total >= MAX_FALLOS_ACUMULADOS && !q.linkLockedAt) {
+        await db
+          .update(quotes)
+          .set({ linkLockedAt: new Date() })
+          .where(eq(quotes.id, q.id));
+        await logAcceso(q.tenantId, q.id, "link_bloqueado_permanente", req);
+        return NextResponse.json({ error: "link_bloqueado" }, { status: 423 });
+      }
+      return NextResponse.json({ error: "two_factor_incorrecto" }, { status: 401 });
+    }
+
+    await logAcceso(q.tenantId, q.id, "2fa_ok", req);
+    const res = NextResponse.json({
       presupuesto: {
         titulo: q.titulo,
         items: q.items,
@@ -121,6 +175,12 @@ export async function POST(
         clinicaNombre: row.clinicaNombre ?? "Clínica",
       },
     });
+    res.cookies.set(
+      nombreCookiePresupuesto(token),
+      firmarCookiePresupuesto(token),
+      opcionesCookiePresupuesto(token),
+    );
+    return res;
   }
 
   if (q.estado === "aprobado" || q.estado === "convertido") {
@@ -133,22 +193,55 @@ export async function POST(
     return NextResponse.json({ error: "firma_requerida" }, { status: 400 });
   }
   const firmanteRol = body.firmanteRol === "tutor" ? "tutor" : "paciente";
+  const match = signatureData.match(/^data:image\/png;base64,(.+)$/);
+  if (!match || !match[1]) return NextResponse.json({ error: "firma_requerida" }, { status: 400 });
+  const pngBytes = Buffer.from(match[1], "base64");
+  if (pngBytes.length > 512 * 1024) {
+    return NextResponse.json({ error: "firma_muy_grande" }, { status: 413 });
+  }
 
   const signedAt = new Date();
-  const signatureSha256 = createHash("sha256")
-    .update(
-      JSON.stringify({
-        quoteId: q.id,
-        titulo: q.titulo,
-        items: q.items,
-        total: q.total,
-        firma: firmanteNombre,
-        fecha: signedAt.toISOString(),
-      }),
-    )
-    .digest("hex");
+  const ipHash = hashIp(ipDe(req));
+  const userAgent = req.headers.get("user-agent") ?? null;
 
-  const db = getDb();
+  // PDF firmado + SHA-256 del documento = evidencia anti-tamper (visión §2.2(6)).
+  const pdfBytes = await pdfPresupuestoFirmado({
+    clinicaNombre: row.clinicaNombre ?? "Clínica",
+    titulo: q.titulo,
+    items: (q.items as Array<{ descripcion?: string; cantidad?: number; precioUnitario?: number }>) ?? [],
+    total: Number(q.total),
+    expiraEn: q.expiraEn,
+    firmanteNombre,
+    firmanteRol,
+    signaturePng: pngBytes,
+    signedAt,
+    ipHash,
+    userAgent,
+  });
+  const documentHash = createHash("sha256").update(pdfBytes).digest("hex");
+
+  const attachmentId = randomUUID();
+  const storage = getStorage();
+  const storageKey = join(q.tenantId, `presupuesto-firmado-${attachmentId}.pdf`);
+  const storagePath =
+    storage.driver === "local" ? join(attachmentsRoot(), storageKey) : storageKey;
+  await storage.put(storagePath, pdfBytes, "application/pdf", pdfBytes.length);
+
+  const [attachment] = await db
+    .insert(attachments)
+    .values({
+      tenantId: q.tenantId,
+      patientId: q.patientId,
+      tipo: "otro",
+      nombre: `presupuesto-firmado-${q.titulo.slice(0, 40)}.pdf`,
+      mime: "application/pdf",
+      sizeBytes: pdfBytes.length,
+      storagePath,
+      storage: storage.driver,
+      nota: `Aceptación firmada: ${q.titulo}`,
+    })
+    .returning({ id: attachments.id });
+
   const [firma] = await db
     .insert(budgetSignatures)
     .values({
@@ -157,9 +250,11 @@ export async function POST(
       firmanteNombre,
       firmanteRol,
       signatureData,
-      signatureSha256,
-      ip: req.headers.get("x-forwarded-for") ?? "local",
-      userAgent: req.headers.get("user-agent") ?? null,
+      signatureSha256: createHash("sha256").update(pngBytes).digest("hex"),
+      documentHash,
+      ipHash,
+      userAgent,
+      attachmentId: attachment!.id,
       signedAt,
     })
     .returning({ id: budgetSignatures.id });
@@ -174,6 +269,12 @@ export async function POST(
     })
     .where(eq(quotes.id, q.id));
 
-  limpiar(token);
-  return NextResponse.json({ ok: true, firmaId: firma?.id ?? null });
+  await logAcceso(q.tenantId, q.id, "aceptado", req);
+
+  const res = NextResponse.json({ ok: true, firmaId: firma?.id ?? null });
+  res.cookies.delete({
+    name: nombreCookiePresupuesto(token),
+    path: `/api/publico/presupuesto/${token}`,
+  });
+  return res;
 }

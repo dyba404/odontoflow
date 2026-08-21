@@ -1,9 +1,10 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { getDb, quotes } from "@odontoflow/db";
 import { guardStaff, guardError } from "@/lib/auth";
 import { logAuditSesion } from "@/lib/audit";
+import { hashValor2fa } from "@/lib/budget-link";
 
 export const dynamic = "force-dynamic";
 
@@ -49,11 +50,13 @@ export async function POST(
   if (!quote) return NextResponse.json({ error: "presupuesto_no_encontrado" }, { status: 404 });
 
   const linkToken = randomBytes(32).toString("hex");
-  const valorHash = createHash("sha256").update(valor.toLowerCase()).digest("hex");
+  const valorHash = hashValor2fa(modo, valor);
 
   const set: Record<string, unknown> = {
     linkToken,
     linkTwoFactor: { modo, valorHash },
+    linkFailCount: 0,
+    linkLockedAt: null,
   };
   if (quote.estado === "borrador") set.estado = "enviado";
 

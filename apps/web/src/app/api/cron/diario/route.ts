@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getDb, teams } from "@odontoflow/db";
+import { lt } from "drizzle-orm";
+import { getDb, teams, budgetAccessLogs } from "@odontoflow/db";
 import { mailConfigurado, sendMail } from "@/lib/mail";
 import { computarDigest, emailOwner, plantillaDigest } from "@/lib/digest";
 import { getNotificationSettings } from "@/lib/reminder-engine";
@@ -19,11 +20,26 @@ export async function POST(req: Request) {
   if (!bearerValido(req)) {
     return NextResponse.json({ error: "no_autorizado" }, { status: 401 });
   }
-  if (!mailConfigurado()) {
-    return NextResponse.json({ ok: true, omitido: "email_no_configurado", enviados: 0 });
-  }
 
   const db = getDb();
+
+  // Purga 90d de budget_access_logs (visión §2.2(5): privacidad, nunca IP cruda).
+  // Corre aunque el correo no esté configurado: es requisito de privacidad.
+  const corte90d = new Date(Date.now() - 90 * 24 * 3600_000);
+  const purgados = await db
+    .delete(budgetAccessLogs)
+    .where(lt(budgetAccessLogs.createdAt, corte90d))
+    .returning({ id: budgetAccessLogs.id });
+
+  if (!mailConfigurado()) {
+    return NextResponse.json({
+      ok: true,
+      omitido: "email_no_configurado",
+      enviados: 0,
+      accessLogsPurgados: purgados.length,
+    });
+  }
+
   const clinics = await db
     .select({ id: teams.id, name: teams.name, slug: teams.slug, timezone: teams.timezone })
     .from(teams);
@@ -86,5 +102,5 @@ export async function POST(req: Request) {
     });
   }
 
-  return NextResponse.json({ ok: true, enviados, omitidos });
+  return NextResponse.json({ ok: true, enviados, omitidos, accessLogsPurgados: purgados.length });
 }

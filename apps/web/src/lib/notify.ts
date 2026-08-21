@@ -198,18 +198,21 @@ export function plantillaPresupuestoSeguimiento(opts: {
   total: number;
   esFinal: boolean;
   reservaUrl?: string;
+  presupuestoUrl?: string | null;
 }): PlantillaEmail {
   const primer = opts.pacienteNombre.split(" ")[0] ?? opts.pacienteNombre;
   const reservaUrl = opts.reservaUrl ?? `${appBaseUrl()}/${opts.clinicaSlug}/reserva`;
   const cierre = opts.esFinal
-    ? "Si ya no estás interesado, igual cuéntanos: así cerramos tu expediente y dejamos de escribirte."
-    : "¿Tienes dudas sobre el presupuesto o quieres agendar? Escríbenos, estamos para ayudarte.";
+    ? "Si ya no estA�s interesado, igual cuAcntanos: asA- cerramos tu expediente y dejamos de escribirte."
+    : "A�Tienes dudas sobre el presupuesto o quieres agendar? EscrA-benos, estamos para ayudarte.";
+  const botonUrl = opts.presupuestoUrl ?? reservaUrl;
+  const botonLabel = opts.presupuestoUrl ? "Ver y aceptar mi presupuesto" : "Agendar una cita";
   const bodyHtml = `
     <p>Hola ${primer}, te escribimos para dar seguimiento a tu presupuesto <strong>${opts.titulo}</strong> por <strong>S/ ${opts.total.toFixed(2)}</strong>.</p>
     <p>${cierre}</p>
-    ${boton(reservaUrl, "Agendar una cita")}`;
-  const bodyText = `Hola ${primer},\n\nDamos seguimiento a tu presupuesto "${opts.titulo}" por S/ ${opts.total.toFixed(2)}.\n\n${cierre}\n\nAgenda aquí: ${reservaUrl}`;
-  const tituloTpl = opts.esFinal ? "Último recordatorio de tu presupuesto" : "Seguimiento de tu presupuesto";
+    ${boton(botonUrl, botonLabel)}`;
+  const bodyText = `Hola ${primer},\n\nDamos seguimiento a tu presupuesto "${opts.titulo}" por S/ ${opts.total.toFixed(2)}.\n\n${cierre}\n\n${opts.presupuestoUrl ? `Revisa tu presupuesto aquA-: ${opts.presupuestoUrl}` : `Agenda aquA-: ${reservaUrl}`}`;
+  const tituloTpl = opts.esFinal ? "Asltimo recordatorio de tu presupuesto" : "Seguimiento de tu presupuesto";
   const tpl = layout(opts.clinicaNombre, tituloTpl, bodyHtml, bodyText);
   return {
     asunto: `${tituloTpl} — ${opts.titulo} | ${opts.clinicaNombre}`,
