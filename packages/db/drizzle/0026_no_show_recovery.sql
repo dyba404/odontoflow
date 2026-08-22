@@ -1,0 +1,1 @@
+ALTER TABLE "notification_settings" ADD COLUMN "no_show_recovery" boolean DEFAULT true NOT NULL;

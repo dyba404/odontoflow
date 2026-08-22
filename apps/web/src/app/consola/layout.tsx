@@ -122,6 +122,9 @@ function buildNav({
     can("waitlist.manage")
       ? { href: "/consola/lista-espera", label: "Lista de espera", icon: "listaespera" }
       : null,
+    can("appointments.create")
+      ? { href: "/consola/series", label: "Series de citas", icon: "historial" }
+      : null,
     can("inventory.manage")
       ? { href: "/consola/inventario", label: "Inventario", icon: "inventario" }
       : null,
@@ -136,6 +139,8 @@ function buildNav({
       ? { href: "/consola/caja/comprobantes", label: "Comprobantes" }
       : null,
     can("reports.view_all") ? { href: "/consola/dashboard", label: "Ingresos" } : null,
+    can("reports.view_all") ? { href: "/consola/produccion", label: "Producción por doctor" } : null,
+    can("reports.view_all") ? { href: "/consola/referidos", label: "Referidos" } : null,
     can("quotes.manage") ? { href: "/consola/presupuestos", label: "Presupuestos" } : null,
     can("commissions.manage") ? { href: "/consola/comisiones", label: "Comisiones" } : null,
     can("reminders.send") ? { href: "/consola/recall", label: "Recall" } : null,

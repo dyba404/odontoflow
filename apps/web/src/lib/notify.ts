@@ -203,6 +203,28 @@ export function plantillaRecall(opts: {
   };
 }
 
+// S1 (Ola 6): recuperación de no-show. Se envía al marcar la cita como
+// no_show, con un enlace para re-agendar en línea.
+export function plantillaNoShowRecuperacion(opts: {
+  clinicaNombre: string;
+  pacienteNombre: string;
+  reservaUrl: string;
+}): PlantillaEmail {
+  const primer = opts.pacienteNombre.split(" ")[0] ?? opts.pacienteNombre;
+  const cuerpo = `Hola ${primer}, notamos que no pudiste asistir a tu última cita en ${opts.clinicaNombre}. No te preocupes: puedes reservar un nuevo horario en línea cuando te acomode.`;
+  const tpl = layout(
+    opts.clinicaNombre,
+    `Te extrañamos, ${primer}`,
+    `<p>${cuerpo}</p>${boton(opts.reservaUrl, "Re-agendar mi cita")}`,
+    `${cuerpo}\n\nRe-agenda tu cita: ${opts.reservaUrl}`,
+  );
+  return {
+    asunto: `${opts.clinicaNombre} - re-agenda tu cita`,
+    html: tpl.html,
+    texto: tpl.text,
+  };
+}
+
 export function plantillaRecordatorio24h(opts: { cita: CitaDatos }): PlantillaEmail {
   const { cita } = opts;
   const bodyHtml = `

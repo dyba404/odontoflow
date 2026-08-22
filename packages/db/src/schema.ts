@@ -313,6 +313,8 @@ export const patients = pgTable(
     medicacion: text("medicacion"),
     gestacion: boolean("gestacion").notNull().default(false),
     representanteId: uuid("representante_id"),
+    codigoReferido: text("codigo_referido"),
+    referidoPor: uuid("referido_por"),
     activo: boolean("activo").notNull().default(true),
     createdBy: uuid("created_by"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -320,6 +322,7 @@ export const patients = pgTable(
   (t) => [
     unique("patients_tenant_celular_key").on(t.tenantId, t.celular),
     index("patients_tenant_idx").on(t.tenantId),
+    index("patients_tenant_codigo_referido_idx").on(t.tenantId, t.codigoReferido),
   ],
 );
 
@@ -350,6 +353,8 @@ export const appointments = pgTable(
     monto: numeric("monto", { precision: 10, scale: 2 }).notNull().default("0"),
     montoPagado: numeric("monto_pagado", { precision: 10, scale: 2 }).notNull().default("0"),
     notas: text("notas"),
+    seriesId: uuid("series_id"),
+    seriesN: integer("series_n"),
     createdBy: uuid("created_by"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -358,6 +363,47 @@ export const appointments = pgTable(
     index("appointments_tenant_fecha_idx").on(t.tenantId, t.fecha),
     index("appointments_estado_idx").on(t.estado),
     index("appointments_doctor_fecha_idx").on(t.doctorId, t.fecha),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Ola 6 — Series recurrentes (S3): ortodoncia multi-fase
+// ---------------------------------------------------------------------------
+
+export const appointmentSeriesStatusEnum = pgEnum("appointment_series_status", [
+  "activa",
+  "completada",
+  "cancelada",
+]);
+
+export const appointmentSeries = pgTable(
+  "appointment_series",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    patientId: uuid("patient_id")
+      .notNull()
+      .references(() => patients.id, { onDelete: "cascade" }),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id),
+    doctorId: uuid("doctor_id"),
+    titulo: text("titulo").notNull(),
+    frecuencia: text("frecuencia").notNull().default("semanal"),
+    horaIni: time("hora_ini").notNull(),
+    totalSesiones: integer("total_sesiones").notNull(),
+    creadas: integer("creadas").notNull().default(0),
+    omitidas: integer("omitidas").notNull().default(0),
+    estado: appointmentSeriesStatusEnum("estado").notNull().default("activa"),
+    createdBy: uuid("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("appointment_series_tenant_idx").on(t.tenantId),
+    index("appointment_series_patient_idx").on(t.patientId),
   ],
 );
 
@@ -673,6 +719,7 @@ export const notificationSettings = pgTable("notification_settings", {
   idiomaPlantilla: text("idioma_plantilla").notNull().default("es"),
   resenaAutomatica: boolean("resena_automatica").notNull().default(false),
   recallAuto: boolean("recall_auto").notNull().default(false),
+  noShowRecovery: boolean("no_show_recovery").notNull().default(true),
   digestDiario: boolean("digest_diario").notNull().default(true),
   emailFrom: text("email_from"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

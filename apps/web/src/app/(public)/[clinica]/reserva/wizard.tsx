@@ -41,6 +41,7 @@ interface Props {
   clinicaName: string;
   servicios: ServicioItem[];
   doctores: DoctorItem[];
+  codigoReferido?: string;
 }
 
 const PASOS = ["Servicio", "Horario", "Datos"];
@@ -147,7 +148,7 @@ function Pill({
   );
 }
 
-export function WizardReserva({ clinicaSlug, clinicaName, servicios, doctores }: Props) {
+export function WizardReserva({ clinicaSlug, clinicaName, servicios, doctores, codigoReferido }: Props) {
   const [paso, setPaso] = useState(1);
   const [serviceId, setServiceId] = useState<string | null>(null);
   const [fecha, setFecha] = useState(fechaISO(1));
@@ -208,6 +209,7 @@ export function WizardReserva({ clinicaSlug, clinicaName, servicios, doctores }:
           celular,
           email: email || undefined,
           consentimiento,
+          ref: codigoReferido || undefined,
         }),
       });
       const j = await r.json();

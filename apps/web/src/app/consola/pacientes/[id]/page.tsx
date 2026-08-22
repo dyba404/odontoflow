@@ -39,6 +39,7 @@ import { getSession } from "@/lib/auth";
 import { planDeTenant, planEsProOMayor } from "@/lib/plans";
 import { fmtPEN, fmtFechaRelativa } from "@/lib/format";
 import { PortalLinkButton } from "./portal-link-button";
+import { ReferidoLinkButton } from "./referido-link-button";
 
 export const dynamic = "force-dynamic";
 
@@ -250,6 +251,12 @@ export default async function FichaPacientePage({
                 ) : null}
                 {hasPermission(session.role, "patients.manage") ? (
                   <PortalLinkButton patientId={paciente.id} />
+                ) : null}
+                {hasPermission(session.role, "patients.manage") ? (
+                  <ReferidoLinkButton
+                    patientId={paciente.id}
+                    codigoInicial={paciente.codigoReferido}
+                  />
                 ) : null}
                 {canEdit ? (
                   <RepresentanteDialog

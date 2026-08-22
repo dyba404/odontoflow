@@ -8,6 +8,7 @@ import { logAuditSesion } from "@/lib/audit";
 import { consumirMateriales } from "@/lib/inventario";
 import { ofrecerHuecoAutomatico } from "@/lib/hueco";
 import { resenaAutomaticaSiAplica } from "@/lib/reviews";
+import { recuperacionNoShow } from "@/lib/no-show";
 
 const VALID: AppointmentStatus[] = [
   "solicitada",
@@ -122,6 +123,17 @@ export async function POST(
       fecha: appt.fecha,
       horaIni: appt.horaIni,
       via: "consola",
+    }).catch(() => {});
+  }
+
+  if (estado === "no_show") {
+    void recuperacionNoShow({
+      tenantId: g.team.id,
+      tenantNombre: g.team.name,
+      tenantSlug: g.team.slug,
+      citaId: id,
+      patientId: appt.patientId,
+      enviadoPor: g.user.id,
     }).catch(() => {});
   }
 

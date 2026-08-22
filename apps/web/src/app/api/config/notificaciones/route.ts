@@ -17,6 +17,7 @@ export async function POST(req: Request) {
     idiomaPlantilla?: string;
     resenaAutomatica?: boolean;
     recallAuto?: boolean;
+    noShowRecovery?: boolean;
     digestDiario?: boolean;
   };
   try {
@@ -32,6 +33,7 @@ export async function POST(req: Request) {
     idiomaPlantilla?: string;
     resenaAutomatica?: boolean;
     recallAuto?: boolean;
+    noShowRecovery?: boolean;
     digestDiario?: boolean;
     updatedAt: Date;
   } = { updatedAt: new Date() };
@@ -47,6 +49,7 @@ export async function POST(req: Request) {
   }
   if (typeof body.resenaAutomatica === "boolean") updates.resenaAutomatica = body.resenaAutomatica;
   if (typeof body.recallAuto === "boolean") updates.recallAuto = body.recallAuto;
+  if (typeof body.noShowRecovery === "boolean") updates.noShowRecovery = body.noShowRecovery;
   if (typeof body.digestDiario === "boolean") updates.digestDiario = body.digestDiario;
 
   const db = getDb();

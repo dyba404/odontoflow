@@ -3,6 +3,7 @@ import { and, asc, eq, ilike, or } from "drizzle-orm";
 import { getDb, patients } from "@odontoflow/db";
 import { guardStaff, guardError } from "@/lib/auth";
 import { limitePlanAlcanzado, respuestaLimitePlan } from "@/lib/plans";
+import { resolverReferentePorCodigo } from "@/lib/referidos";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,7 @@ export async function POST(req: Request) {
     fnac?: string;
     alergias?: string;
     gestacion?: boolean;
+    referidoPorCodigo?: string;
   };
   try {
     body = (await req.json()) as typeof body;
@@ -90,6 +92,14 @@ export async function POST(req: Request) {
   const limitePacientes = await limitePlanAlcanzado(g.team.id, "patients");
   if (limitePacientes) return respuestaLimitePlan("patients", limitePacientes);
 
+  let referidoPor: string | null = null;
+  if (body.referidoPorCodigo?.trim()) {
+    referidoPor = await resolverReferentePorCodigo(g.team.id, body.referidoPorCodigo);
+    if (!referidoPor) {
+      return NextResponse.json({ error: "codigo_referido_invalido" }, { status: 400 });
+    }
+  }
+
   const [row] = await db
     .insert(patients)
     .values({
@@ -101,6 +111,7 @@ export async function POST(req: Request) {
       fnac,
       alergias,
       gestacion,
+      referidoPor,
       createdBy: g.user.id,
     })
     .returning({ id: patients.id, nombre: patients.nombre, celular: patients.celular });

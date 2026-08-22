@@ -6,8 +6,13 @@ export const dynamic = "force-dynamic";
 
 export default async function ReservaPage({
   params,
-}: Readonly<{ params: Promise<{ clinica: string }> }>) {
+  searchParams,
+}: Readonly<{
+  params: Promise<{ clinica: string }>;
+  searchParams: Promise<{ ref?: string }>;
+}>) {
   const { clinica } = await params;
+  const { ref } = await searchParams;
   const tenant = await getTenantBySlug(clinica);
   if (!tenant) notFound();
 
@@ -27,6 +32,7 @@ export default async function ReservaPage({
         precio: s.precio,
       }))}
       doctores={doctores}
+      codigoReferido={ref?.trim() || undefined}
     />
   );
 }

@@ -21,6 +21,7 @@ export function NuevoPacienteDialog() {
   const [fnac, setFnac] = useState("");
   const [alergias, setAlergias] = useState("");
   const [gestacion, setGestacion] = useState(false);
+  const [referidoPorCodigo, setReferidoPorCodigo] = useState("");
 
   function limpiar() {
     setNombre("");
@@ -30,6 +31,7 @@ export function NuevoPacienteDialog() {
     setFnac("");
     setAlergias("");
     setGestacion(false);
+    setReferidoPorCodigo("");
   }
 
   function onSubmit(e: FormEvent) {
@@ -46,6 +48,7 @@ export function NuevoPacienteDialog() {
           fnac: fnac || undefined,
           alergias: alergias || undefined,
           gestacion,
+          referidoPorCodigo: referidoPorCodigo || undefined,
         }),
       });
       const j = await res.json().catch(() => ({}));
@@ -153,6 +156,21 @@ export function NuevoPacienteDialog() {
               maxLength={200}
               placeholder="Penicilina, lidocaína…"
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="np-referido">Código de referido (opcional)</Label>
+            <Input
+              id="np-referido"
+              value={referidoPorCodigo}
+              onChange={(e) => setReferidoPorCodigo(e.target.value.toUpperCase())}
+              maxLength={6}
+              placeholder="ABC123"
+              className="font-mono uppercase"
+            />
+            <p className="text-xs text-muted-foreground">
+              Si este paciente viene recomendado por otro, ingresa su código.
+            </p>
           </div>
 
           <label className="flex cursor-pointer items-center gap-2 text-sm">

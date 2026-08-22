@@ -13,6 +13,7 @@ import { isSlotStillFree } from "@/lib/db";
 import { rateLimit, ipReq } from "@/lib/rate-limit";
 import { logAudit } from "@/lib/audit";
 import { limitePlanAlcanzado, respuestaLimitePlan } from "@/lib/plans";
+import { resolverReferentePorCodigo } from "@/lib/referidos";
 
 export interface RequestPayload {
   serviceId: string;
@@ -25,6 +26,7 @@ export interface RequestPayload {
   email?: string;
   notas?: string;
   consentimiento?: boolean;
+  ref?: string;
 }
 
 export async function POST(
@@ -48,7 +50,7 @@ export async function POST(
     return NextResponse.json({ error: "json_invalido" }, { status: 400 });
   }
 
-  const { serviceId, date, startTime, endTime, doctorMembershipId, nombre, celular, email, notas, consentimiento } = payload;
+  const { serviceId, date, startTime, endTime, doctorMembershipId, nombre, celular, email, notas, consentimiento, ref } = payload;
 
   if (!serviceId || !date || !startTime || !endTime || !nombre || !celular) {
     return NextResponse.json({ error: "faltan_datos" }, { status: 400 });
@@ -114,6 +116,11 @@ export async function POST(
     const limitePacientes = await limitePlanAlcanzado(team.id, "patients");
     if (limitePacientes) return respuestaLimitePlan("patients", limitePacientes);
 
+    let referidoPor: string | null = null;
+    if (ref?.trim()) {
+      referidoPor = await resolverReferentePorCodigo(team.id, ref);
+    }
+
     const created = await db
       .insert(patients)
       .values({
@@ -121,6 +128,7 @@ export async function POST(
         nombre: nombre.trim(),
         celular: telNorm,
         email: email?.trim() || null,
+        referidoPor,
       })
       .returning();
     patient = created[0]!;
