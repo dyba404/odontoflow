@@ -82,10 +82,23 @@ export default async function AgendaPage({
   const esDoctor = role === "doctor";
   const miMembershipId = esDoctor ? session.membershipId : null;
 
-  const [doctores, pacientes] = await Promise.all([
-    doctoresConColor(team.id),
-    pacientesBasicos(team.id),
-  ]);
+  const [doctores, pacientes, citasDiaBase, bloqueos, citasSemana, citasMes] =
+    await Promise.all([
+      doctoresConColor(team.id),
+      pacientesBasicos(team.id),
+      vista === "dia"
+        ? citasDelDia(team.id, fechaISO)
+        : Promise.resolve(SIN_CITAS_DIA),
+      vista === "dia"
+        ? bloqueosDia(team.id, fechaISO)
+        : Promise.resolve(SIN_BLOQUEOS),
+      vista === "semana"
+        ? citasEnRango(team.id, format(lunes, "yyyy-MM-dd"), format(domingo, "yyyy-MM-dd"))
+        : Promise.resolve(SIN_CITAS_RANGO),
+      vista === "mes"
+        ? citasEnRango(team.id, format(gridIni, "yyyy-MM-dd"), format(gridFin, "yyyy-MM-dd"))
+        : Promise.resolve(SIN_CITAS_RANGO),
+    ]);
 
   const doctoresVisibles: AgendaDoctor[] = esDoctor
     ? doctores.filter((d) => d.id === miMembershipId)
@@ -94,19 +107,6 @@ export default async function AgendaPage({
 
   const filtrarDoctor = <T extends { doctorId: string | null }>(rows: T[]): T[] =>
     esDoctor ? rows.filter((r) => r.doctorId === miMembershipId) : rows;
-
-  const [citasDiaBase, bloqueos] =
-    vista === "dia"
-      ? await Promise.all([citasDelDia(team.id, fechaISO), bloqueosDia(team.id, fechaISO)])
-      : ([SIN_CITAS_DIA, SIN_BLOQUEOS] as const);
-  const citasSemana: CitasRango =
-    vista === "semana"
-      ? await citasEnRango(team.id, format(lunes, "yyyy-MM-dd"), format(domingo, "yyyy-MM-dd"))
-      : SIN_CITAS_RANGO;
-  const citasMes: CitasRango =
-    vista === "mes"
-      ? await citasEnRango(team.id, format(gridIni, "yyyy-MM-dd"), format(gridFin, "yyyy-MM-dd"))
-      : SIN_CITAS_RANGO;
 
   const citasDia = filtrarDoctor(citasDiaBase);
   const citasRangoSemana = filtrarDoctor(citasSemana);
