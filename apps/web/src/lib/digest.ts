@@ -1,4 +1,4 @@
-import { and, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
 import {
   getDb,
   payments,
@@ -11,8 +11,12 @@ import {
   subscriptions,
   memberships,
   users,
+  appointments,
+  services,
 } from "@odontoflow/db";
 import { appBaseUrl } from "@/lib/mail";
+import { computeSlots } from "@/lib/db";
+import { pacientesDormidos } from "@/lib/console-data";
 
 export interface SeccionDigest {
   titulo: string;
@@ -159,6 +163,66 @@ export async function computarDigest(opts: {
       detalle: `Tu plan de Odontoflow vence el ${sub.vence}. Renueva en ${appBaseUrl()}/consola/config/suscripcion.`,
     });
     totalPendientes++;
+  }
+
+  const citasHoy = await db
+    .select({ estado: appointments.estado })
+    .from(appointments)
+    .where(and(eq(appointments.tenantId, t), eq(appointments.fecha, hoy)));
+  if (citasHoy.length > 0) {
+    const porEstado = new Map<string, number>();
+    for (const c of citasHoy) porEstado.set(c.estado, (porEstado.get(c.estado) ?? 0) + 1);
+    const partes: string[] = [];
+    const orden: Array<[string, string]> = [
+      ["confirmada", "confirmadas"],
+      ["solicitada", "por confirmar"],
+      ["en_espera", "en espera"],
+      ["en_atencion", "en atención"],
+      ["atendida", "atendidas"],
+    ];
+    for (const [estado, label] of orden) {
+      const n = porEstado.get(estado);
+      if (n) partes.push(`${n} ${label}`);
+    }
+    secciones.push({
+      titulo: "Agenda de hoy",
+      detalle: `${citasHoy.length} cita(s): ${partes.join(", ")}.`,
+    });
+  }
+
+  const dormidos = (await pacientesDormidos(t)).filter((p) => p.estado === "dormido");
+  if (dormidos.length > 0) {
+    secciones.push({
+      titulo: "Recall: pacientes dormidos",
+      detalle: `${dormidos.length} paciente(s) con 6 meses o más sin venir. Revísalos en Recall.`,
+    });
+    totalPendientes++;
+  }
+
+  const [svcCorto] = await db
+    .select({ id: services.id })
+    .from(services)
+    .where(and(eq(services.tenantId, t), eq(services.activo, true)))
+    .orderBy(asc(services.duracionMin))
+    .limit(1);
+  if (svcCorto) {
+    let diasConHuecos = 0;
+    let totalHuecos = 0;
+    for (let d = 1; d <= 14; d++) {
+      const fecha = fechaLocal(opts.timezone, d);
+      const r = await computeSlots(t, { serviceId: svcCorto.id, date: fecha });
+      const n = r?.slots.length ?? 0;
+      if (n > 0) {
+        diasConHuecos++;
+        totalHuecos += n;
+      }
+    }
+    if (diasConHuecos > 0) {
+      secciones.push({
+        titulo: "Huecos disponibles (14 días)",
+        detalle: `${totalHuecos} franja(s) libres en ${diasConHuecos} día(s). Ofrécelas a pacientes en espera o recalls.`,
+      });
+    }
   }
 
   return { secciones, totalPendientes };
