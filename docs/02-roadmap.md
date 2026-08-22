@@ -456,7 +456,14 @@ danphe MIT, mediflow-ai MIT). Resumen por ola:
       en vivo vía SSE (`/api/sala/eventos` + bus in-proceso `lib/eventos.ts`):
       mutaciones de cita/sala/bloqueo publican evento → `router.refresh()`
       instantáneo en todas las pantallas del tenant; fallback poll 30s y
-      pausa por visibilidad conservados. Nota multi-instancia: al pasar a
+      pausa por visibilidad conservados. Deploy marsmode.me revivido: el
+      contenedor cloudflared era stale (montaba el config.yml del modo
+      credentials-file ya eliminado -> exit 127 en cada arranque); se migró a
+      gestión local con `deploy/cloudflared/config.yml` (ingress explícito,
+      credenciales fuera del repo en /home/dev/.cloudflared), IP fija de web
+      (172.31.0.10 + extra_hosts: el resolver Go consulta hosts antes que DNS)
+      y `--protocol http2` (QUIC degrada tras CGNAT: GET OK pero requests con
+      body -> 502 del edge). Nota multi-instancia: al pasar a
       varias máquinas (Ola 3) swap del EventEmitter por Postgres LISTEN/NOTIFY
       sin cambiar clientes SSE.
 - [ ] **v2.1 — Copilot agéntico:** build en v2.0.0, ship separado (registry de

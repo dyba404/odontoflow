@@ -1,0 +1,12 @@
+# Ingress del tunel Cloudflare (gestion LOCAL).
+# El tunnel dcf94b6a existe en la cuenta CF; credenciales fuera del repo
+# en /home/dev/.cloudflared (host WSL) montadas read-only en /etc/cloudflared/creds.
+tunnel: dcf94b6a-9dc7-46a0-9caf-669c7ca7b74d
+credentials-file: /etc/cloudflared/creds/dcf94b6a-9dc7-46a0-9caf-669c7ca7b74d.json
+
+ingress:
+  - hostname: app.marsmode.me
+    service: http://web:3111
+  - hostname: www.marsmode.me
+    service: http://web:3111
+  - service: http_status:404

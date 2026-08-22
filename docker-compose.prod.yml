@@ -87,6 +87,10 @@ services:
     # Límite de memoria para que un heap hinchado de Node no mate a Postgres
     # en la máquina única del piloto.
     mem_limit: 1536m
+    networks:
+      default:
+        # IP fija: cloudflared la resuelve via /etc/hosts (ver extra_hosts).
+        ipv4_address: 172.31.0.10
     healthcheck:
       # /api/health valida app + conexión a DB (devuelve 503 sin DB).
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3111/api/health >/dev/null 2>&1 || exit 1"]
@@ -117,25 +121,38 @@ services:
       - caddy_config:/config
 
   # Cloudflare Tunnel (solo si el equipo está detrás de CGNAT: piloto en casa).
-  # Modo token: se crea el tunnel en Cloudflare Zero Trust y su token va en
-  # CLOUDFLARE_TUNNEL_TOKEN; el ingress se configura en el dashboard
-  # (app.domain -> http://web:3111; el TLS lo termina el edge de Cloudflare,
-  # tal como corrió el piloto). NO hay archivos de credenciales en el repo.
-  # Caddy queda fuera del túnel (es para VPS/Azure con IP pública).
+  # Tunnel de gestion LOCAL: el ingress vive en deploy/cloudflared/config.yml y
+  # las credenciales en /home/dev/.cloudflared del host WSL (fuera del repo),
+  # montadas read-only. El modo token (remoto) requiere permisos de Zero Trust
+  # en el dashboard; este modo corre solo con los archivos ya existentes.
   # Uso: docker compose -f docker-compose.prod.yml --profile tunnel up -d
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: odontoflow-cloudflared-prod
     restart: unless-stopped
     profiles: ["tunnel"]
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN requerido para el perfil tunnel}
+    # --protocol http2: el transporte QUIC por defecto degrada tras CGNAT
+    # (GETs OK pero requests con body -> 502 del edge). HTTP/2 sobre TCP es
+    # estable en esta red; revisar si la topologia cambia.
+    command: tunnel --no-autoupdate --protocol http2 --config /etc/cloudflared/config.yml run
     depends_on:
       web:
         condition: service_healthy
     mem_limit: 256m
+    # DNS externo directo: la imagen scratch de cloudflared recibe NXDOMAIN
+    # intermitente del DNS embebido de Docker para sus consultas SRV
+    # (region1.v2.argotunnel.com), mientras que busybox en el mismo netns
+    # responde OK. Con 1.1.1.1 el registro del tunel funciona siempre.
+    # El origen (web) se resuelve via /etc/hosts (extra_hosts abajo), que el
+    # resolver de Go consulta ANTES que DNS: cero dependencia del embebido.
     dns:
       - 1.1.1.1
       - 8.8.8.8
+    extra_hosts:
+      - "web:172.31.0.10"
+    volumes:
+      - ./deploy/cloudflared/config.yml:/etc/cloudflared/config.yml:ro
+      - /home/dev/.cloudflared:/etc/cloudflared/creds:ro
 
   # Solo herramientas: no arranca con `up` (profile tools).
   # La imagen standalone de `web` no incluye drizzle-kit ni las migraciones SQL,
@@ -196,3 +213,10 @@ volumes:
   attachments:
   caddy_data:
   caddy_config:
+
+networks:
+  default:
+    ipam:
+      config:
+        # Subnet fija para que la IP de web (172.31.0.10) sea determinista.
+        - subnet: 172.31.0.0/24
