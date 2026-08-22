@@ -4,10 +4,12 @@ import type { GuiaSeccion } from "@/lib/guias";
 const ICONO_EMOJI: Record<string, string> = {
   rocket: "🚀",
   calendar: "📅",
+  tooth: "🦷",
   wallet: "💰",
   receipt: "🧾",
   users: "👥",
   message: "💬",
+  chart: "📈",
 };
 
 export function GuiaSecciones({ secciones }: { secciones: GuiaSeccion[] }) {

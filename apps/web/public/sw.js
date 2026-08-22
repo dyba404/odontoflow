@@ -1,12 +1,17 @@
 const CACHE_NAME = "of-cache-v2";
 
 self.addEventListener("install", (event) => {
+  // Sin skipWaiting automatico: el nuevo SW espera hasta que el usuario
+  // acepte recargar desde el toast de actualizacion (SKIP_WAITING).
   event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then((cache) => cache.addAll(["/offline.html"]))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(["/offline.html"]))
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("activate", (event) => {

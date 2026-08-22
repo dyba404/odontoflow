@@ -54,7 +54,7 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+export const NAV_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   dashboard: LayoutDashboard,
   agenda: CalendarDays,
   solicitudes: ClipboardList,
@@ -128,7 +128,7 @@ function Collapsible({
     });
   };
 
-  const Icon = item.icon ? ICONS[item.icon] : undefined;
+  const Icon = item.icon ? NAV_ICONS[item.icon] : undefined;
 
   return (
     <li>
@@ -252,9 +252,9 @@ export function ConsoleSidebar({
                           "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
                       )}
                     >
-                      {item.icon && ICONS[item.icon] ? (
+                      {item.icon && NAV_ICONS[item.icon] ? (
                         (() => {
-                          const Icon = ICONS[item.icon as string];
+                          const Icon = NAV_ICONS[item.icon as string];
                           if (!Icon) return null;
                           return (
                             <Icon

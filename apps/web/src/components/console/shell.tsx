@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Search } from "lucide-react";
 import { ConsoleSidebar, type NavGroup } from "@/components/console/sidebar";
+import { MobileTabBar } from "@/components/console/mobile-nav";
 import { CommandPalette } from "@/components/console/command-palette";
 import { ImpersonationBanner } from "@/components/console/impersonation-banner";
-import { cn } from "@/lib/utils";
 
 export function ConsoleShell({
   clinicName,
@@ -30,7 +28,6 @@ export function ConsoleShell({
   impersonation?: { adminEmail: string } | null;
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
@@ -93,34 +90,10 @@ export function ConsoleShell({
           />
         )}
 
-        <nav className="flex gap-1 overflow-x-auto border-b bg-background/80 px-3 py-2 lg:hidden [@media(pointer:coarse)]:py-2.5">
-          {groups
-            .flatMap((g) => g.items)
-            .flatMap((item) =>
-              item.children && item.children.length > 0
-                ? item.children.map((c) => ({ href: c.href, label: c.label, badge: c.badge }))
-                : [{ href: item.href ?? "/consola", label: item.label, badge: item.badge }],
-            )
-            .map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "whitespace-nowrap rounded-md px-2.5 py-1 text-sm text-muted-foreground [@media(pointer:coarse)]:min-h-12 [@media(pointer:coarse)]:inline-flex [@media(pointer:coarse)]:items-center [@media(pointer:coarse)]:px-3",
-                  (pathname === item.href ||
-                    (item.href !== "/consola" && pathname.startsWith(item.href))) &&
-                    "bg-accent font-medium text-accent-foreground",
-                )}
-              >
-                {item.label}
-                {item.badge ? ` (${item.badge})` : ""}
-              </Link>
-            ))}
-        </nav>
-
-        <main className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+        <main className="flex-1 overflow-y-auto p-4 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:p-6 lg:pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
           {children}
         </main>
+        <MobileTabBar groups={groups} clinicSlug={clinicSlug} />
       </div>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>

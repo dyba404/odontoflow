@@ -448,6 +448,17 @@ danphe MIT, mediflow-ai MIT). Resumen por ola:
       (codigo_referido + link /reserva?ref= + informe /consola/referidos),
       digest matutino (secciones agenda de hoy, recalls dormidos y huecos
       14 días añadidas al digest determinista existente).
+- [x] **v2.0.1 — Pulido UX móvil/PWA + sala en vivo:** navegación móvil tipo
+      bottom tab bar con sheet "Más" (patrón Plane/Mattermost, desktop intacto),
+      toast PWA "Nueva versión disponible → Recargar" (SKIP_WAITING controlado
+      por el usuario, patrón Hoppscotch), guía de la app actualizada a v2.0.0
+      (secciones Clínica avanzada y Crecimiento y retención), y sala de espera
+      en vivo vía SSE (`/api/sala/eventos` + bus in-proceso `lib/eventos.ts`):
+      mutaciones de cita/sala/bloqueo publican evento → `router.refresh()`
+      instantáneo en todas las pantallas del tenant; fallback poll 30s y
+      pausa por visibilidad conservados. Nota multi-instancia: al pasar a
+      varias máquinas (Ola 3) swap del EventEmitter por Postgres LISTEN/NOTIFY
+      sin cambiar clientes SSE.
 - [ ] **v2.1 — Copilot agéntico:** build en v2.0.0, ship separado (registry de
       tools, paridad RBAC, redacción PHI, confirmación de writes, BudgetGuard).
 
