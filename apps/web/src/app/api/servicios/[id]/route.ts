@@ -19,6 +19,8 @@ export async function PATCH(
     precio?: number;
     bufferMin?: number;
     activo?: boolean;
+    instruccionesPre?: string | null;
+    instruccionesPost?: string | null;
   };
   try {
     body = (await req.json()) as typeof body;
@@ -32,6 +34,8 @@ export async function PATCH(
     precio?: string;
     bufferMin?: number;
     activo?: boolean;
+    instruccionesPre?: string | null;
+    instruccionesPost?: string | null;
   } = {};
 
   if (body.nombre !== undefined) {
@@ -67,6 +71,20 @@ export async function PATCH(
       return NextResponse.json({ error: "activo_invalido" }, { status: 400 });
     }
     updates.activo = body.activo;
+  }
+  if (body.instruccionesPre !== undefined) {
+    const v = body.instruccionesPre?.trim() || null;
+    if (v && v.length > 2000) {
+      return NextResponse.json({ error: "instrucciones_pre_muy_largas" }, { status: 400 });
+    }
+    updates.instruccionesPre = v;
+  }
+  if (body.instruccionesPost !== undefined) {
+    const v = body.instruccionesPost?.trim() || null;
+    if (v && v.length > 2000) {
+      return NextResponse.json({ error: "instrucciones_post_muy_largas" }, { status: 400 });
+    }
+    updates.instruccionesPost = v;
   }
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "sin_cambios" }, { status: 400 });

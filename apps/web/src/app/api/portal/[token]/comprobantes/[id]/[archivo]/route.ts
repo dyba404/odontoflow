@@ -3,7 +3,7 @@ import { readFile, stat } from "fs/promises";
 import { join, resolve, sep } from "node:path";
 import { and, eq } from "drizzle-orm";
 import { getDb, payments, patients, receipts, vatSettings } from "@odontoflow/db";
-import { resolvePortalToken } from "@/lib/magic-link";
+import { resolvePortalToken, resolvePortalPaciente } from "@/lib/magic-link";
 import { rateLimit, ipReq } from "@/lib/rate-limit";
 import { attachmentsRoot } from "@/lib/attachments";
 import {
@@ -34,6 +34,11 @@ export async function GET(
   const { ctx } = r;
   const db = getDb();
 
+  const url = new URL(req.url);
+  const pr = await resolvePortalPaciente(ctx, url.searchParams.get("pacienteId"));
+  if (!pr.ok) return NextResponse.json({ error: pr.reason }, { status: pr.status });
+  const paciente = pr.patient;
+
   const [row] = await db
     .select({
       tipo: receipts.tipo,
@@ -55,7 +60,7 @@ export async function GET(
     .where(and(eq(receipts.id, id), eq(receipts.tenantId, ctx.team.id)))
     .limit(1);
 
-  if (!row || row.patientId !== ctx.patient.id) {
+  if (!row || row.patientId !== paciente.id) {
     return NextResponse.json({ error: "comprobante_no_encontrado" }, { status: 404 });
   }
   const soloBoletaFactura = row.tipo === "boleta" || row.tipo === "factura";
@@ -95,10 +100,10 @@ export async function GET(
     return NextResponse.json({ error: "archivo_no_encontrado" }, { status: 404 });
   }
 
-  const [paciente] = await db
+  const [pacienteDoc] = await db
     .select({ nombre: patients.nombre, documento: patients.documento })
     .from(patients)
-    .where(and(eq(patients.id, ctx.patient.id), eq(patients.tenantId, ctx.team.id)))
+    .where(and(eq(patients.id, paciente.id), eq(patients.tenantId, ctx.team.id)))
     .limit(1);
 
   const [config] = await db
@@ -116,7 +121,7 @@ export async function GET(
   let qrPng: Uint8Array | null = null;
   let qrContenido: string | null = null;
   if (config?.ruc && row.emitidaAt) {
-    const docCliente = (paciente?.documento ?? "").replace(/\s+/g, "");
+    const docCliente = (pacienteDoc?.documento ?? "").replace(/\s+/g, "");
     const cliente = /^\d{11}$/.test(docCliente)
       ? { tipoDoc: "6", numDoc: docCliente }
       : /^\d{8}$/.test(docCliente)
@@ -151,8 +156,8 @@ export async function GET(
       referencia: row.referencia,
       razonSocial: config?.razonSocial ?? ctx.team.name,
       ruc: config?.ruc ?? null,
-      clienteNombre: paciente?.nombre ?? null,
-      clienteDocumento: paciente?.documento ?? null,
+      clienteNombre: pacienteDoc?.nombre ?? null,
+      clienteDocumento: pacienteDoc?.documento ?? null,
       afectadoNumero: null,
       bajaMotivo: null,
       teamName: ctx.team.name,

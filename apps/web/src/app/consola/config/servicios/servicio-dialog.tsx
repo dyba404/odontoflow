@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export interface ServicioForm {
   id: string;
@@ -17,6 +18,8 @@ export interface ServicioForm {
   precio: string;
   bufferMin: number;
   activo: boolean;
+  instruccionesPre: string | null;
+  instruccionesPost: string | null;
 }
 
 export function NuevoServicioButton() {
@@ -71,6 +74,12 @@ export function ServicioDialog({
   );
   const [bufferMin, setBufferMin] = useState(String(servicio?.bufferMin ?? 0));
   const [activo, setActivo] = useState(servicio?.activo ?? true);
+  const [instruccionesPre, setInstruccionesPre] = useState(
+    servicio?.instruccionesPre ?? "",
+  );
+  const [instruccionesPost, setInstruccionesPost] = useState(
+    servicio?.instruccionesPost ?? "",
+  );
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -81,6 +90,8 @@ export function ServicioDialog({
         precio: Number(precio),
         bufferMin: Number(bufferMin),
         activo,
+        instruccionesPre: instruccionesPre.trim() || null,
+        instruccionesPost: instruccionesPost.trim() || null,
       };
       const r = await fetch(
         servicio ? `/api/servicios/${servicio.id}` : "/api/servicios",
@@ -167,6 +178,30 @@ export function ServicioDialog({
               required
             />
           </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="srv-instrucciones-pre">Instrucciones antes de la cita</Label>
+          <Textarea
+            id="srv-instrucciones-pre"
+            value={instruccionesPre}
+            onChange={(e) => setInstruccionesPre(e.target.value)}
+            placeholder="Ej. Venir en ayunas, traer exámenes previos…"
+            maxLength={2000}
+            rows={3}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="srv-instrucciones-post">Instrucciones después de la cita</Label>
+          <Textarea
+            id="srv-instrucciones-post"
+            value={instruccionesPost}
+            onChange={(e) => setInstruccionesPost(e.target.value)}
+            placeholder="Ej. No comer por 2 horas, evitar alimentos calientes…"
+            maxLength={2000}
+            rows={3}
+          />
         </div>
 
         <label

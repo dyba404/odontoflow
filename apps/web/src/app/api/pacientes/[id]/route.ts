@@ -25,6 +25,7 @@ export async function PATCH(
     antecedentes?: string | null;
     medicacion?: string | null;
     gestacion?: boolean;
+    representanteId?: string | null;
   };
   try {
     body = (await req.json()) as typeof body;
@@ -42,6 +43,7 @@ export async function PATCH(
     antecedentes?: string | null;
     medicacion?: string | null;
     gestacion?: boolean;
+    representanteId?: string | null;
   } = {};
 
   if (body.nombre !== undefined) {
@@ -87,6 +89,12 @@ export async function PATCH(
     }
     updates.gestacion = body.gestacion;
   }
+  if (body.representanteId !== undefined) {
+    if (body.representanteId !== null && typeof body.representanteId !== "string") {
+      return NextResponse.json({ error: "representante_invalido" }, { status: 400 });
+    }
+    updates.representanteId = body.representanteId || null;
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "sin_cambios" }, { status: 400 });
@@ -115,6 +123,25 @@ export async function PATCH(
       .limit(1);
     if (duplicado && duplicado.id !== id) {
       return NextResponse.json({ error: "duplicado" }, { status: 409 });
+    }
+  }
+
+  if (updates.representanteId) {
+    if (updates.representanteId === id) {
+      return NextResponse.json({ error: "representante_no_puede_ser_el_mismo" }, { status: 400 });
+    }
+    const [rep] = await db
+      .select({ id: patients.id })
+      .from(patients)
+      .where(
+        and(
+          eq(patients.id, updates.representanteId),
+          eq(patients.tenantId, g.team.id),
+        ),
+      )
+      .limit(1);
+    if (!rep) {
+      return NextResponse.json({ error: "representante_no_encontrado" }, { status: 404 });
     }
   }
 

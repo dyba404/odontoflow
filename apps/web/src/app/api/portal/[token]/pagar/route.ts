@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { and, eq, like } from "drizzle-orm";
 import { getDb, installments, payments } from "@odontoflow/db";
-import { resolvePortalToken } from "@/lib/magic-link";
+import { resolvePortalToken, resolvePortalPaciente } from "@/lib/magic-link";
 import { rateLimit, ipReq } from "@/lib/rate-limit";
 import { logAudit } from "@/lib/audit";
 import { gatePlan, respuestaPlanInsuficiente } from "@/lib/plans";
@@ -34,7 +34,7 @@ export async function POST(
   if (!r.ok) return NextResponse.json({ error: r.reason }, { status: 404 });
   const { ctx } = r;
 
-  let body: { cuotaId?: string; metodo?: string };
+  let body: { cuotaId?: string; metodo?: string; pacienteId?: string };
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -44,6 +44,10 @@ export async function POST(
     return NextResponse.json({ error: "cuotaId_requerido" }, { status: 400 });
   }
   const metodo = body.metodo === "plin" ? "plin" : "yape";
+
+  const pr = await resolvePortalPaciente(ctx, body.pacienteId ?? null);
+  if (!pr.ok) return NextResponse.json({ error: pr.reason }, { status: pr.status });
+  const paciente = pr.patient;
 
   const planCheck = await gatePlan(ctx.team.id, "presupuestos");
   if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
@@ -56,7 +60,7 @@ export async function POST(
       and(
         eq(installments.id, body.cuotaId),
         eq(installments.tenantId, ctx.team.id),
-        eq(installments.patientId, ctx.patient.id),
+        eq(installments.patientId, paciente.id),
       ),
     )
     .limit(1);
@@ -79,7 +83,7 @@ export async function POST(
     .where(
       and(
         eq(payments.tenantId, ctx.team.id),
-        eq(payments.patientId, ctx.patient.id),
+        eq(payments.patientId, paciente.id),
         eq(payments.estado, "por_conciliar"),
         like(payments.referencia, "QR:%"),
       ),
@@ -102,7 +106,7 @@ export async function POST(
   } else {
     await db.insert(payments).values({
       tenantId: ctx.team.id,
-      patientId: ctx.patient.id,
+      patientId: paciente.id,
       monto: saldo.toFixed(2),
       metodo,
       referencia,

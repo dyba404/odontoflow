@@ -90,6 +90,8 @@ export default async function ServiciosConfigPage() {
                       precio: s.precio,
                       bufferMin: s.bufferMin,
                       activo: s.activo,
+                      instruccionesPre: s.instruccionesPre,
+                      instruccionesPost: s.instruccionesPost,
                     }}
                   />
                 ) : null}

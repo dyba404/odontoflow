@@ -38,6 +38,8 @@ export async function serviciosActivosConsola(teamId: string) {
       precio: services.precio,
       bufferMin: services.bufferMin,
       activo: services.activo,
+      instruccionesPre: services.instruccionesPre,
+      instruccionesPost: services.instruccionesPost,
     })
     .from(services)
     .where(eq(services.tenantId, teamId))

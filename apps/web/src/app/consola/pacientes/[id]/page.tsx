@@ -5,8 +5,8 @@ import { es } from "date-fns/locale";
 import { CalendarClock, Camera, CreditCard, FileText, FlaskRound, Mail, Phone, Receipt, Users, Sparkles } from "lucide-react";
 import { ShieldCheck } from "lucide-react";
 import { hasPermission } from "@odontoflow/core";
-import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
-import { getDb, labOrders, attachments, services, insurers, patientCoverages } from "@odontoflow/db";
+import { and, asc, desc, eq, isNotNull, ne } from "drizzle-orm";
+import { getDb, labOrders, attachments, services, insurers, patientCoverages, patients } from "@odontoflow/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
@@ -21,6 +21,7 @@ import { NotaForm } from "./nota-form";
 import { AdjuntosUploader } from "./adjuntos-uploader";
 import { ConsentDialog } from "./consent-dialog";
 import { EditDialog } from "./edit-dialog";
+import { RepresentanteDialog } from "./representante-dialog";
 import { LaboratorioCard } from "./laboratorio-card";
 import { FotosCard } from "./fotos-card";
 import { CoberturasCard } from "./coberturas-card";
@@ -158,7 +159,7 @@ export default async function FichaPacientePage({
     db.select({ nombre: services.nombre }).from(services).where(eq(services.tenantId, team.id)),
   ]);
 
-  const [coberturaRows, aseguradoraRows] = await Promise.all([
+  const [coberturaRows, aseguradoraRows, opcionesRepresentante] = await Promise.all([
     db
       .select({
         id: patientCoverages.id,
@@ -180,6 +181,18 @@ export default async function FichaPacientePage({
       .from(insurers)
       .where(and(eq(insurers.tenantId, team.id), eq(insurers.activo, true)))
       .orderBy(asc(insurers.nombre)),
+    db
+      .select({ id: patients.id, nombre: patients.nombre })
+      .from(patients)
+      .where(
+        and(
+          eq(patients.tenantId, team.id),
+          eq(patients.activo, true),
+          ne(patients.id, id),
+        ),
+      )
+      .orderBy(asc(patients.nombre))
+      .limit(200),
   ]);
 
   const gruposFotos = new Map<string, typeof fotosRows>();
@@ -237,6 +250,14 @@ export default async function FichaPacientePage({
                 ) : null}
                 {hasPermission(session.role, "patients.manage") ? (
                   <PortalLinkButton patientId={paciente.id} />
+                ) : null}
+                {canEdit ? (
+                  <RepresentanteDialog
+                    patientId={paciente.id}
+                    pacienteNombre={paciente.nombre}
+                    representanteId={paciente.representanteId}
+                    opciones={opcionesRepresentante}
+                  />
                 ) : null}
               </div>
               <div className="mt-3 grid gap-1.5 text-sm text-muted-foreground sm:grid-cols-3">

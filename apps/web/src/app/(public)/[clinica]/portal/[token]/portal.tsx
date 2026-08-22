@@ -5,6 +5,7 @@ import {
   CalendarCheck2,
   CalendarIcon,
   CheckCircle2,
+  ClipboardList,
   Clock,
   Download,
   FileText,
@@ -29,6 +30,8 @@ interface ProximaCita {
   servicio: string | null;
   doctor: string | null;
   puedeConfirmar: boolean;
+  instruccionesPre: string | null;
+  instruccionesPost: string | null;
 }
 
 interface CitaHistorial {
@@ -72,7 +75,15 @@ interface Consentimiento {
 
 interface PortalData {
   clinica: { nombre: string; slug: string };
-  paciente: { nombre: string };
+  paciente: {
+    id: string;
+    nombre: string;
+    alergias: string | null;
+    antecedentes: string | null;
+    medicacion: string | null;
+    gestacion: boolean;
+  };
+  representados: Array<{ id: string; nombre: string }>;
   proximasCitas: ProximaCita[];
   historial: CitaHistorial[];
   cuotasPendientes: Cuota[];
@@ -120,12 +131,20 @@ export function PortalPaciente({ token }: { token: string }) {
   const [pagoQr, setPagoQr] = useState<PagoQr | null>(null);
   const [generandoQr, setGenerandoQr] = useState(false);
   const [erroresQr, setErroresQr] = useState<Record<string, boolean>>({});
+  const [intakeAbierto, setIntakeAbierto] = useState(false);
+  const [intakeAlergias, setIntakeAlergias] = useState("");
+  const [intakeAntecedentes, setIntakeAntecedentes] = useState("");
+  const [intakeMedicacion, setIntakeMedicacion] = useState("");
+  const [intakeGestacion, setIntakeGestacion] = useState(false);
+  const [guardandoIntake, setGuardandoIntake] = useState(false);
+  const [pacienteSel, setPacienteSel] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     setCargando(true);
     setEstadoError(null);
     try {
-      const r = await fetch(`/api/portal/${token}`);
+      const qs = pacienteSel ? `?pacienteId=${pacienteSel}` : "";
+      const r = await fetch(`/api/portal/${token}${qs}`);
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "token_invalido");
       setData(j);
@@ -136,11 +155,18 @@ export function PortalPaciente({ token }: { token: string }) {
     } finally {
       setCargando(false);
     }
-  }, [token]);
+  }, [token, pacienteSel]);
 
   useEffect(() => {
     void cargar();
   }, [cargar]);
+
+  function cambiarPaciente(id: string) {
+    setPacienteSel(id);
+    setIntakeAbierto(false);
+    setMensaje(null);
+    setError(null);
+  }
 
   async function confirmarAsistencia(citaId: string) {
     setError(null);
@@ -149,7 +175,7 @@ export function PortalPaciente({ token }: { token: string }) {
       const r = await fetch(`/api/portal/${token}/confirmar-asistencia`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ citaId }),
+        body: JSON.stringify({ citaId, pacienteId: pacienteSel }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "error");
@@ -157,6 +183,62 @@ export function PortalPaciente({ token }: { token: string }) {
       await cargar();
     } catch {
       setError("No se pudo confirmar la asistencia. Intenta nuevamente.");
+    }
+  }
+
+  async function abrirGestionar(citaId: string) {
+    setError(null);
+    setMensaje(null);
+    try {
+      const r = await fetch(`/api/portal/${token}/gestionar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ citaId, pacienteId: pacienteSel }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error ?? "error");
+      window.location.href = j.url;
+    } catch {
+      setError("No se pudo abrir la gestión de la cita. Intenta nuevamente.");
+    }
+  }
+
+  function abrirIntake() {
+    if (!data) return;
+    setIntakeAlergias(data.paciente.alergias ?? "");
+    setIntakeAntecedentes(data.paciente.antecedentes ?? "");
+    setIntakeMedicacion(data.paciente.medicacion ?? "");
+    setIntakeGestacion(data.paciente.gestacion);
+    setIntakeAbierto(true);
+    setError(null);
+    setMensaje(null);
+  }
+
+  async function guardarIntake() {
+    setError(null);
+    setMensaje(null);
+    setGuardandoIntake(true);
+    try {
+      const r = await fetch(`/api/portal/${token}/intake`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          alergias: intakeAlergias,
+          antecedentes: intakeAntecedentes,
+          medicacion: intakeMedicacion,
+          gestacion: intakeGestacion,
+          pacienteId: pacienteSel,
+        }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error ?? "error");
+      setMensaje("Gracias, tu información de salud quedó actualizada.");
+      setIntakeAbierto(false);
+      await cargar();
+    } catch {
+      setError("No se pudo guardar tu información. Intenta nuevamente.");
+    } finally {
+      setGuardandoIntake(false);
     }
   }
 
@@ -168,7 +250,7 @@ export function PortalPaciente({ token }: { token: string }) {
       const r = await fetch(`/api/portal/${token}/pagar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cuotaId: cuota.id, metodo }),
+        body: JSON.stringify({ cuotaId: cuota.id, metodo, pacienteId: pacienteSel }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "error");
@@ -229,6 +311,27 @@ export function PortalPaciente({ token }: { token: string }) {
           </div>
         </header>
 
+        {data.representados.length > 1 && (
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
+            <span className="text-xs text-muted-foreground">Ver portal de:</span>
+            {data.representados.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => cambiarPaciente(p.id)}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                  paciente.id === p.id
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                )}
+              >
+                {p.nombre}
+              </button>
+            ))}
+          </div>
+        )}
+
         {mensaje && (
           <div className="mt-6 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
             <CheckCircle2 className="size-4 shrink-0" />
@@ -276,6 +379,26 @@ export function PortalPaciente({ token }: { token: string }) {
                       </span>
                     </div>
                   </div>
+                  {c.instruccionesPre || c.instruccionesPost ? (
+                    <div className="mt-3 space-y-2 rounded-lg bg-accent/50 p-3 text-xs text-foreground">
+                      {c.instruccionesPre ? (
+                        <div>
+                          <p className="font-semibold">Antes de tu cita</p>
+                          <p className="mt-0.5 whitespace-pre-line text-muted-foreground">
+                            {c.instruccionesPre}
+                          </p>
+                        </div>
+                      ) : null}
+                      {c.instruccionesPost ? (
+                        <div>
+                          <p className="font-semibold">Después de tu cita</p>
+                          <p className="mt-0.5 whitespace-pre-line text-muted-foreground">
+                            {c.instruccionesPost}
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                   {c.puedeConfirmar && (
                     <Button
                       type="button"
@@ -285,11 +408,158 @@ export function PortalPaciente({ token }: { token: string }) {
                       Confirmar mi asistencia
                     </Button>
                   )}
+                  {(c.estado === "solicitada" || c.estado === "confirmada") && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="mt-2 w-full"
+                      onClick={() => void abrirGestionar(c.id)}
+                    >
+                      Reprogramar o cancelar
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
           </section>
         )}
+
+        <section className="mt-8">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+            <ClipboardList className="size-5 text-primary" />
+            Tu información de salud
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Completa estos datos antes de tu cita para agilizar la atención.
+          </p>
+          {!intakeAbierto ? (
+            <div className="mt-3 rounded-xl border border-border bg-card p-4">
+              <dl className="space-y-2 text-sm">
+                <div>
+                  <dt className="text-xs font-medium text-muted-foreground">Alergias</dt>
+                  <dd className="text-foreground">
+                    {data.paciente.alergias || "Sin registrar"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-muted-foreground">
+                    Antecedentes médicos
+                  </dt>
+                  <dd className="text-foreground">
+                    {data.paciente.antecedentes || "Sin registrar"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-muted-foreground">Medicación actual</dt>
+                  <dd className="text-foreground">
+                    {data.paciente.medicacion || "Sin registrar"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-muted-foreground">Gestación</dt>
+                  <dd className="text-foreground">
+                    {data.paciente.gestacion ? "Sí" : "No"}
+                  </dd>
+                </div>
+              </dl>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-4 w-full"
+                onClick={abrirIntake}
+              >
+                Actualizar mi información
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-3 space-y-3 rounded-xl border border-border bg-card p-4">
+              <div className="space-y-1.5">
+                <label htmlFor="intake-alergias" className="text-xs font-medium text-foreground">
+                  Alergias
+                </label>
+                <textarea
+                  id="intake-alergias"
+                  value={intakeAlergias}
+                  onChange={(e) => setIntakeAlergias(e.target.value)}
+                  maxLength={2000}
+                  rows={2}
+                  placeholder="Ej. penicilina, látex…"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="intake-antecedentes"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Antecedentes médicos
+                </label>
+                <textarea
+                  id="intake-antecedentes"
+                  value={intakeAntecedentes}
+                  onChange={(e) => setIntakeAntecedentes(e.target.value)}
+                  maxLength={2000}
+                  rows={2}
+                  placeholder="Ej. diabetes, hipertensión…"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="intake-medicacion" className="text-xs font-medium text-foreground">
+                  Medicación actual
+                </label>
+                <textarea
+                  id="intake-medicacion"
+                  value={intakeMedicacion}
+                  onChange={(e) => setIntakeMedicacion(e.target.value)}
+                  maxLength={2000}
+                  rows={2}
+                  placeholder="Ej. losartán 50 mg…"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </div>
+              <label
+                htmlFor="intake-gestacion"
+                className="flex cursor-pointer items-center gap-2 text-sm text-foreground"
+              >
+                <input
+                  id="intake-gestacion"
+                  type="checkbox"
+                  checked={intakeGestacion}
+                  onChange={(e) => setIntakeGestacion(e.target.checked)}
+                  className="size-4 rounded border-border accent-primary"
+                />
+                Estoy embarazada / en gestación
+              </label>
+              <div className="flex gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setIntakeAbierto(false)}
+                  disabled={guardandoIntake}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  className="flex-1"
+                  onClick={() => void guardarIntake()}
+                  disabled={guardandoIntake}
+                >
+                  {guardandoIntake ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Guardando…
+                    </>
+                  ) : (
+                    "Guardar"
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </section>
 
         {data.cuotasPendientes.length > 0 && (
           <section className="mt-8">

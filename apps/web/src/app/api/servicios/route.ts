@@ -12,6 +12,8 @@ function parseBody(body: {
   precio?: number;
   bufferMin?: number;
   activo?: boolean;
+  instruccionesPre?: string | null;
+  instruccionesPost?: string | null;
 }) {
   const nombre = body.nombre?.trim();
   if (
@@ -44,7 +46,21 @@ function parseBody(body: {
     }
     activo = body.activo;
   }
-  return { values: { nombre, duracionMin, precio, bufferMin, activo } } as const;
+  let instruccionesPre: string | null | undefined;
+  if (body.instruccionesPre !== undefined) {
+    instruccionesPre = body.instruccionesPre?.trim() || null;
+    if (instruccionesPre && instruccionesPre.length > 2000) {
+      return { error: "instrucciones_pre_muy_largas" } as const;
+    }
+  }
+  let instruccionesPost: string | null | undefined;
+  if (body.instruccionesPost !== undefined) {
+    instruccionesPost = body.instruccionesPost?.trim() || null;
+    if (instruccionesPost && instruccionesPost.length > 2000) {
+      return { error: "instrucciones_post_muy_largas" } as const;
+    }
+  }
+  return { values: { nombre, duracionMin, precio, bufferMin, activo, instruccionesPre, instruccionesPost } } as const;
 }
 
 export async function GET() {
@@ -59,6 +75,8 @@ export async function GET() {
       precio: services.precio,
       bufferMin: services.bufferMin,
       activo: services.activo,
+      instruccionesPre: services.instruccionesPre,
+      instruccionesPost: services.instruccionesPost,
     })
     .from(services)
     .where(eq(services.tenantId, g.team.id))
@@ -76,6 +94,8 @@ export async function POST(req: Request) {
     precio?: number;
     bufferMin?: number;
     activo?: boolean;
+    instruccionesPre?: string | null;
+    instruccionesPost?: string | null;
   };
   try {
     body = (await req.json()) as typeof body;
@@ -97,6 +117,8 @@ export async function POST(req: Request) {
       precio: parsed.values.precio.toFixed(2),
       bufferMin: parsed.values.bufferMin ?? 0,
       activo: parsed.values.activo ?? true,
+      instruccionesPre: parsed.values.instruccionesPre ?? null,
+      instruccionesPost: parsed.values.instruccionesPost ?? null,
       createdBy: g.user.id,
     })
     .returning({

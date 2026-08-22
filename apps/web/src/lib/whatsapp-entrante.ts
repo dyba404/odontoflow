@@ -207,6 +207,44 @@ async function resolverCtxSaliente(tenantId: string): Promise<CtxSaliente> {
   }
 }
 
+// P4 (Ola 5): envío manual desde la bandeja. El staff responde a un paciente
+// con texto libre o una plantilla. Registra el mensaje saliente y audita.
+export async function enviarMensajeManual(opts: {
+  tenantId: string;
+  patientId: string | null;
+  waId: string;
+  body: string;
+  enviadoPor: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const ctx = await resolverCtxSaliente(opts.tenantId);
+  if (!ctx.waSettings || !ctx.token || !ctx.waSettings.phoneNumberId) {
+    return { ok: false, error: "whatsapp_no_configurado" };
+  }
+  const envio = await enviarWhatsApp(
+    opts.waId,
+    ctx.token,
+    ctx.waSettings.phoneNumberId,
+    opts.body,
+  );
+  await registrarMensajeWhatsAppSaliente({
+    tenantId: opts.tenantId,
+    patientId: opts.patientId,
+    waId: opts.waId,
+    body: opts.body,
+    envio,
+    extra: { modo: "manual", enviadoPor: opts.enviadoPor },
+  });
+  void logAudit({
+    tenantId: opts.tenantId,
+    accion: "whatsapp.mensaje_manual",
+    entidad: "whatsapp",
+    payload: { numero: opts.waId, enviado: envio.ok, enviadoPor: opts.enviadoPor },
+  });
+  return envio.ok
+    ? { ok: true }
+    : { ok: false, error: envio.reason ?? "error_whatsapp" };
+}
+
 async function procesarSinKeyword(opts: {
   tenantId: string;
   patientId: string;
@@ -392,7 +430,11 @@ export async function procesarMensajeEntrante(opts: {
         });
 
         const [svc] = await db
-          .select({ nombre: services.nombre })
+          .select({
+            nombre: services.nombre,
+            instruccionesPre: services.instruccionesPre,
+            instruccionesPost: services.instruccionesPost,
+          })
           .from(services)
           .where(eq(services.id, cita.serviceId))
           .limit(1);
@@ -404,6 +446,8 @@ export async function procesarMensajeEntrante(opts: {
               servicio: svc?.nombre ?? "",
               clinicaNombre: team.name,
               clinicaSlug: team.slug,
+              instruccionesPre: svc?.instruccionesPre ?? null,
+              instruccionesPost: svc?.instruccionesPost ?? null,
             },
             magicUrl: magicUrl(team.slug, await ensureMagicToken(opts.tenantId, opts.patientId, cita.id)),
           });

@@ -108,6 +108,36 @@ export interface PortalContext {
 
 export type PortalResult = { ok: true; ctx: PortalContext } | { ok: false; reason: string };
 
+// P5 (Ola 5): resuelve el paciente efectivo del portal. Si `pacienteId` es el
+// dueño del token, lo devuelve; si es un paciente que lo tiene como
+// representante, devuelve al representado; en otro caso, error.
+export async function resolvePortalPaciente(
+  ctx: PortalContext,
+  pacienteId: string | null,
+): Promise<
+  | { ok: true; patient: typeof patients.$inferSelect }
+  | { ok: false; reason: string; status: number }
+> {
+  if (!pacienteId || pacienteId === ctx.patient.id) {
+    return { ok: true, patient: ctx.patient };
+  }
+  const db = getDb();
+  const [fila] = await db
+    .select()
+    .from(patients)
+    .where(
+      and(
+        eq(patients.id, pacienteId),
+        eq(patients.tenantId, ctx.team.id),
+        eq(patients.representanteId, ctx.patient.id),
+        eq(patients.activo, true),
+      ),
+    )
+    .limit(1);
+  if (!fila) return { ok: false, reason: "paciente_no_permitido", status: 403 };
+  return { ok: true, patient: fila };
+}
+
 export async function resolvePortalToken(token: string): Promise<PortalResult> {
   const db = getDb();
   const rows = await db

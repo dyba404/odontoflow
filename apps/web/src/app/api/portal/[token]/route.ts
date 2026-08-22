@@ -11,6 +11,7 @@ import {
   receipts,
   quotes,
   signedConsents,
+  patients,
 } from "@odontoflow/db";
 import { resolvePortalToken } from "@/lib/magic-link";
 import { rateLimit, ipReq } from "@/lib/rate-limit";
@@ -39,6 +40,38 @@ export async function GET(
   const { ctx } = r;
   const db = getDb();
 
+  // P5 (Ola 5): cuentas familiares/tutor. El dueño del token puede ver el
+  // portal de pacientes que lo tienen como representante (hijos, padres…).
+  const url = new URL(req.url);
+  const pacienteIdParam = url.searchParams.get("pacienteId");
+
+  const representados = await db
+    .select({ id: patients.id, nombre: patients.nombre })
+    .from(patients)
+    .where(
+      and(
+        eq(patients.representanteId, ctx.patient.id),
+        eq(patients.tenantId, ctx.team.id),
+        eq(patients.activo, true),
+      ),
+    )
+    .orderBy(patients.nombre);
+
+  let paciente = ctx.patient;
+  if (pacienteIdParam && pacienteIdParam !== ctx.patient.id) {
+    const match = representados.find((p) => p.id === pacienteIdParam);
+    if (!match) {
+      return NextResponse.json({ error: "paciente_no_permitido" }, { status: 403 });
+    }
+    const [fila] = await db
+      .select()
+      .from(patients)
+      .where(eq(patients.id, match.id))
+      .limit(1);
+    if (!fila) return NextResponse.json({ error: "paciente_no_encontrado" }, { status: 404 });
+    paciente = fila;
+  }
+
   const citas = await db
     .select({
       id: appointments.id,
@@ -47,13 +80,15 @@ export async function GET(
       horaFin: appointments.horaFin,
       estado: appointments.estado,
       servicio: services.nombre,
+      instruccionesPre: services.instruccionesPre,
+      instruccionesPost: services.instruccionesPost,
       doctorNombre: users.name,
     })
     .from(appointments)
     .leftJoin(services, eq(appointments.serviceId, services.id))
     .leftJoin(memberships, eq(appointments.doctorId, memberships.id))
     .leftJoin(users, eq(memberships.userId, users.id))
-    .where(eq(appointments.patientId, ctx.patient.id))
+    .where(eq(appointments.patientId, paciente.id))
     .orderBy(appointments.fecha, appointments.horaIni);
 
   const proximas = citas
@@ -67,6 +102,8 @@ export async function GET(
       servicio: c.servicio,
       doctor: c.doctorNombre,
       puedeConfirmar: c.estado === "solicitada",
+      instruccionesPre: c.instruccionesPre,
+      instruccionesPost: c.instruccionesPost,
     }));
 
   const historial = citas
@@ -94,7 +131,7 @@ export async function GET(
     })
     .from(installments)
     .where(
-      and(eq(installments.patientId, ctx.patient.id), eq(installments.tenantId, ctx.team.id)),
+      and(eq(installments.patientId, paciente.id), eq(installments.tenantId, ctx.team.id)),
     )
     .orderBy(installments.vence, installments.n);
 
@@ -125,7 +162,7 @@ export async function GET(
     .where(
       and(
         eq(receipts.tenantId, ctx.team.id),
-        eq(payments.patientId, ctx.patient.id),
+        eq(payments.patientId, paciente.id),
         eq(receipts.sunatEstado, "aceptado"),
         inArray(receipts.tipo, ["boleta", "factura"]),
       ),
@@ -142,7 +179,7 @@ export async function GET(
     .from(quotes)
     .where(
       and(
-        eq(quotes.patientId, ctx.patient.id),
+        eq(quotes.patientId, paciente.id),
         inArray(quotes.estado, ["enviado", "aprobado"]),
       ),
     )
@@ -156,20 +193,34 @@ export async function GET(
       signedAt: signedConsents.signedAt,
     })
     .from(signedConsents)
-    .where(eq(signedConsents.patientId, ctx.patient.id))
+    .where(eq(signedConsents.patientId, paciente.id))
     .orderBy(signedConsents.signedAt);
 
   void logAudit({
     tenantId: ctx.team.id,
     accion: "portal.acceder",
     entidad: "patients",
-    entidadId: ctx.patient.id,
-    payload: { via: "token_portal" },
+    entidadId: paciente.id,
+    payload: {
+      via: "token_portal",
+      ...(paciente.id !== ctx.patient.id ? { representanteId: ctx.patient.id } : {}),
+    },
   });
 
   return NextResponse.json({
     clinica: { nombre: ctx.team.name, slug: ctx.team.slug },
-    paciente: { nombre: ctx.patient.nombre },
+    paciente: {
+      id: paciente.id,
+      nombre: paciente.nombre,
+      alergias: paciente.alergias,
+      antecedentes: paciente.antecedentes,
+      medicacion: paciente.medicacion,
+      gestacion: paciente.gestacion,
+    },
+    representados: [
+      { id: ctx.patient.id, nombre: ctx.patient.nombre },
+      ...representados,
+    ],
     proximasCitas: proximas,
     historial,
     cuotasPendientes,

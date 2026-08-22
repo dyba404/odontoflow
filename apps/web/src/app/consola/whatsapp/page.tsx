@@ -22,6 +22,7 @@ import { getDefaultTeam } from "@/lib/console-data";
 import { gatePlan } from "@/lib/plans";
 import { PlanGate } from "@/components/console/plan-gate";
 import { WhatsappFiltros, WhatsappPaginacion } from "./whatsapp-nav";
+import { ResponderButton } from "./responder-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +82,7 @@ export default async function WhatsAppPage({
         id: whatsappMessages.id,
         waId: whatsappMessages.waId,
         direction: whatsappMessages.direction,
+        patientId: whatsappMessages.patientId,
         patientNombre: patients.nombre,
         phoneNumber: whatsappMessages.phoneNumber,
         body: whatsappMessages.body,
@@ -130,6 +132,7 @@ export default async function WhatsAppPage({
                 <TableHead>Mensaje</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Momento</TableHead>
+                <TableHead className="w-24" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -168,6 +171,15 @@ export default async function WhatsAppPage({
                     <span title={format(f.createdAt, "d MMM yyyy HH:mm")}>
                       {formatDistanceToNow(f.createdAt, { addSuffix: true, locale: es })}
                     </span>
+                  </TableCell>
+                  <TableCell>
+                    {(f.waId || f.phoneNumber) && (
+                      <ResponderButton
+                        waId={(f.waId ?? f.phoneNumber)!}
+                        patientId={f.patientId}
+                        patientNombre={f.patientNombre}
+                      />
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

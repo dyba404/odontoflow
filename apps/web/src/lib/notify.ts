@@ -7,6 +7,8 @@ export interface CitaDatos {
   servicio: string;
   clinicaNombre: string;
   clinicaSlug: string;
+  instruccionesPre?: string | null;
+  instruccionesPost?: string | null;
 }
 
 export function fechaLargaEs(fecha: string): string {
@@ -49,6 +51,19 @@ function boton(href: string, label: string) {
   return `<p style="margin:24px 0;"><a href="${href}" style="display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;font-size:14px;">${label}</a></p>`;
 }
 
+function esc(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function bloqueInstruccionesHtml(titulo: string, texto: string): string {
+  return `<p style="margin:16px 0 4px;font-weight:bold;">${titulo}</p>
+    <p style="margin:0;white-space:pre-line;">${esc(texto)}</p>`;
+}
+
 export interface PlantillaEmail {
   asunto: string;
   html: string;
@@ -64,6 +79,22 @@ export function plantillaConfirmacionSolicitud(opts: {
     ? `${boton(magicUrl, "Gestionar mi cita")}
        <p>Si necesitas reprogramar o cancelar, usa el botón de arriba. El enlace es personal, no lo compartas.</p>`
     : `<p>Si necesitas reprogramar o cancelar, comunícate con ${cita.clinicaNombre} por teléfono.</p>`;
+  const instruccionesHtml = [
+    cita.instruccionesPre
+      ? bloqueInstruccionesHtml("Antes de tu cita", cita.instruccionesPre)
+      : "",
+    cita.instruccionesPost
+      ? bloqueInstruccionesHtml("Después de tu cita", cita.instruccionesPost)
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const instruccionesText = [
+    cita.instruccionesPre ? `Antes de tu cita:\n${cita.instruccionesPre}` : "",
+    cita.instruccionesPost ? `Después de tu cita:\n${cita.instruccionesPost}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
   const bodyHtml = `
     <p>Tu solicitud fue <strong>confirmada</strong>. Te esperamos:</p>
     <ul>
@@ -71,9 +102,10 @@ export function plantillaConfirmacionSolicitud(opts: {
       <li><strong>Hora:</strong> ${cita.horaIni}</li>
       <li><strong>Servicio:</strong> ${cita.servicio}</li>
     </ul>
+    ${instruccionesHtml}
     ${manage}
     <p>Si no puedes asistir, por favor avísanos con anticipación.</p>`;
-  const bodyText = `Tu solicitud fue confirmada.\n\nFecha: ${fechaLargaEs(cita.fecha)}\nHora: ${cita.horaIni}\nServicio: ${cita.servicio}\n\n${magicUrl ? `Para reprogramar o cancelar: ${magicUrl}` : "Para reprogramar o cancelar, comunícate con la clínica."}`;
+  const bodyText = `Tu solicitud fue confirmada.\n\nFecha: ${fechaLargaEs(cita.fecha)}\nHora: ${cita.horaIni}\nServicio: ${cita.servicio}\n\n${instruccionesText ? `${instruccionesText}\n\n` : ""}${magicUrl ? `Para reprogramar o cancelar: ${magicUrl}` : "Para reprogramar o cancelar, comunícate con la clínica."}`;
   const tpl = layout(cita.clinicaNombre, "Tu cita quedó confirmada", bodyHtml, bodyText);
   return {
     asunto: `Cita confirmada — ${cita.fecha} ${cita.horaIni} | ${cita.clinicaNombre}`,

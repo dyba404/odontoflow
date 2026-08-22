@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { getDb, appointments } from "@odontoflow/db";
-import { resolvePortalToken } from "@/lib/magic-link";
+import { resolvePortalToken, resolvePortalPaciente } from "@/lib/magic-link";
 import { rateLimit, ipReq } from "@/lib/rate-limit";
 import { logAudit } from "@/lib/audit";
 
@@ -25,7 +25,7 @@ export async function POST(
   if (!r.ok) return NextResponse.json({ error: r.reason }, { status: 404 });
   const { ctx } = r;
 
-  let body: { citaId?: string };
+  let body: { citaId?: string; pacienteId?: string };
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -34,6 +34,10 @@ export async function POST(
   if (!body.citaId || typeof body.citaId !== "string") {
     return NextResponse.json({ error: "citaId_requerido" }, { status: 400 });
   }
+
+  const pr = await resolvePortalPaciente(ctx, body.pacienteId ?? null);
+  if (!pr.ok) return NextResponse.json({ error: pr.reason }, { status: pr.status });
+  const paciente = pr.patient;
 
   const db = getDb();
   const [cita] = await db
@@ -49,7 +53,7 @@ export async function POST(
       and(
         eq(appointments.id, body.citaId),
         eq(appointments.tenantId, ctx.team.id),
-        eq(appointments.patientId, ctx.patient.id),
+        eq(appointments.patientId, paciente.id),
       ),
     )
     .limit(1);

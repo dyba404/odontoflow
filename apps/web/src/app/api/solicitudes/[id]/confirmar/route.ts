@@ -72,7 +72,11 @@ export async function POST(
       const [patientRows, serviceRows] = await Promise.all([
         db.select().from(patients).where(eq(patients.id, appt.patientId)).limit(1),
         db
-          .select({ nombre: services.nombre })
+          .select({
+            nombre: services.nombre,
+            instruccionesPre: services.instruccionesPre,
+            instruccionesPost: services.instruccionesPost,
+          })
           .from(services)
           .where(eq(services.id, appt.serviceId))
           .limit(1),
@@ -86,6 +90,8 @@ export async function POST(
           servicio: serviceRows[0]?.nombre ?? "",
           clinicaNombre: g.team.name,
           clinicaSlug: g.team.slug,
+          instruccionesPre: serviceRows[0]?.instruccionesPre ?? null,
+          instruccionesPost: serviceRows[0]?.instruccionesPost ?? null,
         },
         magicUrl: magicUrl(g.team.slug, token),
       });
