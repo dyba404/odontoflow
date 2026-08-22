@@ -43,3 +43,61 @@
     min-height: 24px;
   }
 }
+
+/*
+ * ===== Modo arco segmentado (nativo, sin zoom ni scroll) =====
+ * El vendor aplica odon-arch-upper / odon-arch-lower sobre #toothGrid con sus
+ * botones Superiores/Ambas/Inferiores (pointer:coarse). Con una arcada activa
+ * redefinimos la grilla a 8 columnas grandes para que la mitad de la boca
+ * quepa completa en ~300px. Los botones del vendor ocultan los .tooth-tile
+ * de la arcada opuesta; aquí cubrimos lo que ellos no cubren.
+ */
+@media (max-width: 600px) {
+  .odontogram-root .tooth-grid.odon-arch-upper,
+  .odontogram-root .tooth-grid.odon-arch-lower {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 4px;
+    padding: 6px;
+  }
+
+  /* CRÍTICO: placeholders oclusales SIN row-class ni data-tooth (anteriores de
+     cada arco): si quedan visibles rompen el flujo de 8 columnas. */
+  .odontogram-root .tooth-grid[class*="odon-arch-"] .tooth-tile.placeholder,
+  /* Banda oclusal oculta en segmentado: queda la vista lateral limpia
+     (2 filas de labels + 1 fila de dientes). La cara oclusal sigue accesible
+     vía el popover zoom del diente. */
+  .odontogram-root .tooth-grid[class*="odon-arch-"] .tooth-tile.occl-view {
+    display: none !important;
+  }
+
+  /* Los SVG tienen ancho fijo por plantilla (60-68px): escalar a la celda. */
+  .odontogram-root .tooth-grid[class*="odon-arch-"] .tooth-svg svg {
+    width: 100%;
+    height: auto;
+    max-height: 76px;
+  }
+
+  /* Sin pinch en modo segmentado: anula el transform inline del vendor. */
+  .odontogram-root .tooth-grid[class*="odon-arch-"] {
+    transform: none !important;
+    width: auto !important;
+  }
+
+  .odontogram-root .odon-arch-toggle {
+    margin-bottom: 6px;
+  }
+}
+
+/* ===== Editor a pantalla completa (táctil) ===== */
+/* Contenedor de OdontogramaV2 cuando se expande: ocupa el viewport como una
+   pantalla de app, con scroll propio para ambas arcadas + panel. */
+.odontograma-fs {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: var(--background);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px;
+  padding-top: max(12px, env(safe-area-inset-top));
+}

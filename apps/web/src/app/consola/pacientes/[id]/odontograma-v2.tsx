@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Maximize2, Minimize2 } from "lucide-react";
 import "@/vendor/react-advanced-odontogram/style.css";
 import "./odontograma-movil.css";
 
@@ -36,6 +36,7 @@ export function OdontogramaV2({
 }) {
   const [estado] = useState<ChartEstado | null>(chartInicial);
   const [cargando, setCargando] = useState(false);
+  const [pantallaCompleta, setPantallaCompleta] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ultimoEnvio = useRef<string>("");
 
@@ -106,26 +107,68 @@ export function OdontogramaV2({
     await guardar(mod.getStatusChart(), mod.getPlanChart());
   }
 
+  useEffect(() => {
+    if (!pantallaCompleta) return;
+    const previo = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previo;
+    };
+  }, [pantallaCompleta]);
+
   return (
-    <div className="relative space-y-3">
-      {canEdit ? (
-        <div className="flex flex-wrap items-center justify-between gap-3">
+    <div
+      className={
+        pantallaCompleta
+          ? "odontograma-fs relative space-y-3"
+          : "relative space-y-3"
+      }
+    >
+      <div className="flex items-start justify-between gap-2">
+        {canEdit ? (
           <p className="text-xs text-muted-foreground">
             Haz clic en una pieza para marcar caries, obturaciones, endodoncia,
             prótesis y más. Se guarda automáticamente.
           </p>
-          <div className="flex items-center gap-2">
-            {cargando ? (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Loader2 className="size-3.5 animate-spin" /> Guardando…
-              </span>
-            ) : null}
+        ) : (
+          <span />
+        )}
+        <div className="flex shrink-0 items-center gap-2">
+          {cargando ? (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Loader2 className="size-3.5 animate-spin" /> Guardando…
+            </span>
+          ) : null}
+          {canEdit ? (
             <Button size="sm" variant="outline" onClick={guardarManual}>
               Guardar
             </Button>
-          </div>
+          ) : null}
+          {pantallaCompleta ? (
+            <Button
+              size="icon"
+              variant="outline"
+              className="hidden [@media(pointer:coarse)]:inline-flex"
+              aria-label="Cerrar pantalla completa"
+              title="Cerrar pantalla completa"
+              onClick={() => setPantallaCompleta(false)}
+            >
+              <Minimize2 className="size-4" />
+            </Button>
+          ) : (
+            <Button
+              size="icon"
+              variant="outline"
+              className="hidden [@media(pointer:coarse)]:inline-flex"
+              aria-label="Pantalla completa"
+              title="Pantalla completa"
+              onClick={() => setPantallaCompleta(true)}
+            >
+              <Maximize2 className="size-4" />
+            </Button>
+          )}
         </div>
-      ) : null}
+      </div>
       <OdontogramShellDynamic
         language="es"
         numberingSystem="FDI"
@@ -133,6 +176,12 @@ export function OdontogramaV2({
         readOnly={!canEdit}
         enableNotes={canEdit}
       />
+      {!pantallaCompleta ? (
+        <p className="text-xs text-muted-foreground [@media(pointer:coarse)]:block md:hidden">
+          Consejo: usa Superiores/Inferiores arriba del gráfico para ver una
+          arcada a la vez, grande y sin zoom.
+        </p>
+      ) : null}
     </div>
   );
 }
