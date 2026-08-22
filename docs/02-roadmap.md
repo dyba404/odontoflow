@@ -463,7 +463,12 @@ danphe MIT, mediflow-ai MIT). Resumen por ola:
       credenciales fuera del repo en /home/dev/.cloudflared), IP fija de web
       (172.31.0.10 + extra_hosts: el resolver Go consulta hosts antes que DNS)
       y `--protocol http2` (QUIC degrada tras CGNAT: GET OK pero requests con
-      body -> 502 del edge). Nota multi-instancia: al pasar a
+      body -> 502 del edge). Causa raiz del flapping intermitente resuelta:
+      wslservice apaga la distro por inactividad cuando muere la ultima
+      sesion (vmIdleTimeout=-1 de .wslconfig no se honra sin wsl --shutdown);
+      tarea `OdontoFlow-WSL-Boot` convertida en sesion persistente
+      (`sleep infinity` + IgnoreNew, reproducible con
+      `scripts/configurar-keepalive-wsl.ps1`). Nota multi-instancia: al pasar a
       varias máquinas (Ola 3) swap del EventEmitter por Postgres LISTEN/NOTIFY
       sin cambiar clientes SSE.
 - [ ] **v2.1 — Copilot agéntico:** build en v2.0.0, ship separado (registry de
