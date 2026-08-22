@@ -6,6 +6,7 @@ import { logAuditSesion } from "@/lib/audit";
 import { ensureMagicToken, magicUrl } from "@/lib/magic-link";
 import { plantillaReprogramacionSolicitud } from "@/lib/notify";
 import { enviarRecordatorio } from "@/lib/reminder-engine";
+import { publishEvento } from "@/lib/eventos";
 import { horaFinDesde, horarioOcupado, normalizarHora } from "../../solape";
 
 export async function POST(
@@ -167,6 +168,8 @@ export async function POST(
   } catch {
     email = { enviado: false, error: "error_notificacion" };
   }
+
+  publishEvento(g.team.id, "cita");
 
   return NextResponse.json({ ok: true, estado: nuevoEstado, reactivada: desdeTerminal, email });
 }

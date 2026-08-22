@@ -6,6 +6,7 @@ import { computeSlots } from "@/lib/db";
 import { logAuditSesion } from "@/lib/audit";
 import { sucursalActiva } from "@/lib/branch";
 import { limitePlanAlcanzado, respuestaLimitePlan } from "@/lib/plans";
+import { publishEvento } from "@/lib/eventos";
 import { horaFinDesde, horarioOcupado, normalizarHora } from "./solape";
 
 export async function POST(req: Request) {
@@ -199,6 +200,8 @@ export async function POST(req: Request) {
     entidadId: appt.id,
     payload: { estado: appt.estado },
   });
+
+  publishEvento(g.team.id, "cita");
 
   return NextResponse.json({ ok: true, id: appt.id }, { status: 201 });
 }

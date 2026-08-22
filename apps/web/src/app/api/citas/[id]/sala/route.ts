@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { getDb, appointments } from "@odontoflow/db";
 import { guardStaff, guardError } from "@/lib/auth";
 import { logAuditSesion } from "@/lib/audit";
+import { publishEvento } from "@/lib/eventos";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,8 @@ export async function PATCH(
     entidadId: id,
     payload: { salaEstado: body.salaEstado ?? null, room: body.room ?? null },
   });
+
+  publishEvento(g.team.id, "sala");
 
   return NextResponse.json({ ok: true });
 }

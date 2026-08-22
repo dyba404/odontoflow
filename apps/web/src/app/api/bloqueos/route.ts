@@ -4,6 +4,7 @@ import { hasPermission } from "@odontoflow/core";
 import { getDb, blockedSlots, appointments, memberships } from "@odontoflow/db";
 import { guardStaff, guardError } from "@/lib/auth";
 import { logAuditSesion } from "@/lib/audit";
+import { publishEvento } from "@/lib/eventos";
 
 export async function POST(req: Request) {
   const full = await guardStaff("agenda.view_all");
@@ -98,6 +99,8 @@ export async function POST(req: Request) {
     payload: { fecha, horaIni: ini, horaFin: fin },
   });
 
+  publishEvento(g.team.id, "bloqueo");
+
   return NextResponse.json({ ok: true, id: row!.id }, { status: 201 });
 }
 
@@ -144,6 +147,8 @@ export async function DELETE(req: Request) {
     entidad: "blocked_slots",
     entidadId: id,
   });
+
+  publishEvento(g.team.id, "bloqueo");
 
   return NextResponse.json({ ok: true });
 }

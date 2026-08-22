@@ -9,6 +9,7 @@ import { consumirMateriales } from "@/lib/inventario";
 import { ofrecerHuecoAutomatico } from "@/lib/hueco";
 import { resenaAutomaticaSiAplica } from "@/lib/reviews";
 import { recuperacionNoShow } from "@/lib/no-show";
+import { publishEvento } from "@/lib/eventos";
 
 const VALID: AppointmentStatus[] = [
   "solicitada",
@@ -136,6 +137,8 @@ export async function POST(
       enviadoPor: g.user.id,
     }).catch(() => {});
   }
+
+  publishEvento(g.team.id, "cita");
 
   return NextResponse.json({ ok: true, estado, faltantes });
 }
