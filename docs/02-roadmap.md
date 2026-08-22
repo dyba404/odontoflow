@@ -434,11 +434,20 @@ danphe MIT, mediflow-ai MIT). Resumen por ola:
       sala paralela: sala_estado + room + appointment_status_events; decisión
       documentada en 09-vision-v2.md), F7 allocations de pago ✅
       (payment_allocations + reconcile + computePaidSummary único).
-- [ ] **v2.0.0 Ola 5 — Portal P1-P5:** reprogramar desde portal, instrucciones
-      post-op, intake digital pre-cita, mensajería bidireccional, cuentas
-      familiares.
-- [ ] **v2.0.0 Ola 6 — Retención S1-S5:** no-show recovery, producción por
-      doctor, series recurrentes, referidos, digest matutino.
+- [x] **v2.0.0 Ola 5 — Portal P1-P5:** reprogramar desde portal (link de
+      gestión reutilizando el wizard /gestionar), instrucciones pre/post-op
+      (services.instrucciones_pre/post + plantilla de confirmación + portal),
+      intake digital pre-cita (API portal/[token]/intake + sección de salud),
+      mensajería bidireccional manual (enviarMensajeManual + bandeja con
+      plantillas rápidas), cuentas familiares (patients.representante_id +
+      portal multi-paciente con ?pacienteId=).
+- [x] **v2.0.0 Ola 6 — Retención S1-S5:** no-show recovery (link re-agendar
+      automático + toggle + métrica en dashboard), producción por doctor
+      drill-down (/consola/produccion), series recurrentes (appointment_series
+      + crear/cancelar serie, ortodoncia multi-fase), referidos con tracking
+      (codigo_referido + link /reserva?ref= + informe /consola/referidos),
+      digest matutino (secciones agenda de hoy, recalls dormidos y huecos
+      14 días añadidas al digest determinista existente).
 - [ ] **v2.1 — Copilot agéntico:** build en v2.0.0, ship separado (registry de
       tools, paridad RBAC, redacción PHI, confirmación de writes, BudgetGuard).
 
