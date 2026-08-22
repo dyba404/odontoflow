@@ -50,9 +50,11 @@ $env:PORT = "$Port"
 $env:HOSTNAME = "0.0.0.0"
 
 # Detener instancia previa sin matar otros procesos node (solo servers
-# standalone de esta app, identificados por su server.js).
+# standalone de ESTA app: el patron incluye "odontoflow" para no tocar el
+# server standalone de otros proyectos, p.ej. clinicflow, que comparte el
+# mismo patron generico "standalone.apps.web.server.js").
 Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" |
-  Where-Object { $_.CommandLine -match "standalone.apps.web.server.js" } |
+  Where-Object { $_.CommandLine -match "odontoflow.*standalone.apps.web.server.js" } |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 Start-Sleep 1
 
