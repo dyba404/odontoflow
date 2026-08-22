@@ -170,7 +170,7 @@ function ChipCita({
       {accionable ? (
         <div
           data-no-drag
-          className="absolute right-1 top-1 flex items-center rounded-md bg-card/90 opacity-50 shadow-sm transition-opacity hover:opacity-100"
+          className="absolute right-1 top-1 flex items-center rounded-md bg-card/90 opacity-50 shadow-sm transition-opacity hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
         >
           <CitaActions
             citaId={cita.id}

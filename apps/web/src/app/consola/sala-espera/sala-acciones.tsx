@@ -89,7 +89,7 @@ export function SalaAcciones({
         value={consultorio}
         onChange={(e) => setConsultorio(e.target.value)}
         placeholder="Box"
-        className="h-7 w-14 rounded-md border border-input bg-transparent px-2 text-xs outline-none"
+        className="h-7 w-14 rounded-md border border-input bg-transparent px-2 text-xs outline-none [@media(pointer:coarse)]:h-10 [@media(pointer:coarse)]:w-20 [@media(pointer:coarse)]:text-sm"
       />
       {cargando ? <Loader2 className="size-3.5 animate-spin" /> : null}
     </div>

@@ -120,9 +120,9 @@ export default async function SeriesPage() {
               <TableRow>
                 <TableHead>Serie</TableHead>
                 <TableHead>Paciente</TableHead>
-                <TableHead>Servicio</TableHead>
-                <TableHead>Doctor</TableHead>
-                <TableHead className="text-center">Frecuencia</TableHead>
+                <TableHead className="hidden md:table-cell">Servicio</TableHead>
+                <TableHead className="hidden md:table-cell">Doctor</TableHead>
+                <TableHead className="hidden text-center md:table-cell">Frecuencia</TableHead>
                 <TableHead className="text-center">Sesiones</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="w-24" />
@@ -136,9 +136,9 @@ export default async function SeriesPage() {
                     <p className="text-xs tabular-nums text-muted-foreground">{f.horaIni}</p>
                   </TableCell>
                   <TableCell className="text-sm">{f.paciente ?? "—"}</TableCell>
-                  <TableCell className="text-sm">{f.servicio ?? "—"}</TableCell>
-                  <TableCell className="text-sm">{f.doctor ?? "Sin asignar"}</TableCell>
-                  <TableCell className="text-center text-sm">
+                  <TableCell className="hidden text-sm md:table-cell">{f.servicio ?? "—"}</TableCell>
+                  <TableCell className="hidden text-sm md:table-cell">{f.doctor ?? "Sin asignar"}</TableCell>
+                  <TableCell className="hidden text-center text-sm md:table-cell">
                     {FRECUENCIA_LABEL[f.frecuencia] ?? f.frecuencia}
                   </TableCell>
                   <TableCell className="text-center text-sm tabular-nums">

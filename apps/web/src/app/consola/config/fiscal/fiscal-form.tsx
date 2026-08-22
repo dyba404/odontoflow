@@ -151,7 +151,7 @@ export function FiscalForm({
         description="Registra tus datos SUNAT para emitir boletas y facturas electrónicas."
       >
         <form onSubmit={onSubmit} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground" htmlFor="fiscal-ruc">
                 RUC
@@ -178,7 +178,7 @@ export function FiscalForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground" htmlFor="fiscal-regimen">
                 Régimen

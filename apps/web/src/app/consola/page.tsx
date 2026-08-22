@@ -214,7 +214,7 @@ export default async function ConsolaPage() {
                       </p>
                       <p className="text-xs text-muted-foreground">{p.detail}</p>
                     </div>
-                    <span className="text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                    <span className="text-xs font-medium text-primary opacity-100 transition-opacity group-hover:opacity-100 md:opacity-0">
                       {p.hecho ? "Ver" : "Hacer"} →
                     </span>
                   </Link>

@@ -113,9 +113,9 @@ export default async function ArcoPage() {
                 <TableHead>Paciente</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>Detalle</TableHead>
+                <TableHead className="hidden md:table-cell">Detalle</TableHead>
                 <TableHead>Fecha</TableHead>
-                <TableHead>Gestionado por</TableHead>
+                <TableHead className="hidden md:table-cell">Gestionado por</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -135,7 +135,7 @@ export default async function ArcoPage() {
                       {ESTADO_LABEL[f.estado] ?? f.estado}
                     </Badge>
                   </TableCell>
-                  <TableCell className="max-w-xs text-sm text-muted-foreground">
+                  <TableCell className="hidden max-w-xs text-sm text-muted-foreground md:table-cell">
                     {f.detalle ? (
                       <span className="line-clamp-2">{f.detalle}</span>
                     ) : (
@@ -145,7 +145,7 @@ export default async function ArcoPage() {
                   <TableCell className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
                     {fechaCorta(f.createdAt)}
                   </TableCell>
-                  <TableCell className="text-sm">{f.gestionado ?? "—"}</TableCell>
+                  <TableCell className="hidden text-sm md:table-cell">{f.gestionado ?? "—"}</TableCell>
                   <TableCell>
                     <ArcoAcciones id={f.id} paciente={f.paciente ?? "este paciente"} estado={f.estado} />
                   </TableCell>

@@ -581,7 +581,7 @@ export default async function FichaPacientePage({
             </span>
           </div>
         </CardHeader>
-        <CardContent className="p-5 pt-0">
+        <CardContent className="p-3 pt-0 sm:p-5 sm:pt-0">
           <OdontogramaV2
             patientId={paciente.id}
             canEdit={canEdit}

@@ -191,7 +191,7 @@ export default async function CajaPage() {
                   <TableHead>Hora</TableHead>
                   <TableHead>Paciente</TableHead>
                   <TableHead>Método</TableHead>
-                  <TableHead>Referencia</TableHead>
+                  <TableHead className="hidden md:table-cell">Referencia</TableHead>
                   <TableHead className="text-right">Monto</TableHead>
                   <TableHead className="text-right">Estado</TableHead>
                 </TableRow>
@@ -226,7 +226,7 @@ export default async function CajaPage() {
                             {METODO_LABEL[p.metodo] ?? p.metodo}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
+                        <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
                           {p.referencia ?? "—"}
                         </TableCell>
                         <TableCell
@@ -274,8 +274,8 @@ export default async function CajaPage() {
                   <TableHead className="text-right">Cierre sistema</TableHead>
                   <TableHead className="text-right">Cierre real</TableHead>
                   <TableHead className="text-right">Diferencia</TableHead>
-                  <TableHead>Cerró</TableHead>
-                  <TableHead className="text-right">Hora</TableHead>
+                  <TableHead className="hidden md:table-cell">Cerró</TableHead>
+                  <TableHead className="hidden text-right md:table-cell">Hora</TableHead>
                   <TableHead className="text-right">Estado</TableHead>
                 </TableRow>
               </TableHeader>
@@ -308,10 +308,10 @@ export default async function CajaPage() {
                         >
                           {fmtPEN(diff)}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
                           {c.cerradoPorNombre ?? "—"}
                         </TableCell>
-                        <TableCell className="text-right text-xs tabular-nums text-muted-foreground">
+                        <TableCell className="hidden text-right text-xs tabular-nums text-muted-foreground md:table-cell">
                           {c.createdAt ? fmtHora(c.createdAt) : "—"}
                         </TableCell>
                         <TableCell className="text-right">

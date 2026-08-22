@@ -141,8 +141,8 @@ export default async function ProduccionPage({
                 <TableRow>
                   <TableHead>Doctor</TableHead>
                   <TableHead className="text-center">Atendidas</TableHead>
-                  <TableHead className="text-center">No-shows</TableHead>
-                  <TableHead className="text-center">Pagos</TableHead>
+                  <TableHead className="hidden text-center md:table-cell">No-shows</TableHead>
+                  <TableHead className="hidden text-center md:table-cell">Pagos</TableHead>
                   <TableHead className="text-right">Ticket prom.</TableHead>
                   <TableHead className="text-right">Ventas</TableHead>
                 </TableRow>
@@ -163,10 +163,10 @@ export default async function ProduccionPage({
                       )}
                     </TableCell>
                     <TableCell className="text-center text-sm tabular-nums">{f.atendidas}</TableCell>
-                    <TableCell className="text-center text-sm tabular-nums text-muted-foreground">
+                    <TableCell className="hidden text-center text-sm tabular-nums text-muted-foreground md:table-cell">
                       {f.noShows}
                     </TableCell>
-                    <TableCell className="text-center text-sm tabular-nums">{f.pagos}</TableCell>
+                    <TableCell className="hidden text-center text-sm tabular-nums md:table-cell">{f.pagos}</TableCell>
                     <TableCell className="text-right text-sm tabular-nums">{fmtPEN(f.ticket)}</TableCell>
                     <TableCell className="text-right text-sm font-semibold tabular-nums">
                       {fmtPEN(f.ventas)}
@@ -208,7 +208,7 @@ export default async function ProduccionPage({
                             <TableHead>Fecha</TableHead>
                             <TableHead>Hora</TableHead>
                             <TableHead>Paciente</TableHead>
-                            <TableHead>Servicio</TableHead>
+                            <TableHead className="hidden md:table-cell">Servicio</TableHead>
                             <TableHead>Estado</TableHead>
                             <TableHead className="text-right">Monto</TableHead>
                           </TableRow>
@@ -219,7 +219,7 @@ export default async function ProduccionPage({
                               <TableCell className="text-sm tabular-nums">{c.fecha}</TableCell>
                               <TableCell className="text-sm tabular-nums">{c.horaIni}</TableCell>
                               <TableCell className="text-sm">{c.paciente ?? "—"}</TableCell>
-                              <TableCell className="text-sm">{c.servicio}</TableCell>
+                              <TableCell className="hidden text-sm md:table-cell">{c.servicio}</TableCell>
                               <TableCell>
                                 <Badge variant="gray">{c.estado}</Badge>
                               </TableCell>

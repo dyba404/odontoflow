@@ -227,8 +227,8 @@ export default async function ComprobantesPage() {
               <TableHead>Pago</TableHead>
               <TableHead>Paciente</TableHead>
               <TableHead>SUNAT</TableHead>
-              <TableHead>Archivos</TableHead>
-              <TableHead className="text-right">Emitido</TableHead>
+              <TableHead className="hidden md:table-cell">Archivos</TableHead>
+              <TableHead className="hidden text-right md:table-cell">Emitido</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -275,7 +275,7 @@ export default async function ComprobantesPage() {
                       {SUNAT_LABEL[c.sunatEstado] ?? c.sunatEstado}
                     </Badge>
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-xs">
+                  <TableCell className="hidden whitespace-nowrap text-xs md:table-cell">
                     {c.xmlUrl || c.cdrUrl || c.sunatEstado !== "manual" ? (
                       <span className="inline-flex items-center gap-2">
                         {c.xmlUrl ? (
@@ -311,11 +311,11 @@ export default async function ComprobantesPage() {
                       <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-right text-xs tabular-nums text-muted-foreground">
+                  <TableCell className="hidden whitespace-nowrap text-right text-xs tabular-nums text-muted-foreground md:table-cell">
                     {fechaCorta(c.createdAt)}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-right">
-                    <div className="flex items-center justify-end gap-1.5">
+                  <TableCell className="text-right">
+                    <div className="flex flex-wrap items-center justify-end gap-1.5">
                       <EmitirButton id={c.id} sunatEstado={c.sunatEstado} />
                       {c.sunatEstado === "pendiente_envio" && c.emitidaAt ? (
                         <ConsultarCdrButton

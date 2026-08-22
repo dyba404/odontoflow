@@ -113,10 +113,10 @@ export default async function CampanasPage() {
               <TableRow>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Título</TableHead>
-                <TableHead className="text-right">Audiencia</TableHead>
+                <TableHead className="hidden text-right md:table-cell">Audiencia</TableHead>
                 <TableHead className="text-right">Enviados</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>Creada</TableHead>
+                <TableHead className="hidden md:table-cell">Creada</TableHead>
                 <TableHead className="text-right">Acción</TableHead>
               </TableRow>
             </TableHeader>
@@ -131,7 +131,7 @@ export default async function CampanasPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="max-w-[260px] truncate text-sm font-medium">{c.titulo}</TableCell>
-                    <TableCell className="text-right text-sm tabular-nums">{audiencia}</TableCell>
+                    <TableCell className="hidden text-right text-sm tabular-nums md:table-cell">{audiencia}</TableCell>
                     <TableCell className="text-right text-sm tabular-nums text-muted-foreground">
                       {c.enviadosOk}/{c.enviadoA}
                     </TableCell>
@@ -140,7 +140,7 @@ export default async function CampanasPage() {
                         {ESTADO_LABEL[c.estado] ?? c.estado}
                       </Badge>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                    <TableCell className="hidden whitespace-nowrap text-sm text-muted-foreground md:table-cell">
                       {format(c.createdAt, "d MMM yyyy, HH:mm", { locale: es })}
                     </TableCell>
                     <TableCell className="text-right">

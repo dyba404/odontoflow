@@ -1,0 +1,45 @@
+/*
+ * Overrides móviles del odontograma clínico (cargan DESPUÉS del style.css
+ * del vendor, ver import en odontograma-v2.tsx). Sin tocar el bundle.
+ *
+ * Problema: .tooth-grid impone 16 columnas × minmax(36px) = 636px mínimos
+ * dentro de .chart con overflow:hidden → en ~375px la boca sale recortada
+ * sin scroll. El vendor ya trae interacción táctil completa (tap→popover
+ * zoom con botones de 44px, long-press→menú, pinch y toggle de arcadas);
+ * solo faltaba el layout.
+ */
+
+/* Scroll horizontal real en vez de recorte silencioso. */
+.odontogram-root .chart {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.odontogram-root .tooth-grid {
+  width: max-content;
+}
+
+/* En táctil la topbar embebida (logo, tour, idioma, export/import, settings)
+   es chrome inútil dentro de una ficha: roba ~150px verticales. En desktop
+   se conserva por si alguien usa export/ajustes. */
+@media (pointer: coarse) {
+  .odontogram-root .topbar {
+    display: none;
+  }
+}
+
+/* Perio full-grid: las media queries del vendor encogen celdas hasta 8px,
+   inoperables con dedo. Piso con un mínimo operable; el contenedor
+   .perio-fullgrid-scroll ya tiene su propio overflow:auto así que el costo
+   es más scroll horizontal. */
+@media (max-width: 600px), (pointer: coarse) {
+  .odontogram-root .perio-fullgrid-cell,
+  .odontogram-root .perio-fullgrid-graphic-cell,
+  .odontogram-root .perio-fullgrid-input,
+  .odontogram-root .perio-fullgrid-plaque,
+  .odontogram-root .perio-fullgrid-bop,
+  .odontogram-root .perio-fullgrid-furc,
+  .odontogram-root .perio-fullgrid-header-cell {
+    min-width: 28px;
+    min-height: 24px;
+  }
+}

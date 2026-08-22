@@ -91,7 +91,7 @@ export function ItemDialog({
   return (
     <>
       {esEdicion ? (
-        <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={abrir} aria-label="Editar artículo">
+                    <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0 [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:w-12" onClick={abrir} aria-label="Editar artículo">
           <Pencil className="size-3.5" />
         </Button>
       ) : (

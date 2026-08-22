@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import "@/vendor/react-advanced-odontogram/style.css";
+import "./odontograma-movil.css";
 
 const OdontogramShellDynamic = dynamic(
   () =>

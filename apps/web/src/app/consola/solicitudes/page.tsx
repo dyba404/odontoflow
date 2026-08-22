@@ -90,7 +90,7 @@ export default async function SolicitudesPage() {
                 <TableHead>Paciente</TableHead>
                 <TableHead>Servicio</TableHead>
                 <TableHead>Propone</TableHead>
-                <TableHead>Preferencia</TableHead>
+                <TableHead className="hidden md:table-cell">Preferencia</TableHead>
                 <TableHead>Monto</TableHead>
                 <TableHead className="text-right">Acción</TableHead>
               </TableRow>
@@ -121,7 +121,7 @@ export default async function SolicitudesPage() {
                       {s.horaIni} · {diasRestantes(s.fecha)}
                     </p>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     {s.preferredDoctorNombre ? (
                       <span className="text-sm">{s.preferredDoctorNombre}</span>
                     ) : (

@@ -118,8 +118,8 @@ export default async function RecallPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
-                <TableHead>Celular</TableHead>
-                <TableHead>Última visita</TableHead>
+                <TableHead className="hidden md:table-cell">Celular</TableHead>
+                <TableHead className="hidden md:table-cell">Última visita</TableHead>
                 <TableHead className="text-right">Meses sin venir</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acción</TableHead>
@@ -129,8 +129,8 @@ export default async function RecallPage() {
               {objetivo.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell className="text-sm font-medium">{p.nombre}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{p.celular}</TableCell>
-                  <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                  <TableCell className="hidden text-sm text-muted-foreground md:table-cell">{p.celular}</TableCell>
+                  <TableCell className="hidden whitespace-nowrap text-sm text-muted-foreground md:table-cell">
                     {p.ultimaVisita ? fechaLarga(p.ultimaVisita) : "Nunca"}
                   </TableCell>
                   <TableCell className="text-right text-sm tabular-nums">

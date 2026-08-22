@@ -157,9 +157,9 @@ export default async function PresupuestosPage() {
                 <TableHead>Paciente</TableHead>
                 <TableHead>Título</TableHead>
                 <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-center">Ítems</TableHead>
+                <TableHead className="hidden text-center md:table-cell">Ítems</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>Creado</TableHead>
+                <TableHead className="hidden md:table-cell">Creado</TableHead>
                 <TableHead className="text-right">Acción</TableHead>
               </TableRow>
             </TableHeader>
@@ -173,7 +173,7 @@ export default async function PresupuestosPage() {
                   <TableCell className="text-right text-sm font-semibold tabular-nums">
                     {fmtPEN(p.totalNum)}
                   </TableCell>
-                  <TableCell className="text-center text-sm tabular-nums text-muted-foreground">
+                  <TableCell className="hidden text-center text-sm tabular-nums text-muted-foreground md:table-cell">
                     {p.itemsCount}
                   </TableCell>
                   <TableCell>
@@ -181,7 +181,7 @@ export default async function PresupuestosPage() {
                       {ESTADO_LABEL[p.estado] ?? p.estado}
                     </Badge>
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                  <TableCell className="hidden whitespace-nowrap text-sm text-muted-foreground md:table-cell">
                     {fmtCreado(p.createdAt)}
                   </TableCell>
                   <TableCell className="text-right">

@@ -125,9 +125,9 @@ export default async function CuotasConciliacionPage() {
               <TableRow>
                 <TableHead>Paciente</TableHead>
                 <TableHead>Método</TableHead>
-                <TableHead>Referencia</TableHead>
+                <TableHead className="hidden md:table-cell">Referencia</TableHead>
                 <TableHead className="text-right">Monto</TableHead>
-                <TableHead>Fecha</TableHead>
+                <TableHead className="hidden md:table-cell">Fecha</TableHead>
                 <TableHead className="text-right">Acción</TableHead>
               </TableRow>
             </TableHeader>
@@ -138,11 +138,11 @@ export default async function CuotasConciliacionPage() {
                     {p.patientNombre ?? "—"}
                   </TableCell>
                   <TableCell className="text-sm capitalize">{p.metodo}</TableCell>
-                  <TableCell className="text-sm tabular-nums">{p.referencia}</TableCell>
+                  <TableCell className="hidden text-sm tabular-nums md:table-cell">{p.referencia}</TableCell>
                   <TableCell className="text-right text-sm font-semibold tabular-nums">
                     {fmtPEN(Number(p.monto))}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                  <TableCell className="hidden whitespace-nowrap text-sm text-muted-foreground md:table-cell">
                     {p.createdAt
                       ? new Intl.DateTimeFormat("es-PE", {
                           day: "2-digit",
@@ -171,17 +171,17 @@ export default async function CuotasConciliacionPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Paciente</TableHead>
-                <TableHead>Referencia</TableHead>
+                <TableHead className="hidden md:table-cell">Referencia</TableHead>
                 <TableHead className="text-right">Monto</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>Fecha</TableHead>
+                <TableHead className="hidden md:table-cell">Fecha</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {historial.map((h) => (
                 <TableRow key={h.id}>
                   <TableCell className="text-sm">{h.patientNombre ?? "—"}</TableCell>
-                  <TableCell className="text-sm tabular-nums">{h.referencia}</TableCell>
+                  <TableCell className="hidden text-sm tabular-nums md:table-cell">{h.referencia}</TableCell>
                   <TableCell className="text-right text-sm tabular-nums">
                     {fmtPEN(Number(h.monto))}
                   </TableCell>
@@ -196,7 +196,7 @@ export default async function CuotasConciliacionPage() {
                       </span>
                     )}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                  <TableCell className="hidden whitespace-nowrap text-sm text-muted-foreground md:table-cell">
                     {h.conciliado}
                   </TableCell>
                 </TableRow>

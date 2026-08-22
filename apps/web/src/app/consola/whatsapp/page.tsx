@@ -128,10 +128,10 @@ export default async function WhatsAppPage({
               <TableRow>
                 <TableHead>Sentido</TableHead>
                 <TableHead>Paciente</TableHead>
-                <TableHead>Número</TableHead>
+                <TableHead className="hidden md:table-cell">Número</TableHead>
                 <TableHead>Mensaje</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>Momento</TableHead>
+                <TableHead className="hidden md:table-cell">Momento</TableHead>
                 <TableHead className="w-24" />
               </TableRow>
             </TableHeader>
@@ -150,7 +150,7 @@ export default async function WhatsAppPage({
                       <span className="text-sm text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
+                  <TableCell className="hidden whitespace-nowrap text-xs tabular-nums text-muted-foreground md:table-cell">
                     {f.phoneNumber ?? f.waId ?? "—"}
                   </TableCell>
                   <TableCell className="max-w-[320px]">
@@ -167,7 +167,7 @@ export default async function WhatsAppPage({
                       <Badge variant="green">{f.estado}</Badge>
                     )}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap tabular-nums">
+                  <TableCell className="hidden whitespace-nowrap tabular-nums md:table-cell">
                     <span title={format(f.createdAt, "d MMM yyyy HH:mm")}>
                       {formatDistanceToNow(f.createdAt, { addSuffix: true, locale: es })}
                     </span>

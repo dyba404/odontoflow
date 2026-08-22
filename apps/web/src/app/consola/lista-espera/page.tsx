@@ -106,9 +106,9 @@ export default async function ListaEsperaPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Paciente</TableHead>
-                <TableHead>Celular</TableHead>
+                <TableHead className="hidden md:table-cell">Celular</TableHead>
                 <TableHead>Servicio</TableHead>
-                <TableHead>Preferencia</TableHead>
+                <TableHead className="hidden md:table-cell">Preferencia</TableHead>
                 <TableHead>Prioridad</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
@@ -118,9 +118,9 @@ export default async function ListaEsperaPage() {
               {filas.map((f) => (
                 <TableRow key={f.id}>
                   <TableCell className="text-sm font-medium">{f.pacienteNombre}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{f.pacienteCelular}</TableCell>
+                  <TableCell className="hidden text-sm text-muted-foreground md:table-cell">{f.pacienteCelular}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{f.servicioNombre ?? "—"}</TableCell>
-                  <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+                  <TableCell className="hidden max-w-[200px] truncate text-sm text-muted-foreground md:table-cell">
                     {f.preferencia ?? "—"}
                   </TableCell>
                   <TableCell>
