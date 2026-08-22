@@ -104,26 +104,30 @@ export default async function FichaPacientePage({
     );
   }
 
-  const [dientes, registros] = await Promise.all([
-    toothStatesPaciente(ficha.paciente.id),
-    registrosPaciente(ficha.paciente.id),
-  ]);
-  const chart = await odontogramaChartPaciente(team.id, ficha.paciente.id);
   const canEdit = hasPermission(session.role, "records.edit");
   const pro = planEsProOMayor(await planDeTenant(team.id));
-  const periRegs = (
-    pro
-      ? await periodoRegistrosPaciente(team.id, ficha.paciente.id)
-      : []
-  ).map((r) => ({ id: r.id, nota: r.nota, creadoEl: r.createdAt.toISOString() }));
-
-  const [adjuntos, consentimientos] = await Promise.all([
-    adjuntosDePaciente(team.id, id),
-    consentimientosDePaciente(team.id, id),
-  ]);
 
   const db = getDb();
-  const [pedidosLab, fotosRows, serviciosRows] = await Promise.all([
+  const [
+    dientes,
+    registros,
+    chart,
+    periRegsRaw,
+    adjuntos,
+    consentimientos,
+    pedidosLab,
+    fotosRows,
+    serviciosRows,
+    coberturaRows,
+    aseguradoraRows,
+    opcionesRepresentante,
+  ] = await Promise.all([
+    toothStatesPaciente(ficha.paciente.id),
+    registrosPaciente(ficha.paciente.id),
+    odontogramaChartPaciente(team.id, ficha.paciente.id),
+    pro ? periodoRegistrosPaciente(team.id, ficha.paciente.id) : Promise.resolve([]),
+    adjuntosDePaciente(team.id, id),
+    consentimientosDePaciente(team.id, id),
     db
       .select({
         id: labOrders.id,
@@ -158,9 +162,6 @@ export default async function FichaPacientePage({
       )
       .orderBy(asc(attachments.createdAt)),
     db.select({ nombre: services.nombre }).from(services).where(eq(services.tenantId, team.id)),
-  ]);
-
-  const [coberturaRows, aseguradoraRows, opcionesRepresentante] = await Promise.all([
     db
       .select({
         id: patientCoverages.id,
@@ -195,6 +196,12 @@ export default async function FichaPacientePage({
       .orderBy(asc(patients.nombre))
       .limit(200),
   ]);
+
+  const periRegs = periRegsRaw.map((r) => ({
+    id: r.id,
+    nota: r.nota,
+    creadoEl: r.createdAt.toISOString(),
+  }));
 
   const gruposFotos = new Map<string, typeof fotosRows>();
   for (const f of fotosRows) {
