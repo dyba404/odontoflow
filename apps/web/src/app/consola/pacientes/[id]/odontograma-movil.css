@@ -9,13 +9,23 @@
  * solo faltaba el layout.
  */
 
-/* Scroll horizontal real en vez de recorte silencioso. */
-.odontogram-root .chart {
+/*
+ * El scroll vive en LA GRILLA MISMA, no en .chart: si .chart fuera el
+ * contenedor scrolleable, sus hermanos (ej. section.tooth-info.card,
+ * "Información dental") heredarían el ancho de contenido ampliado de la
+ * grilla y saldrían recortados por los lados. Con overflow sobre
+ * .tooth-grid, solo la boca scrollea y los paneles quedan al ancho normal.
+ */
+.odontogram-root .tooth-grid {
+  max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
-.odontogram-root .tooth-grid {
-  width: max-content;
+.odontogram-root .chart > * {
+  min-width: 0;
+}
+.odontogram-root .tooth-info {
+  max-width: 100%;
 }
 
 /* En táctil la topbar embebida (logo, tour, idioma, export/import, settings)
