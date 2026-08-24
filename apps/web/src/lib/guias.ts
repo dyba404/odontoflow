@@ -26,6 +26,21 @@ export const GUIAS: GuiaSeccion[] = [
     descripcion: "Configura tu clínica en 30 minutos y queda lista para recibir pacientes.",
     guias: [
       {
+        id: "instalar-app",
+        titulo: "Instala Odontoflow en tu celular",
+        descripcion:
+          "Úsalo como una app más de tu teléfono: ícono propio, pantalla completa y sesión abierta, sin tienda de aplicaciones.",
+        roles: ["owner", "receptionist", "doctor", "assistant"],
+        pasos: [
+          "Abre la dirección de Odontoflow en el navegador de tu celular (Chrome en Android, Safari en iPhone).",
+          "Inicia sesión con tu cuenta de trabajo; la sesión se mantiene abierta entre visitas.",
+          "iPhone (Safari): toca el botón Compartir (el cuadrito con la flecha) → “Añadir a pantalla de inicio” → Añadir.",
+          "Android (Chrome): menú ⋮ → “Instalar aplicación” (o “Añadir a pantalla de inicio”) → Instalar.",
+          "Abre Odontoflow desde el ícono: se ve a pantalla completa, sin barra del navegador, como cualquier app.",
+        ],
+        tip: "No descarga nada pesado ni pasa por la tienda: es la misma web instalada (PWA). Las actualizaciones llegan solas al abrir la app.",
+      },
+      {
         id: "configurar-clinica",
         titulo: "Configura los datos de tu clínica",
         descripcion:
