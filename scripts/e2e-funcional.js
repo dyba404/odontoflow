@@ -31,6 +31,10 @@
  * Variables: E2E_BASE (URL base), E2E_HEADLESS=0 (ver el browser),
  *            E2E_WA_MOCK (default http://127.0.0.1:3020), CRON_SECRET.
  *
+ * Higiene: cada corrida deja citas/reservas QA en la BD. Si los pasos 04/05
+ * fallan con "No hay horarios ese día", correr scripts/limpiar-qa.sh (cancela
+ * las citas QA acumuladas que bloquean los slots públicos de fechas futuras).
+ *
  * Duración típica: ~11-12 min. Exit code 0 siempre (el resumen manda).
  */
 
