@@ -90,7 +90,9 @@ function layoutCitas(citas: Cita[]): { pos: Map<string, Posicion>; mas: MasInfo[
       const ancho = 100 / n;
       pos.set(c.id, {
         top: ((ini - INI_MS) / 60) * HORA_PX,
-        height: Math.max(((fin - ini) / 60) * HORA_PX, 28),
+        // 22px mínimos: una cita de 20 min mide ~21px de alto; con 28 los
+        // bloques encadenados se tapaban entre sí y recortaban el nombre
+        height: Math.max(((fin - ini) / 60) * HORA_PX, 22),
         left: lane * ancho,
         ancho,
       });
@@ -136,13 +138,16 @@ function ChipCita({
 }) {
   const atenuada = cita.estado === "cancelada" || cita.estado === "no_show";
   const accionable = cita.estado === "solicitada" || cita.estado === "confirmada";
+  // Bloque corto (<38px no alcanza para hora+nombre): mostrar solo el nombre
+  const corta = pos.height < 38;
   return (
     <div
       draggable={arrastrable}
       onDragStart={arrastrable ? onDragStart : undefined}
       onDragEnd={arrastrable ? onDragEnd : undefined}
       className={cn(
-        "absolute z-20 overflow-hidden rounded-md border-l-[3px] px-2 py-1 transition-shadow hover:shadow-md ring-1 ring-black/10",
+        "absolute z-20 overflow-hidden rounded-md border-l-[3px] px-2 transition-shadow hover:shadow-md ring-1 ring-black/10",
+        corta ? "py-0.5" : "py-1",
         sinAsignar ? "border-l-muted-foreground/40 bg-muted/30" : "",
         atenuada && "opacity-45",
         arrastrable && "cursor-grab",
@@ -157,14 +162,18 @@ function ChipCita({
         borderLeftColor: sinAsignar ? undefined : color,
       }}
     >
-      <div className="text-[10px] font-medium tabular-nums text-muted-foreground">
-        {cita.horaIni.slice(0, 5)} – {cita.horaFin.slice(0, 5)}
+      {!corta ? (
+        <div className="text-[10px] font-medium tabular-nums text-muted-foreground">
+          {cita.horaIni.slice(0, 5)} – {cita.horaFin.slice(0, 5)}
+        </div>
+      ) : null}
+      <div className={cn("truncate text-xs font-semibold", accionable && "pr-7")}>
+        {cita.patientNombre}
       </div>
-      <div className="truncate text-xs font-semibold">{cita.patientNombre}</div>
-      {pos.height > 50 ? (
+      {pos.height > 66 ? (
         <div className="truncate text-[10px] text-muted-foreground">{cita.servicio}</div>
       ) : null}
-      {pos.height > 40 ? (
+      {pos.height > 52 ? (
         <div className="text-[10px] font-medium tabular-nums">{fmtPEN(Number(cita.servicioPrecio))}</div>
       ) : null}
       {accionable ? (
