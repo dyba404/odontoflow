@@ -71,8 +71,13 @@ services:
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?NEXT_PUBLIC_APP_URL obligatorio (URL publica HTTPS, ver .env.prod.example)}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_FROM: ${RESEND_FROM:-}
-      # resend es el canal de producción; smtp-dev solo existe en docker-compose.yml (Mailpit).
-      MAIL_MODE: ${MAIL_MODE:-resend}
+      # resend es el canal de producción; smtp-dev envía TODO a Mailpit (bandeja
+      # local, nada sale a internet). Modo actual del piloto: smtp-dev.
+      MAIL_MODE: ${MAIL_MODE:-smtp-dev}
+      MAILPIT_HOST: ${MAILPIT_HOST:-mailpit}
+      MAILPIT_PORT: ${MAILPIT_PORT:-1025}
+      # WhatsApp contra whatsmock (mock Cloud API local): envío/recibo simulados.
+      WHATSAPP_BASE_URL: ${WHATSAPP_BASE_URL:-http://whatsmock:3010/v22.0}
       WA_REPLY_MODE: ${WA_REPLY_MODE:-single}
       YAPE_PLIN_NUMBER: ${YAPE_PLIN_NUMBER:-}
       # DEPRECADO: solo bootstrap inicial del fundador (is_platform_admin); se ignora en runtime.
@@ -168,6 +173,40 @@ services:
     profiles: ["tools"]
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-odontoflow}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obligatorio (ver .env.prod.example)}@${DATABASE_HOST:-db}:5432/${POSTGRES_DB:-odontoflow}
+      # Necesaria para scripts que cifran datos sensibles (seed-piloto: fiscal/whatsapp).
+      LOCAL_MASTER_KEY: ${LOCAL_MASTER_KEY:?LOCAL_MASTER_KEY obligatorio (ver .env.prod.example)}
+
+  # Bandeja de correo de prueba: TODO el email de la app cae aquí (nada sale real).
+  # UI en http://<host>:8025 (solo LAN; la máquina está detrás de CGNAT).
+  mailpit:
+    image: axllent/mailpit
+    container_name: odontoflow-mailpit-prod
+    restart: unless-stopped
+    ports:
+      # 8025 del host lo usa el Mailpit del stack dev → UI del prod en 8027.
+      - "8027:8025"
+    mem_limit: 128m
+
+  # Mock de WhatsApp Cloud API (el "Mailpit de WhatsApp"): envío y recepción
+  # 100% simulados. Los webhooks simulados llegan al web por la red interna.
+  whatsmock:
+    build:
+      context: ./.references/whap
+    image: odontoflow-whatsmock:prod
+    container_name: odontoflow-whatsmock-prod
+    restart: unless-stopped
+    environment:
+      WEBHOOK_URL: http://web:3111/api/whatsapp/webhook
+    ports:
+      # 3010 del host lo usa el whatsmock del stack dev → simulador del prod en 3020.
+      - "3020:3010"
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://127.0.0.1:3010/health >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 10
     depends_on:
       db:
         condition: service_healthy

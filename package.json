@@ -26,6 +26,7 @@
     "db:migrate": "npm run db:migrate -w @odontoflow/db",
     "db:seed": "npm run db:seed -w @odontoflow/db",
     "db:seed:founder": "npm run db:seed:founder -w @odontoflow/db",
+    "db:seed-piloto": "npm run db:seed-piloto -w @odontoflow/db",
     "admin:change-password": "npm run admin:change-password -w @odontoflow/db"
   },
   "engines": {
