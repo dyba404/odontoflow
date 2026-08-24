@@ -289,17 +289,18 @@ export async function membershipIdPorNombre(teamId: string, name: string) {
 export async function citasDelDia(teamId: string, fecha: string) {
   const db = getDb();
   return db
-    .select({
-      id: appointments.id,
-      horaIni: appointments.horaIni,
-      horaFin: appointments.horaFin,
-      estado: appointments.estado,
-      patientNombre: patients.nombre,
-      servicio: services.nombre,
-      servicioPrecio: services.precio,
-      doctorId: appointments.doctorId,
-      doctorNombre: users.name,
-    })
+  .select({
+  id: appointments.id,
+  horaIni: appointments.horaIni,
+  horaFin: appointments.horaFin,
+  estado: appointments.estado,
+  patientNombre: patients.nombre,
+  serviceId: appointments.serviceId,
+  servicio: services.nombre,
+  servicioPrecio: services.precio,
+  doctorId: appointments.doctorId,
+  doctorNombre: users.name,
+  })
     .from(appointments)
     .innerJoin(patients, eq(appointments.patientId, patients.id))
     .innerJoin(services, eq(appointments.serviceId, services.id))

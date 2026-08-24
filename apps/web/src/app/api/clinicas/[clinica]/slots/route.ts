@@ -42,10 +42,14 @@ export async function GET(
     return NextResponse.json({ error: "fecha_pasada" }, { status: 400 });
   }
   const sesion = await getSession();
+  // staff puede excluir la cita que se está reprogramando para que su slot
+  // actual aparezca como disponible en el selector; público no.
+  const excluirCitaId = sesion ? url.searchParams.get("excluirCitaId") : null;
   const slotData = await computeSlots(tenant.teamId, {
     serviceId,
     date,
     doctorMembershipId: doctorMembershipId || null,
+    excluirCitaId: excluirCitaId ?? undefined,
     nowMin: !sesion && date === hoy.date ? hoy.min : null,
   });
   if (!slotData) {

@@ -158,6 +158,7 @@ export default async function AgendaPage({
           doctores={doctoresVisibles}
           doctoresTodos={doctores}
           esDoctor={esDoctor}
+          slug={team.slug}
         />
       ) : null}
 

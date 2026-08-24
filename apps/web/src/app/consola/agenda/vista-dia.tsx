@@ -23,6 +23,21 @@ function minutos(hora: string): number {
   return h * 60 + m;
 }
 
+function hoyLimaISO(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date());
+}
+
+function minutosAhoraLima(): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Lima",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date());
+  const [h = 0, m = 0] = parts.split(":").map(Number);
+  return h * 60 + m;
+}
+
 function aHHMM(min: number): string {
   return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 }
@@ -120,6 +135,7 @@ function ChipCita({
   sinAsignar,
   fechaISO,
   doctoresTodos,
+  slug,
   arrastrable,
   siendoArrastrada,
   onDragStart,
@@ -131,6 +147,7 @@ function ChipCita({
   sinAsignar?: boolean;
   fechaISO: string;
   doctoresTodos: AgendaDoctor[];
+  slug?: string;
   arrastrable: boolean;
   siendoArrastrada: boolean;
   onDragStart: (e: DragEvent<HTMLDivElement>) => void;
@@ -138,7 +155,8 @@ function ChipCita({
 }) {
   const atenuada = cita.estado === "cancelada" || cita.estado === "no_show";
   const accionable = cita.estado === "solicitada" || cita.estado === "confirmada";
-  // Bloque corto (<38px no alcanza para hora+nombre): mostrar solo el nombre
+  // Bloque corto (<38px no alcanza para hora+nombre apilados): hora de inicio
+  // inline con el nombre en una sola línea
   const corta = pos.height < 38;
   return (
     <div
@@ -146,7 +164,7 @@ function ChipCita({
       onDragStart={arrastrable ? onDragStart : undefined}
       onDragEnd={arrastrable ? onDragEnd : undefined}
       className={cn(
-        "absolute z-20 overflow-hidden rounded-md border-l-[3px] px-2 transition-shadow hover:shadow-md ring-1 ring-black/10",
+        "group absolute z-20 overflow-hidden rounded-md border-l-[3px] px-2 transition-shadow hover:shadow-md",
         corta ? "py-0.5" : "py-1",
         sinAsignar ? "border-l-muted-foreground/40 bg-muted/30" : "",
         atenuada && "opacity-45",
@@ -163,7 +181,7 @@ function ChipCita({
       }}
     >
       {corta ? (
-        <div className={cn("flex min-w-0 items-baseline gap-1.5", accionable && "pr-7")}>
+        <div className={cn("flex min-w-0 items-baseline gap-1.5", accionable && "pr-14")}>
           <span className="shrink-0 text-[10px] font-medium tabular-nums text-muted-foreground">
             {cita.horaIni.slice(0, 5)}
           </span>
@@ -174,7 +192,7 @@ function ChipCita({
           <div className="text-[10px] font-medium tabular-nums text-muted-foreground">
             {cita.horaIni.slice(0, 5)} – {cita.horaFin.slice(0, 5)}
           </div>
-          <div className={cn("truncate text-xs font-semibold", accionable && "pr-7")}>
+          <div className={cn("truncate text-xs font-semibold", accionable && "pr-14")}>
             {cita.patientNombre}
           </div>
         </>
@@ -188,7 +206,7 @@ function ChipCita({
       {accionable ? (
         <div
           data-no-drag
-          className="absolute right-1 top-1 flex items-center rounded-md bg-card/90 opacity-50 shadow-sm transition-opacity hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
+          className="absolute right-1 top-1 z-10 flex items-center rounded-md bg-card/90 shadow-sm transition-opacity [@media(pointer:coarse)]:opacity-100 [@media(pointer:coarse)]:shadow-md md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
         >
           <CitaActions
             citaId={cita.id}
@@ -197,6 +215,9 @@ function ChipCita({
             fecha={fechaISO}
             horaIni={cita.horaIni}
             doctores={doctoresTodos}
+            servicio={cita.servicio}
+            serviceId={cita.serviceId}
+            slug={slug}
           />
         </div>
       ) : null}
@@ -276,6 +297,7 @@ function ColumnaDia({
   sinAsignar,
   fechaISO,
   doctoresTodos,
+  slug,
   colId,
   doctorDestino,
   permiteDrag,
@@ -293,6 +315,7 @@ function ColumnaDia({
   sinAsignar?: boolean;
   fechaISO: string;
   doctoresTodos: AgendaDoctor[];
+  slug?: string;
   colId: string;
   doctorDestino: string | null;
   permiteDrag: boolean;
@@ -356,6 +379,7 @@ function ColumnaDia({
             sinAsignar={sinAsignar}
             fechaISO={fechaISO}
             doctoresTodos={doctoresTodos}
+            slug={slug}
             arrastrable={arrastrable}
             siendoArrastrada={dragId === c.id}
             onDragStart={(e) => onDragStartCita(c, e)}
@@ -385,6 +409,7 @@ export function VistaDia({
   doctores,
   doctoresTodos,
   esDoctor,
+  slug,
 }: {
   fechaISO: string;
   citas: Cita[];
@@ -392,11 +417,35 @@ export function VistaDia({
   doctores: AgendaDoctor[];
   doctoresTodos: AgendaDoctor[];
   esDoctor: boolean;
+  slug?: string;
 }) {
   const router = useRouter();
   const [drag, setDrag] = useState<Cita | null>(null);
   const [fantasma, setFantasma] = useState<Fantasma | null>(null);
   const permiteDrag = !esDoctor;
+
+  // ---- Línea de "ahora" (solo hoy) + auto-scroll a la hora actual ----
+  const esHoy = fechaISO === hoyLimaISO();
+  const [ahoraMin, setAhoraMin] = useState<number | null>(esHoy ? minutosAhoraLima() : null);
+  const lineaRef = useRef<HTMLDivElement>(null);
+  const scrollHecho = useRef(false);
+  useEffect(() => {
+    if (!esHoy) {
+      setAhoraMin(null);
+      return;
+    }
+    setAhoraMin(minutosAhoraLima());
+    const t = setInterval(() => setAhoraMin(minutosAhoraLima()), 60000);
+    return () => clearInterval(t);
+  }, [esHoy]);
+  useEffect(() => {
+    if (!esHoy || ahoraMin === null || scrollHecho.current) return;
+    scrollHecho.current = true;
+    const t = setTimeout(() => {
+      lineaRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 350);
+    return () => clearTimeout(t);
+  }, [esHoy, ahoraMin]);
 
   function iniciarDrag(cita: Cita, e: DragEvent<HTMLDivElement>) {
     if (!permiteDrag) return;
@@ -502,6 +551,7 @@ export function VistaDia({
   const columnas = [
     ...grupos.map((g, i) => ({
       id: g.doctor.id,
+      angosta: false,
       border: i > 0,
       header: (
         <>
@@ -516,6 +566,7 @@ export function VistaDia({
           color={g.doctor.color}
           fechaISO={fechaISO}
           doctoresTodos={doctoresTodos}
+          slug={slug}
           colId={g.doctor.id}
           doctorDestino={g.doctor.id}
           permiteDrag={permiteDrag}
@@ -533,6 +584,7 @@ export function VistaDia({
       ? [
           {
             id: "sin-asignar",
+            angosta: true,
             border: grupos.length > 0,
             header: (
               <>
@@ -547,6 +599,7 @@ export function VistaDia({
                 sinAsignar
                 fechaISO={fechaISO}
                 doctoresTodos={doctoresTodos}
+                slug={slug}
                 colId="sin-asignar"
                 doctorDestino={null}
                 permiteDrag={permiteDrag}
@@ -623,6 +676,9 @@ export function VistaDia({
                                 fecha={fechaISO}
                                 horaIni={c.horaIni}
                                 doctores={doctoresTodos}
+                                servicio={c.servicio}
+                                serviceId={c.serviceId}
+                                slug={slug}
                               />
                             ) : null}
                           </div>
@@ -639,7 +695,7 @@ export function VistaDia({
 
       {/* Grilla semanal/horaria: tablet y desktop */}
       <div className="hidden overflow-x-auto rounded-xl border bg-card sm:block">
-        <div className="flex min-w-[700px]">
+        <div className="relative flex min-w-[700px]">
           <div className="w-14 shrink-0">
             <div className="h-10 border-b" />
             {HORAS.map((h) => (
@@ -657,7 +713,11 @@ export function VistaDia({
           {columnas.map((col) => (
             <div
               key={col.id}
-              className={cn("flex min-w-[148px] flex-1 flex-col", col.border && "border-l")}
+              className={cn(
+                "flex flex-col",
+                col.angosta ? "w-60 flex-none" : "min-w-[148px] flex-1",
+                col.border && "border-l",
+              )}
             >
               <div className="flex h-10 items-center justify-center gap-2 border-b bg-muted/20 px-3">
                 {col.header}
@@ -665,6 +725,19 @@ export function VistaDia({
               {col.body}
             </div>
           ))}
+          {esHoy && ahoraMin !== null && ahoraMin >= INI_MS && ahoraMin < INI_MS + HORAS_MS ? (
+            <div
+              ref={lineaRef}
+              className="pointer-events-none absolute inset-x-0 z-30"
+              style={{ top: 40 + ((ahoraMin - INI_MS) / 60) * HORA_PX }}
+            >
+              <div className="relative border-t-2 border-red-500/80">
+                <span className="absolute -top-2.5 left-0 rounded-full bg-red-500 px-1.5 text-[9px] font-semibold tabular-nums text-white">
+                  {aHHMM(ahoraMin)}
+                </span>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </>
