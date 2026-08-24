@@ -7,6 +7,7 @@ import { Camera, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { EliminarAdjunto } from "./eliminar-adjunto";
 
 export type FotoGrupo = {
   tratamiento: string;
@@ -212,7 +213,7 @@ export function FotosCard({
                   {grupo.tratamiento || "General"}
                 </p>
                 <div
-                  className="grid gap-3"
+                  className="grid grid-cols-1 gap-3"
                   style={{ gridTemplateColumns: `repeat(${visibles.length || 1}, minmax(0, 1fr))` }}
                 >
                   {visibles.map((col) => {
@@ -233,44 +234,50 @@ export function FotosCard({
                           }}
                         >
                           {fotos.map((f) => (
-                            <a
-                              key={f.id}
-                              href={`/api/adjuntos/${f.id}?variant=preview`}
-                              target="_blank"
-                              rel="noreferrer"
-                              title={f.nombre}
-                              draggable={canEdit || undefined}
-                              onDragStart={(e) => {
-                                if (!canEdit) {
+                            <div key={f.id} className="relative min-w-0">
+                              <a
+                                href={`/api/adjuntos/${f.id}?variant=preview`}
+                                target="_blank"
+                                rel="noreferrer"
+                                title={f.nombre}
+                                draggable={canEdit || undefined}
+                                onDragStart={(e) => {
+                                  if (!canEdit) {
+                                    e.preventDefault();
+                                    return;
+                                  }
+                                  setArrastrando(f.id);
+                                  e.dataTransfer.effectAllowed = "move";
+                                  e.dataTransfer.setData("text/plain", f.id);
+                                }}
+                                onDragEnd={() => setArrastrando(null)}
+                                onDragOver={(e) => {
+                                  if (!canEdit || !arrastrando || arrastrando === f.id) return;
                                   e.preventDefault();
-                                  return;
-                                }
-                                setArrastrando(f.id);
-                                e.dataTransfer.effectAllowed = "move";
-                                e.dataTransfer.setData("text/plain", f.id);
-                              }}
-                              onDragEnd={() => setArrastrando(null)}
-                              onDragOver={(e) => {
-                                if (!canEdit || !arrastrando || arrastrando === f.id) return;
-                                e.preventDefault();
-                                e.dataTransfer.dropEffect = "move";
-                              }}
-                              onDrop={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                reordenar(grupo.tratamiento || "General", col.key, f.id);
-                              }}
-                              style={arrastrando === f.id ? { opacity: 0.4 } : undefined}
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element -- el optimizador de next/image no puede acceder al endpoint autenticado /api/adjuntos */}
-                              <img
-                                src={`/api/adjuntos/${f.id}?variant=thumb`}
-                                alt={f.nombre}
-                                loading="lazy"
-                                draggable={false}
-                                className="max-h-40 w-full cursor-grab rounded object-cover"
-                              />
-                            </a>
+                                  e.dataTransfer.dropEffect = "move";
+                                }}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  reordenar(grupo.tratamiento || "General", col.key, f.id);
+                                }}
+                                style={arrastrando === f.id ? { opacity: 0.4 } : undefined}
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element -- el optimizador de next/image no puede acceder al endpoint autenticado /api/adjuntos */}
+                                <img
+                                  src={`/api/adjuntos/${f.id}?variant=thumb`}
+                                  alt={f.nombre}
+                                  loading="lazy"
+                                  draggable={false}
+                                  className="max-h-40 w-full cursor-grab rounded object-cover"
+                                />
+                              </a>
+                              {canEdit ? (
+                                <div className="absolute right-1 top-1 rounded-md bg-card/90 shadow-sm">
+                                  <EliminarAdjunto adjuntoId={f.id} nombre={f.nombre} />
+                                </div>
+                              ) : null}
+                            </div>
                           ))}
                         </div>
                       </div>

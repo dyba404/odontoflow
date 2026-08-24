@@ -74,7 +74,8 @@ class LocalStorageDriver implements Storage {
 
   async delete(key: string): Promise<void> {
     try {
-      await unlink(this.segura(key, false));
+      // Path-safe: igual que las escrituras, solo se puede borrar dentro de la raíz.
+      await unlink(this.segura(key, true));
     } catch {
       return;
     }
@@ -227,4 +228,18 @@ export function getStorage(): Storage {
  */
 export function storagePara(storage: string | null | undefined): Storage {
   return storage === "s3" ? s3Storage() : localStorage();
+}
+
+/**
+ * Borra un adjunto y sus variantes de imagen (`*.thumb.webp` / `*.preview.webp`,
+ * convención de lib/attachments.ts). Best-effort: nunca lanza si alguno falta.
+ * Path-safe: el driver local resuelve dentro de `attachmentsRoot()`; nunca fuera.
+ */
+export async function eliminarAdjuntoYVariantes(
+  storage: Storage,
+  ruta: string | null | undefined,
+): Promise<void> {
+  if (!ruta) return;
+  const rutas = [ruta, `${ruta}.thumb.webp`, `${ruta}.preview.webp`];
+  await Promise.all(rutas.map((r) => storage.delete(r).catch(() => {})));
 }

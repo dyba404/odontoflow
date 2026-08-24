@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
-import { getDb, attachments } from "@odontoflow/db";
+import {
+  getDb,
+  attachments,
+  signedConsents,
+  budgetSignatures,
+  consentSigns,
+} from "@odontoflow/db";
 import { guardStaff, guardError } from "@/lib/auth";
 import { gatePlan, respuestaPlanInsuficiente } from "@/lib/plans";
 import { logAuditSesion } from "@/lib/audit";
 import { VARIANTES, variantesDe } from "@/lib/attachments";
-import { storagePara } from "@/lib/storage";
+import { storagePara, eliminarAdjuntoYVariantes } from "@/lib/storage";
 
 const MIME_FOTO = ["image/jpeg", "image/png", "image/webp"];
 const FOTO_TIPOS = ["antes", "despues", "progreso"] as const;
@@ -193,4 +199,65 @@ export async function PATCH(
     fotoOrden: row!.fotoOrden,
     tratamiento: row!.tratamiento,
   });
+}
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const g = await guardStaff("records.edit");
+  if (!g.ok) return NextResponse.json({ error: guardError(g) }, { status: g.status });
+  const planCheck = await gatePlan(g.team.id, "ficha_avanzada");
+  if (!planCheck.ok) return respuestaPlanInsuficiente(planCheck);
+
+  const db = getDb();
+  const [att] = await db
+    .select()
+    .from(attachments)
+    .where(and(eq(attachments.id, id), eq(attachments.tenantId, g.team.id)))
+    .limit(1);
+  if (!att) {
+    return NextResponse.json({ error: "no_encontrado" }, { status: 404 });
+  }
+
+  // FK sin cascade: consentimientos firmados, firmas de presupuesto y
+  // consentimientos v2 referencian el adjunto. Se bloquea su borrado.
+  const refs = await Promise.all([
+    db
+      .select({ id: signedConsents.id })
+      .from(signedConsents)
+      .where(eq(signedConsents.attachmentId, id))
+      .limit(1),
+    db
+      .select({ id: budgetSignatures.id })
+      .from(budgetSignatures)
+      .where(eq(budgetSignatures.attachmentId, id))
+      .limit(1),
+    db
+      .select({ id: consentSigns.id })
+      .from(consentSigns)
+      .where(eq(consentSigns.attachmentId, id))
+      .limit(1),
+  ]);
+  if (refs.some((r) => r.length > 0)) {
+    return NextResponse.json({ error: "adjunto_en_uso" }, { status: 409 });
+  }
+
+  await db
+    .delete(attachments)
+    .where(and(eq(attachments.id, id), eq(attachments.tenantId, g.team.id)));
+
+  // Archivo físico + variantes, best-effort y después de borrar la fila.
+  void eliminarAdjuntoYVariantes(storagePara(att.storage), att.storagePath).catch(() => {});
+
+  void logAuditSesion({
+    tenantId: g.team.id,
+    accion: "adjunto.eliminar",
+    entidad: "attachments",
+    entidadId: id,
+    payload: { nombre: att.nombre, tipo: att.tipo },
+  });
+
+  return NextResponse.json({ ok: true });
 }

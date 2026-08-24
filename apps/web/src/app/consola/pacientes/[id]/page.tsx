@@ -19,6 +19,7 @@ import { ConsentV2Card } from "./consent-v2-card";
 import { AsignacionesPaciente } from "@/app/consola/cuotas/asignaciones-paciente";
 import { NotaForm } from "./nota-form";
 import { AdjuntosUploader } from "./adjuntos-uploader";
+import { EliminarAdjunto } from "./eliminar-adjunto";
 import { ConsentDialog } from "./consent-dialog";
 import { EditDialog } from "./edit-dialog";
 import { RepresentanteDialog } from "./representante-dialog";
@@ -291,7 +292,7 @@ export default async function FichaPacientePage({
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-xl border bg-muted/30 p-4">
               <span className="text-xs text-muted-foreground">Visitas</span>
               <p className="mt-1 text-xl font-semibold tabular-nums">{citas.length}</p>
@@ -316,7 +317,7 @@ export default async function FichaPacientePage({
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="p-5 pb-4">
             <CardTitle className="text-sm font-medium">Historial de citas</CardTitle>
@@ -386,7 +387,7 @@ export default async function FichaPacientePage({
       </div>
 
       {pro ? (
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="p-5 pb-4">
             <CardTitle className="flex items-center gap-2 text-sm font-medium">
@@ -526,9 +527,12 @@ export default async function FichaPacientePage({
                         {a.nota ? ` · ${a.nota}` : ""}
                       </p>
                     </div>
-                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                      {fmtKB(a.sizeBytes)}
-                    </span>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        {fmtKB(a.sizeBytes)}
+                      </span>
+                      {canEdit ? <EliminarAdjunto adjuntoId={a.id} nombre={a.nombre} /> : null}
+                    </div>
                   </li>
                 ))}
               </ul>
