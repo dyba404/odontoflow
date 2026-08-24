@@ -72,11 +72,15 @@ export function ConsoleShell({
                 Ctrl K
               </kbd>
             </button>
-            <span className="hidden rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground sm:inline-block">
+            <span
+              className="hidden rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground sm:inline-block"
+              suppressHydrationWarning
+            >
               {new Intl.DateTimeFormat("es-PE", {
                 weekday: "short",
                 day: "numeric",
                 month: "short",
+                timeZone: "America/Lima",
               }).format(new Date())}
             </span>
           </div>

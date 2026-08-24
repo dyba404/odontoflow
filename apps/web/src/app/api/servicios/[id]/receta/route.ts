@@ -73,6 +73,7 @@ export async function PUT(
   if (!servicio) return NextResponse.json({ error: "servicio_no_encontrado" }, { status: 404 });
 
   const validos: Array<{ itemId: string; cantidad: number }> = [];
+  const sinDuplicados = new Map<string, number>();
   for (const m of body.materiales) {
     const cantidad = Number(m.cantidad);
     if (!m.itemId || !Number.isFinite(cantidad) || cantidad <= 0 || cantidad > 10000) {
@@ -84,26 +85,34 @@ export async function PUT(
       .where(and(eq(inventoryItems.id, m.itemId), eq(inventoryItems.tenantId, g.team.id), eq(inventoryItems.activo, true)))
       .limit(1);
     if (!item) return NextResponse.json({ error: "material_no_encontrado" }, { status: 400 });
-    validos.push({ itemId: item.id, cantidad });
+    // dedupe: si el ítem se repite, gana la última cantidad
+    sinDuplicados.set(item.id, cantidad);
   }
+  const finales = [...sinDuplicados.entries()].map(([itemId, cantidad]) => ({
+    itemId,
+    cantidad,
+  }));
 
-  await db.delete(serviceMaterials).where(eq(serviceMaterials.serviceId, servicio.id));
-  if (validos.length > 0) {
-    await db.insert(serviceMaterials).values(
-      validos.map((v) => ({
-        serviceId: servicio.id,
-        itemId: v.itemId,
-        cantidad: v.cantidad.toFixed(2),
-      })),
-    );
-  }
+  // transacción: el delete+insert es atómico (evita receta vacía si el insert falla)
+  await db.transaction(async (tx) => {
+    await tx.delete(serviceMaterials).where(eq(serviceMaterials.serviceId, servicio.id));
+    if (finales.length > 0) {
+      await tx.insert(serviceMaterials).values(
+        finales.map((v) => ({
+          serviceId: servicio.id,
+          itemId: v.itemId,
+          cantidad: v.cantidad.toFixed(2),
+        })),
+      );
+    }
+  });
 
   void logAuditSesion({
     tenantId: g.team.id,
     accion: "inventario.receta_guardar",
     entidad: "service_materials",
     entidadId: servicio.id,
-    payload: { servicio: servicio.nombre, materiales: validos.length },
+    payload: { servicio: servicio.nombre, materiales: finales.length },
   });
 
   return NextResponse.json({ ok: true });
