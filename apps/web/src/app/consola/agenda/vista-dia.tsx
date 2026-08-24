@@ -162,14 +162,23 @@ function ChipCita({
         borderLeftColor: sinAsignar ? undefined : color,
       }}
     >
-      {!corta ? (
-        <div className="text-[10px] font-medium tabular-nums text-muted-foreground">
-          {cita.horaIni.slice(0, 5)} – {cita.horaFin.slice(0, 5)}
+      {corta ? (
+        <div className={cn("flex min-w-0 items-baseline gap-1.5", accionable && "pr-7")}>
+          <span className="shrink-0 text-[10px] font-medium tabular-nums text-muted-foreground">
+            {cita.horaIni.slice(0, 5)}
+          </span>
+          <span className="truncate text-xs font-semibold">{cita.patientNombre}</span>
         </div>
-      ) : null}
-      <div className={cn("truncate text-xs font-semibold", accionable && "pr-7")}>
-        {cita.patientNombre}
-      </div>
+      ) : (
+        <>
+          <div className="text-[10px] font-medium tabular-nums text-muted-foreground">
+            {cita.horaIni.slice(0, 5)} – {cita.horaFin.slice(0, 5)}
+          </div>
+          <div className={cn("truncate text-xs font-semibold", accionable && "pr-7")}>
+            {cita.patientNombre}
+          </div>
+        </>
+      )}
       {pos.height > 66 ? (
         <div className="truncate text-[10px] text-muted-foreground">{cita.servicio}</div>
       ) : null}
