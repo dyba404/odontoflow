@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/console/page-header";
 import { EmptyState } from "@/components/console/empty-state";
+import { DataList, DataRow } from "@/components/console/data-list";
 import { ComprobanteDialog } from "./comprobante-dialog";
 import { EmitirButton } from "./emitir-button";
 import { BajaButton } from "./baja-button";
@@ -197,13 +198,13 @@ export default async function ComprobantesPage() {
             : "Emisión electrónica de boletas y facturas contra cada pago (envío a SUNAT)."
         }
         action={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
             {hasPermission(role, "reports.view_all") ? <ExportSunatButton /> : null}
-            <LogoComprobanteDialog hayLogo={hayLogo} />
+            <LogoComprobanteDialog hayLogo={hayLogo} className="w-full sm:w-auto" />
             {puedeConfigurar ? (
               <Link
                 href="/consola/config/fiscal"
-                className="inline-flex h-8 items-center gap-2 rounded-md border border-input bg-card px-3 text-xs font-medium shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground"
+                className="inline-flex h-8 items-center justify-center gap-2 rounded-md border border-input bg-card px-3 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground sm:justify-start"
               >
                 <Settings className="size-3.5" />
                 Configuración fiscal
@@ -213,152 +214,218 @@ export default async function ComprobantesPage() {
               pagos={pagosOpciones}
               serieSugerida="B001"
               correlativoSugerido={(ultimoBoleta ?? 0) + 1}
+              className="w-full sm:w-auto"
             />
           </div>
         }
       />
 
       <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nº</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Pago</TableHead>
-              <TableHead>Paciente</TableHead>
-              <TableHead>SUNAT</TableHead>
-              <TableHead className="hidden md:table-cell">Archivos</TableHead>
-              <TableHead className="hidden text-right md:table-cell">Emitido</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {lista.length === 0 ? (
+        {/* Lista compacta: móvil */}
+        <div className="p-4 pt-1 md:hidden">
+          {lista.length === 0 ? (
+            <EmptyState
+              icon={Receipt}
+              title="Aún no hay comprobantes"
+              description="Emite el primero asociándolo a un pago registrado en caja."
+            />
+          ) : (
+            <DataList className="py-1">
+              {lista.map((c) => (
+                <DataRow
+                  key={c.id}
+                  title={
+                    <span className="tabular-nums">
+                      {c.serie}-{String(c.correlativo).padStart(8, "0")}
+                    </span>
+                  }
+                  meta={
+                    <>
+                      <Badge variant={TIPO_BADGE[c.tipo] ?? "gray"} className="mr-1">
+                        {TIPO_LABEL[c.tipo] ?? c.tipo}
+                      </Badge>
+                      {c.patientNombre ?? "Sin paciente"}
+                      {" · "}
+                      {fechaCorta(c.createdAt)}
+                      {" · "}
+                      <Badge variant={SUNAT_BADGE[c.sunatEstado] ?? "gray"}>
+                        {SUNAT_LABEL[c.sunatEstado] ?? c.sunatEstado}
+                      </Badge>
+                      <Badge variant={METODO_BADGE[c.metodo] ?? "gray"}>
+                        {METODO_LABEL[c.metodo] ?? c.metodo}
+                      </Badge>
+                      {c.afectadoSerie && c.afectadoCorrelativo ? (
+                        <span>
+                          anula {c.afectadoSerie}-{String(c.afectadoCorrelativo).padStart(8, "0")}
+                        </span>
+                      ) : null}
+                    </>
+                  }
+                  trailing={
+                    <span className="text-sm font-semibold tabular-nums">
+                      {fmtPEN(Number(c.monto))}
+                    </span>
+                  }
+                  actions={<EmitirButton id={c.id} sunatEstado={c.sunatEstado} />}
+                />
+              ))}
+            </DataList>
+          )}
+        </div>
+
+        {/* Tabla: tablet y desktop */}
+        <div className="hidden md:block">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={8}>
-                  <EmptyState
-                    icon={Receipt}
-                    title="Aún no hay comprobantes"
-                    description="Emite el primero asociándolo a un pago registrado en caja."
-                  />
-                </TableCell>
+                <TableHead>Nº</TableHead>
+                <TableHead className="hidden lg:table-cell">Tipo</TableHead>
+                <TableHead>Pago</TableHead>
+                <TableHead>Paciente</TableHead>
+                <TableHead>SUNAT</TableHead>
+                <TableHead className="hidden lg:table-cell">Archivos</TableHead>
+                <TableHead className="hidden text-right lg:table-cell">Emitido</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
-            ) : (
-              lista.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell className="whitespace-nowrap text-sm font-medium tabular-nums">
-                    {c.serie}-{String(c.correlativo).padStart(8, "0")}
-                    {c.afectadoSerie && c.afectadoCorrelativo ? (
-                      <span className="ml-1.5 text-xs font-normal text-muted-foreground">
-                        anula {c.afectadoSerie}-{String(c.afectadoCorrelativo).padStart(8, "0")}
-                      </span>
-                    ) : null}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={TIPO_BADGE[c.tipo] ?? "gray"}>
-                      {TIPO_LABEL[c.tipo] ?? c.tipo}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-sm tabular-nums">
-                    <span className="font-semibold">{fmtPEN(Number(c.monto))}</span>
-                    <Badge variant={METODO_BADGE[c.metodo] ?? "gray"} className="ml-2">
-                      {METODO_LABEL[c.metodo] ?? c.metodo}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {c.patientNombre ?? (
-                      <span className="text-muted-foreground">Sin paciente</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={SUNAT_BADGE[c.sunatEstado] ?? "gray"}>
-                      {SUNAT_LABEL[c.sunatEstado] ?? c.sunatEstado}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden whitespace-nowrap text-xs md:table-cell">
-                    {c.xmlUrl || c.cdrUrl || c.sunatEstado !== "manual" ? (
-                      <span className="inline-flex items-center gap-2">
-                        {c.xmlUrl ? (
-                          <a
-                            href={urlArchivo(c.xmlUrl)}
-                            download
-                            className="inline-flex items-center gap-1 text-primary hover:underline"
-                          >
-                            <Download className="size-3.5" />
-                            XML
-                          </a>
-                        ) : null}
-                        {c.cdrUrl ? (
-                          <a
-                            href={urlArchivo(c.cdrUrl)}
-                            download
-                            className="inline-flex items-center gap-1 text-primary hover:underline"
-                          >
-                            <Download className="size-3.5" />
-                            CDR
-                          </a>
-                        ) : null}
-                        <a
-                          href={`/api/caja/comprobantes/${c.id}/pdf`}
-                          download
-                          className="inline-flex items-center gap-1 text-primary hover:underline"
-                        >
-                          <Download className="size-3.5" />
-                          PDF
-                        </a>
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="hidden whitespace-nowrap text-right text-xs tabular-nums text-muted-foreground md:table-cell">
-                    {fechaCorta(c.createdAt)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex flex-wrap items-center justify-end gap-1.5">
-                      <EmitirButton id={c.id} sunatEstado={c.sunatEstado} />
-                      {c.sunatEstado === "pendiente_envio" && c.emitidaAt ? (
-                        <ConsultarCdrButton
-                          id={c.id}
-                          numero={`${c.serie}-${String(c.correlativo).padStart(8, "0")}`}
-                        />
-                      ) : null}
-                      {c.tipo === "boleta" || c.tipo === "factura" ? (
-                        <BajaButton
-                          id={c.id}
-                          serie={c.serie}
-                          correlativo={c.correlativo}
-                          sunatEstado={c.sunatEstado}
-                          tipo={c.tipo}
-                          emitidaAt={c.emitidaAt ? c.emitidaAt.toISOString() : null}
-                          bajaTicket={c.bajaTicket}
-                        />
-                      ) : null}
-                      {c.sunatEstado === "manual" ? (
-                        <>
-                          <EditarComprobanteManual
-                            id={c.id}
-                            numero={`${c.serie}-${String(c.correlativo).padStart(8, "0")}`}
-                            serieInicial={c.serie}
-                            correlativoInicial={c.correlativo}
-                            modo="editar"
-                          />
-                          <EditarComprobanteManual
-                            id={c.id}
-                            numero={`${c.serie}-${String(c.correlativo).padStart(8, "0")}`}
-                            serieInicial={c.serie}
-                            correlativoInicial={c.correlativo}
-                            modo="anular"
-                          />
-                        </>
-                      ) : null}
-                    </div>
+            </TableHeader>
+            <TableBody>
+              {lista.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8}>
+                    <EmptyState
+                      icon={Receipt}
+                      title="Aún no hay comprobantes"
+                      description="Emite el primero asociándolo a un pago registrado en caja."
+                    />
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                lista.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="whitespace-nowrap text-sm font-medium tabular-nums">
+                      {c.serie}-{String(c.correlativo).padStart(8, "0")}
+                      {c.afectadoSerie && c.afectadoCorrelativo ? (
+                        <span className="ml-1.5 hidden text-xs font-normal text-muted-foreground xl:inline">
+                          anula {c.afectadoSerie}-{String(c.afectadoCorrelativo).padStart(8, "0")}
+                        </span>
+                      ) : null}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <Badge variant={TIPO_BADGE[c.tipo] ?? "gray"}>
+                        {TIPO_LABEL[c.tipo] ?? c.tipo}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-sm tabular-nums">
+                      <span className="font-semibold">{fmtPEN(Number(c.monto))}</span>
+                      <Badge variant={METODO_BADGE[c.metodo] ?? "gray"} className="ml-2 hidden lg:inline-flex">
+                        {METODO_LABEL[c.metodo] ?? c.metodo}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-[140px] text-sm lg:max-w-none">
+                      <span className="block truncate">
+                        {c.patientNombre ?? (
+                          <span className="text-muted-foreground">Sin paciente</span>
+                        )}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={SUNAT_BADGE[c.sunatEstado] ?? "gray"}>
+                        {SUNAT_LABEL[c.sunatEstado] ?? c.sunatEstado}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden whitespace-nowrap text-xs lg:table-cell">
+                      {c.xmlUrl || c.cdrUrl || c.sunatEstado !== "manual" ? (
+                        <span className="inline-flex items-center gap-2">
+                          {c.xmlUrl ? (
+                            <a
+                              href={urlArchivo(c.xmlUrl)}
+                              download
+                              className="inline-flex items-center gap-1 text-primary hover:underline"
+                            >
+                              <Download className="size-3.5" />
+                              XML
+                            </a>
+                          ) : null}
+                          {c.cdrUrl ? (
+                            <a
+                              href={urlArchivo(c.cdrUrl)}
+                              download
+                              className="inline-flex items-center gap-1 text-primary hover:underline"
+                            >
+                              <Download className="size-3.5" />
+                              CDR
+                            </a>
+                          ) : null}
+                          <a
+                            href={`/api/caja/comprobantes/${c.id}/pdf`}
+                            download
+                            className="inline-flex items-center gap-1 text-primary hover:underline"
+                          >
+                            <Download className="size-3.5" />
+                            PDF
+                          </a>
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden whitespace-nowrap text-right text-xs tabular-nums text-muted-foreground lg:table-cell">
+                      {fechaCorta(c.createdAt)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                        <EmitirButton id={c.id} sunatEstado={c.sunatEstado} />
+                        {c.sunatEstado === "pendiente_envio" && c.emitidaAt ? (
+                          <span className="hidden lg:inline">
+                            <ConsultarCdrButton
+                              id={c.id}
+                              numero={`${c.serie}-${String(c.correlativo).padStart(8, "0")}`}
+                            />
+                          </span>
+                        ) : null}
+                        {c.tipo === "boleta" || c.tipo === "factura" ? (
+                          <span className="hidden lg:inline">
+                            <BajaButton
+                              id={c.id}
+                              serie={c.serie}
+                              correlativo={c.correlativo}
+                              sunatEstado={c.sunatEstado}
+                              tipo={c.tipo}
+                              emitidaAt={c.emitidaAt ? c.emitidaAt.toISOString() : null}
+                              bajaTicket={c.bajaTicket}
+                            />
+                          </span>
+                        ) : null}
+                        {c.sunatEstado === "manual" ? (
+                          <>
+                            <span className="hidden lg:inline">
+                              <EditarComprobanteManual
+                                id={c.id}
+                                numero={`${c.serie}-${String(c.correlativo).padStart(8, "0")}`}
+                                serieInicial={c.serie}
+                                correlativoInicial={c.correlativo}
+                                modo="editar"
+                              />
+                            </span>
+                            <span className="hidden lg:inline">
+                              <EditarComprobanteManual
+                                id={c.id}
+                                numero={`${c.serie}-${String(c.correlativo).padStart(8, "0")}`}
+                                serieInicial={c.serie}
+                                correlativoInicial={c.correlativo}
+                                modo="anular"
+                              />
+                            </span>
+                          </>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </Card>
     </div>
   );

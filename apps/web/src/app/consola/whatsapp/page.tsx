@@ -9,14 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/console/page-header";
 import { EmptyState } from "@/components/console/empty-state";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataList, DataRow } from "@/components/console/data-list";
 import { getSession } from "@/lib/auth";
 import { getDefaultTeam } from "@/lib/console-data";
 import { gatePlan } from "@/lib/plans";
@@ -123,68 +116,50 @@ export default async function WhatsAppPage({
         </Card>
       ) : (
         <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Sentido</TableHead>
-                <TableHead>Paciente</TableHead>
-                <TableHead className="hidden md:table-cell">Número</TableHead>
-                <TableHead>Mensaje</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="hidden md:table-cell">Momento</TableHead>
-                <TableHead className="w-24" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <div className="p-4">
+            <DataList>
               {filas.map((f) => (
-                <TableRow key={f.id}>
-                  <TableCell>
-                    <Badge variant={f.direction === "in" ? "blue" : "teal"}>
-                      {f.direction === "in" ? "Entrante" : "Saliente"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {f.patientNombre ? (
-                      <span className="text-sm font-medium">{f.patientNombre}</span>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="hidden whitespace-nowrap text-xs tabular-nums text-muted-foreground md:table-cell">
-                    {f.phoneNumber ?? f.waId ?? "—"}
-                  </TableCell>
-                  <TableCell className="max-w-[320px]">
-                    <p className="whitespace-pre-wrap text-sm" title={f.body ?? undefined}>
-                      {f.body ? (f.body.length > 140 ? `${f.body.slice(0, 140)}…` : f.body) : "—"}
-                    </p>
-                  </TableCell>
-                  <TableCell>
-                    {f.error ? (
+                <DataRow
+                  key={f.id}
+                  title={
+                    <span className="flex items-center gap-2">
+                      <Badge variant={f.direction === "in" ? "blue" : "teal"}>
+                        {f.direction === "in" ? "Entrante" : "Saliente"}
+                      </Badge>
+                      <span className="truncate">{f.patientNombre ?? "—"}</span>
+                    </span>
+                  }
+                  meta={
+                    <>
+                      {f.body ? (f.body.length > 120 ? `${f.body.slice(0, 120)}…` : f.body) : "—"}
+                      <span className="mx-1.5">·</span>
+                      <span title={format(f.createdAt, "d MMM yyyy HH:mm")}>
+                        {formatDistanceToNow(f.createdAt, { addSuffix: true, locale: es })}
+                      </span>
+                    </>
+                  }
+                  trailing={
+                    f.error ? (
                       <Badge variant="red" title={f.error}>
                         Error
                       </Badge>
                     ) : (
                       <Badge variant="green">{f.estado}</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="hidden whitespace-nowrap tabular-nums md:table-cell">
-                    <span title={format(f.createdAt, "d MMM yyyy HH:mm")}>
-                      {formatDistanceToNow(f.createdAt, { addSuffix: true, locale: es })}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {(f.waId || f.phoneNumber) && (
+                    )
+                  }
+                  actions={
+                    (f.waId || f.phoneNumber) ? (
                       <ResponderButton
                         waId={(f.waId ?? f.phoneNumber)!}
                         patientId={f.patientId}
                         patientNombre={f.patientNombre}
                       />
-                    )}
-                  </TableCell>
-                </TableRow>
+                    ) : null
+                  }
+                />
               ))}
-            </TableBody>
-          </Table>
+            </DataList>
+          </div>
           <WhatsappPaginacion direccion={direccion} offset={offset} total={total} />
         </Card>
       )}

@@ -4,6 +4,7 @@ import { QrCode } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/console/page-header";
 import { EmptyState } from "@/components/console/empty-state";
+import { DataList, DataRow } from "@/components/console/data-list";
 import {
   Table,
   TableBody,
@@ -120,45 +121,82 @@ export default async function CuotasConciliacionPage() {
             description="Cuando un paciente pague una cuota por QR, aparecerá aquí para verificar el pago."
           />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Paciente</TableHead>
-                <TableHead>Método</TableHead>
-                <TableHead className="hidden md:table-cell">Referencia</TableHead>
-                <TableHead className="text-right">Monto</TableHead>
-                <TableHead className="hidden md:table-cell">Fecha</TableHead>
-                <TableHead className="text-right">Acción</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            {/* Lista compacta: móvil y tablet */}
+            <DataList className="p-4 pt-2 lg:hidden">
               {pendientes.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="text-sm font-medium">
-                    {p.patientNombre ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-sm capitalize">{p.metodo}</TableCell>
-                  <TableCell className="hidden text-sm tabular-nums md:table-cell">{p.referencia}</TableCell>
-                  <TableCell className="text-right text-sm font-semibold tabular-nums">
-                    {fmtPEN(Number(p.monto))}
-                  </TableCell>
-                  <TableCell className="hidden whitespace-nowrap text-sm text-muted-foreground md:table-cell">
-                    {p.createdAt
-                      ? new Intl.DateTimeFormat("es-PE", {
-                          day: "2-digit",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }).format(new Date(p.createdAt))
-                      : "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <ConciliarPago paymentId={p.id} monto={Number(p.monto)} />
-                  </TableCell>
-                </TableRow>
+                <DataRow
+                  key={p.id}
+                  title={
+                    <span className="truncate">{p.patientNombre ?? "—"}</span>
+                  }
+                  meta={
+                    <>
+                      <span className="capitalize">{p.metodo}</span>
+                      {" · "}
+                      {p.referencia}
+                      {" · "}
+                      {p.createdAt
+                        ? new Intl.DateTimeFormat("es-PE", {
+                            day: "2-digit",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }).format(new Date(p.createdAt))
+                        : "—"}
+                    </>
+                  }
+                  trailing={
+                    <span className="text-sm font-semibold tabular-nums">
+                      {fmtPEN(Number(p.monto))}
+                    </span>
+                  }
+                  actions={<ConciliarPago paymentId={p.id} monto={Number(p.monto)} />}
+                />
               ))}
-            </TableBody>
-          </Table>
+            </DataList>
+
+            {/* Tabla: desktop */}
+            <div className="hidden lg:block">
+              <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Paciente</TableHead>
+                  <TableHead>Método</TableHead>
+                  <TableHead>Referencia</TableHead>
+                  <TableHead className="text-right">Monto</TableHead>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead className="text-right">Acción</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pendientes.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="text-sm font-medium">{p.patientNombre ?? "—"}</TableCell>
+                    <TableCell className="text-sm capitalize">{p.metodo}</TableCell>
+                    <TableCell className="text-sm tabular-nums">{p.referencia}</TableCell>
+                    <TableCell className="text-right text-sm font-semibold tabular-nums">
+                      {fmtPEN(Number(p.monto))}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                      {p.createdAt
+                        ? new Intl.DateTimeFormat("es-PE", {
+                            day: "2-digit",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }).format(new Date(p.createdAt))
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <ConciliarPago paymentId={p.id} monto={Number(p.monto)} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </Card>
 
@@ -167,42 +205,75 @@ export default async function CuotasConciliacionPage() {
           <div className="p-5 pb-2">
             <p className="text-sm font-medium">Historial reciente</p>
           </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Paciente</TableHead>
-                <TableHead className="hidden md:table-cell">Referencia</TableHead>
-                <TableHead className="text-right">Monto</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="hidden md:table-cell">Fecha</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {historial.map((h) => (
-                <TableRow key={h.id}>
-                  <TableCell className="text-sm">{h.patientNombre ?? "—"}</TableCell>
-                  <TableCell className="hidden text-sm tabular-nums md:table-cell">{h.referencia}</TableCell>
-                  <TableCell className="text-right text-sm tabular-nums">
-                    {fmtPEN(Number(h.monto))}
-                  </TableCell>
-                  <TableCell className="text-sm">
+
+          {/* Lista compacta: móvil y tablet */}
+          <DataList className="px-4 pb-4 lg:hidden">
+            {historial.map((h) => (
+              <DataRow
+                key={h.id}
+                title={<span className="truncate">{h.patientNombre ?? "—"}</span>}
+                meta={
+                  <>
+                    {h.referencia}
+                    {" · "}
+                    {h.conciliado}
                     {h.estado === "valido" ? (
-                      <span className="rounded-full bg-emerald-500/14 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                      <span className="ml-1.5 rounded-full bg-emerald-500/14 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
                         Conciliado
                       </span>
                     ) : (
-                      <span className="rounded-full bg-red-500/12 px-2 py-0.5 text-[11px] font-medium text-red-700">
+                      <span className="ml-1.5 rounded-full bg-red-500/12 px-2 py-0.5 text-[11px] font-medium text-red-700">
                         Rechazado
                       </span>
                     )}
-                  </TableCell>
-                  <TableCell className="hidden whitespace-nowrap text-sm text-muted-foreground md:table-cell">
-                    {h.conciliado}
-                  </TableCell>
+                  </>
+                }
+                trailing={
+                  <span className="text-sm tabular-nums">{fmtPEN(Number(h.monto))}</span>
+                }
+              />
+            ))}
+          </DataList>
+
+          {/* Tabla: desktop */}
+          <div className="hidden px-0 pb-2 lg:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Paciente</TableHead>
+                  <TableHead>Referencia</TableHead>
+                  <TableHead className="text-right">Monto</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Fecha</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {historial.map((h) => (
+                  <TableRow key={h.id}>
+                    <TableCell className="text-sm">{h.patientNombre ?? "—"}</TableCell>
+                    <TableCell className="text-sm tabular-nums">{h.referencia}</TableCell>
+                    <TableCell className="text-right text-sm tabular-nums">
+                      {fmtPEN(Number(h.monto))}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {h.estado === "valido" ? (
+                        <span className="rounded-full bg-emerald-500/14 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                          Conciliado
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-red-500/12 px-2 py-0.5 text-[11px] font-medium text-red-700">
+                          Rechazado
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                      {h.conciliado}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </Card>
       )}
     </div>

@@ -9,6 +9,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/console/page-header";
 import { EmptyState } from "@/components/console/empty-state";
+import { DataList, DataRow } from "@/components/console/data-list";
 import { RegistrarPago } from "@/app/consola/caja/registrar-pago";
 import { CierreDialog } from "@/app/consola/caja/components/cierre-dialog";
 import { AnularPago } from "@/app/consola/caja/components/anular-pago";
@@ -145,7 +146,7 @@ export default async function CajaPage() {
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className="flex min-h-[100px] flex-col justify-between rounded-2xl border bg-card p-5">
           <span className="text-xs text-muted-foreground">Total del día</span>
           <div className="mt-2">
@@ -179,19 +180,84 @@ export default async function CajaPage() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card>
             <CardHeader className="p-5 pb-4">
               <CardTitle className="text-sm font-medium">Movimientos</CardTitle>
             </CardHeader>
-            <Table>
+
+            {/* Lista compacta: móvil y tablet */}
+            <div className="p-4 pt-0 lg:hidden">
+              {todos.length === 0 ? (
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  Sin pagos todavía. Registra el primero desde el panel derecho.
+                </p>
+              ) : (
+                <DataList>
+                  {todos.map((p) => {
+                    const anulado = p.estado === "anulado";
+                    return (
+                      <DataRow
+                        key={p.id}
+                        muted={anulado}
+                        leading={<Avatar name={p.patientNombre ?? "?"} className="size-8 text-xs" />}
+                        title={
+                          <span className="flex items-center gap-2">
+                            <span className="truncate">{p.patientNombre ?? "Sin paciente"}</span>
+                            <Badge variant={METODO_BADGE[p.metodo] ?? "gray"}>
+                              {METODO_LABEL[p.metodo] ?? p.metodo}
+                            </Badge>
+                          </span>
+                        }
+                        meta={
+                          <>
+                            {p.createdAt ? `${fmtDiaRelativo(p.createdAt)} · ${fmtHora(p.createdAt)}` : "—"}
+                            {p.referencia ? <> · ref {p.referencia}</> : null}
+                          </>
+                        }
+                        trailing={
+                          anulado ? (
+                            <Badge variant="gray">Anulado</Badge>
+                          ) : (
+                            <span className="text-sm font-semibold tabular-nums">
+                              {fmtPEN(Number(p.monto))}
+                            </span>
+                          )
+                        }
+                        actions={
+                          anulado ? null : (
+                            <>
+                              <SplitAseguradora
+                                pagoId={p.id}
+                                monto={Number(p.monto)}
+                                paciente={p.patientNombre}
+                                aseguradoras={aseguradoras}
+                              />
+                              <AnularPago
+                                pagoId={p.id}
+                                monto={Number(p.monto)}
+                                paciente={p.patientNombre}
+                              />
+                            </>
+                          )
+                        }
+                      />
+                    );
+                  })}
+                </DataList>
+              )}
+            </div>
+
+            {/* Tabla: desktop */}
+            <div className="hidden lg:block">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Hora</TableHead>
                   <TableHead>Paciente</TableHead>
                   <TableHead>Método</TableHead>
-                  <TableHead className="hidden md:table-cell">Referencia</TableHead>
+                  <TableHead>Referencia</TableHead>
                   <TableHead className="text-right">Monto</TableHead>
                   <TableHead className="text-right">Estado</TableHead>
                 </TableRow>
@@ -199,9 +265,9 @@ export default async function CajaPage() {
               <TableBody>
                 {todos.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
-                      Sin pagos todavía. Registra el primero desde el panel derecho.
-                    </TableCell>
+                      <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                        Sin pagos todavía. Registra el primero desde el panel derecho.
+                      </TableCell>
                   </TableRow>
                 ) : (
                   todos.map((p) => {
@@ -226,7 +292,7 @@ export default async function CajaPage() {
                             {METODO_LABEL[p.metodo] ?? p.metodo}
                           </Badge>
                         </TableCell>
-                        <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
+                        <TableCell className="text-xs text-muted-foreground">
                           {p.referencia ?? "—"}
                         </TableCell>
                         <TableCell
@@ -260,22 +326,72 @@ export default async function CajaPage() {
                   })
                 )}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
           </Card>
 
           <Card>
             <CardHeader className="p-5 pb-4">
               <CardTitle className="text-sm font-medium">Historial de cierres</CardTitle>
             </CardHeader>
-            <Table>
+
+            {/* Lista compacta: móvil y tablet */}
+            <div className="p-4 pt-0 lg:hidden">
+              {cierres.length === 0 ? (
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  Sin cierres registrados todavía.
+                </p>
+              ) : (
+                <DataList>
+                  {cierres.map((c) => {
+                    const diff = Number(c.diferencia);
+                    const cerrada = c.estado === "cerrado";
+                    return (
+                      <DataRow
+                        key={c.id}
+                        title={<span className="truncate">{fmtFecha(c.fecha)}</span>}
+                        meta={
+                          <>
+                            Sistema {fmtPEN(Number(c.cierreSistema))} · Real{" "}
+                            {fmtPEN(Number(c.cierreReal))}
+                          </>
+                        }
+                        trailing={
+                          <span
+                            className={`text-sm font-semibold tabular-nums ${
+                              Math.abs(diff) < 0.005 ? "text-emerald-600" : "text-red-600"
+                            }`}
+                          >
+                            {fmtPEN(diff)}
+                          </span>
+                        }
+                        actions={
+                          cerrada && role === "owner" ? (
+                            <ReabrirCierre cierreId={c.id} fecha={fmtFecha(c.fecha)} />
+                          ) : cerrada ? (
+                            <Badge variant="green">Cerrada</Badge>
+                          ) : (
+                            <Badge variant="amber">Reabierta</Badge>
+                          )
+                        }
+                      />
+                    );
+                  })}
+                </DataList>
+              )}
+            </div>
+
+            {/* Tabla: desktop */}
+            <div className="hidden lg:block">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Fecha</TableHead>
                   <TableHead className="text-right">Cierre sistema</TableHead>
                   <TableHead className="text-right">Cierre real</TableHead>
                   <TableHead className="text-right">Diferencia</TableHead>
-                  <TableHead className="hidden md:table-cell">Cerró</TableHead>
-                  <TableHead className="hidden text-right md:table-cell">Hora</TableHead>
+                  <TableHead className="hidden xl:table-cell">Cerró</TableHead>
+                  <TableHead className="hidden text-right xl:table-cell">Hora</TableHead>
                   <TableHead className="text-right">Estado</TableHead>
                 </TableRow>
               </TableHeader>
@@ -308,10 +424,10 @@ export default async function CajaPage() {
                         >
                           {fmtPEN(diff)}
                         </TableCell>
-                        <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
+                        <TableCell className="hidden text-sm text-muted-foreground xl:table-cell">
                           {c.cerradoPorNombre ?? "—"}
                         </TableCell>
-                        <TableCell className="hidden text-right text-xs tabular-nums text-muted-foreground md:table-cell">
+                        <TableCell className="hidden text-right text-xs tabular-nums text-muted-foreground xl:table-cell">
                           {c.createdAt ? fmtHora(c.createdAt) : "—"}
                         </TableCell>
                         <TableCell className="text-right">
@@ -328,7 +444,8 @@ export default async function CajaPage() {
                   })
                 )}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
           </Card>
         </div>
 

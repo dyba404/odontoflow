@@ -7,6 +7,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { PageHeader } from "@/components/console/page-header";
 import { EmptyState } from "@/components/console/empty-state";
+import { DataList, DataRow } from "@/components/console/data-list";
 import { cn } from "@/lib/utils";
 import { SolicitudActions } from "@/app/consola/solicitudes/solicitud-actions";
 import { getDefaultTeam, solicitudesActivas } from "@/lib/console-data";
@@ -84,65 +85,91 @@ export default async function SolicitudesPage() {
         </Card>
       ) : (
         <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Paciente</TableHead>
-                <TableHead>Servicio</TableHead>
-                <TableHead>Propone</TableHead>
-                <TableHead className="hidden md:table-cell">Preferencia</TableHead>
-                <TableHead>Monto</TableHead>
-                <TableHead className="text-right">Acción</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {solicitudes.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar name={s.patientNombre} />
-                      <div>
-                        <p className="text-sm font-medium">{s.patientNombre}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {s.patientCelular}
-                        </p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="teal">{s.servicio}</Badge>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {s.servicioDuracion} min
-                    </p>
-                  </TableCell>
-                  <TableCell>
-                    <p className="text-sm">{s.fecha}</p>
-                    <p className="text-xs font-medium text-amber-600">
-                      {s.horaIni} · {diasRestantes(s.fecha)}
-                    </p>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {s.preferredDoctorNombre ? (
-                      <span className="text-sm">{s.preferredDoctorNombre}</span>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        Cualquier doctor
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-sm font-medium tabular-nums">
+          {/* Lista compacta: móvil y tablet */}
+          <DataList className="p-4 pt-2 lg:hidden">
+            {solicitudes.map((s) => (
+              <DataRow
+                key={s.id}
+                leading={<Avatar name={s.patientNombre} className="size-9 text-xs" />}
+                title={
+                  <span className="flex items-center gap-2">
+                    <span className="truncate">{s.patientNombre}</span>
+                    <Badge variant="teal" className="max-w-[140px]">
+                      <span className="truncate">{s.servicio}</span>
+                    </Badge>
+                  </span>
+                }
+                meta={
+                  <>
+                    {s.fecha} · {s.horaIni} ({diasRestantes(s.fecha)})
+                    {" · "}
+                    {s.servicioDuracion} min
+                    {" · "}
                     S/ {Number(s.monto).toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <SolicitudActions
-                      citaId={s.id}
-                      paciente={s.patientNombre}
-                    />
-                  </TableCell>
+                    {s.preferredDoctorNombre ? <> · {s.preferredDoctorNombre}</> : null}
+                  </>
+                }
+                trailing={<Badge variant="amber">{s.horaIni}</Badge>}
+                actions={<SolicitudActions citaId={s.id} paciente={s.patientNombre} />}
+              />
+            ))}
+          </DataList>
+
+          {/* Tabla: desktop */}
+          <div className="hidden lg:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Paciente</TableHead>
+                  <TableHead>Servicio</TableHead>
+                  <TableHead>Propone</TableHead>
+                  <TableHead>Preferencia</TableHead>
+                  <TableHead>Monto</TableHead>
+                  <TableHead className="text-right">Acción</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {solicitudes.map((s) => (
+                  <TableRow key={s.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar name={s.patientNombre} />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{s.patientNombre}</p>
+                          <p className="text-xs text-muted-foreground">{s.patientCelular}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="teal" className="max-w-[160px]">
+                        <span className="truncate">{s.servicio}</span>
+                      </Badge>
+                      <p className="mt-1 text-xs text-muted-foreground">{s.servicioDuracion} min</p>
+                    </TableCell>
+                    <TableCell>
+                      <p className="text-sm">{s.fecha}</p>
+                      <p className="text-sm font-medium text-amber-600">
+                        {s.horaIni} · {diasRestantes(s.fecha)}
+                      </p>
+                    </TableCell>
+                    <TableCell>
+                      {s.preferredDoctorNombre ? (
+                        <span className="text-sm">{s.preferredDoctorNombre}</span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Cualquier doctor</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm font-medium tabular-nums">
+                      S/ {Number(s.monto).toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <SolicitudActions citaId={s.id} paciente={s.patientNombre} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </Card>
       )}
     </div>
