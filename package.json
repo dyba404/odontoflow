@@ -17,6 +17,7 @@
     "test:e2e:vivo": "npm run test:e2e:vivo -w @odontoflow/web",
     "test:e2e:vivo-serie": "npm run test:e2e:vivo-serie -w @odontoflow/web",
     "test:e2e:admin": "npm run test:e2e:admin -w @odontoflow/web",
+    "e2e:funcional": "node scripts/e2e-funcional.js",
     "of:up": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/of.ps1 up",
     "of:down": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/of.ps1 down",
     "of:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/of.ps1 status",
