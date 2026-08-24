@@ -90,7 +90,7 @@ export default async function NotificacionesConfigPage() {
         digestDiario={settings?.digestDiario ?? true}
       />
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="p-5 pb-4">
             <CardTitle className="text-sm font-medium">Cómo funciona cada aviso</CardTitle>

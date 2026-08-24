@@ -130,7 +130,7 @@ export default async function SucursalesPage() {
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {todas.map((b) => (
           <Card key={b.id}>
             <CardHeader className="flex-row items-center justify-between space-y-0">

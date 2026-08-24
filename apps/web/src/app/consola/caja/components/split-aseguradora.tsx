@@ -85,7 +85,7 @@ export function SplitAseguradora({
         disabled={aseguradoras.length === 0}
       >
         <ShieldPlus className="size-3.5" />
-        Aseguradora
+        <span className="hidden sm:inline">Aseguradora</span>
       </Button>
       <Dialog
         open={open}

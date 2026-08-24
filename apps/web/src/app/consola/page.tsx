@@ -225,7 +225,7 @@ export default async function ConsolaPage() {
         </Card>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <Card className="lg:col-span-3">
           <CardHeader className="flex-row items-center justify-between space-y-0 p-5 pb-4">
             <CardTitle className="text-sm font-medium">Agenda de hoy</CardTitle>

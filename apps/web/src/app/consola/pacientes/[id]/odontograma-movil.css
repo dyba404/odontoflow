@@ -111,3 +111,59 @@
   padding: 12px;
   padding-top: max(12px, env(safe-area-inset-top));
 }
+
+/*
+ * Header de la carta en móvil: .chart-header del vendor es flex sin wrap;
+ * con ~375px comprimía el título "Carta dental" (y su hint) a una columna
+ * de ~70px y cortaba las acciones (Estado/Plan + iconos) en el borde.
+ * El bloque de título pasa a línea propia y las acciones bajan debajo.
+ */
+@media (max-width: 600px) {
+  .odontogram-root .chart > .chart-header {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .odontogram-root .chart > .chart-header > div:first-child {
+    flex: 1 1 100%;
+  }
+}
+
+/*
+ * Tablet (601-1100px): la grilla de 16 columnas impone 16x36px + gaps =
+ * ~656px mínimos, apenas más que el ancho útil → scrollbar permanente.
+ * Con minmax(0,1fr) la boca completa siempre cabe sin scroll; las celdas
+ * quedan en ~34-38px, operables con dedo. No aplica en modo arco
+ * segmentado (ya redefinido a 8 columnas por <=600px).
+ */
+@media (min-width: 601px) and (max-width: 1100px) {
+  .odontogram-root .tooth-grid:not([class*="odon-arch-"]) {
+    grid-template-columns: repeat(16, minmax(0, 1fr));
+  }
+}
+
+/*
+ * ===== Vista "Ambas" apilada (<=600px): boca completa SIN scroll =====
+ * La grilla base de 16 columnas pasa a 8: los cuadrantes quedan en filas
+ * de a 8 dientes (sup 1-8 / 9-16, inf 17-24 / 25-32) y TODO cabe en ~343px.
+ * Mismo tratamiento que el modo segmentado: fuera placeholders/banda
+ * oclusal, SVGs escalados a la celda, sin pinch.
+ */
+@media (max-width: 600px) {
+  .odontogram-root .tooth-grid:not([class*="odon-arch-"]) {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 4px;
+    padding: 6px;
+    overflow-x: visible;
+    transform: none !important;
+    width: auto !important;
+  }
+  .odontogram-root .tooth-grid:not([class*="odon-arch-"]) .tooth-tile.placeholder,
+  .odontogram-root .tooth-grid:not([class*="odon-arch-"]) .tooth-tile.occl-view {
+    display: none !important;
+  }
+  .odontogram-root .tooth-grid:not([class*="odon-arch-"]) .tooth-svg svg {
+    width: 100%;
+    height: auto;
+    max-height: 76px;
+  }
+}

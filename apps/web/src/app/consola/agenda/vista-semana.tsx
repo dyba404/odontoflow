@@ -26,32 +26,33 @@ export function VistaSemana({
       .sort((a, b) => a.horaIni.localeCompare(b.horaIni)),
   }));
   return (
-    <div className="overflow-x-auto rounded-xl border bg-card">
-      <div className="grid min-w-[760px] grid-cols-7">
+    <>
+      {/* Móvil: días apilados sin scroll */}
+      <div className="divide-y rounded-xl border bg-card sm:hidden">
         {dias.map((d, i) => {
           const esHoy = d.fechaISO === hoyISO;
           return (
-            <div key={d.fechaISO} className={cn(i > 0 && "border-l")}>
+            <div key={d.fechaISO} className="flex items-start gap-3 p-3">
               <LinkDia
                 fechaISO={d.fechaISO}
                 className={cn(
-                  "flex w-full flex-col items-center gap-0.5 px-2 py-2 transition-colors hover:bg-muted/50",
+                  "flex w-12 shrink-0 flex-col items-center gap-0.5 rounded-lg py-1.5 transition-colors hover:bg-muted/50",
                   esHoy && "bg-accent",
                 )}
               >
-                <span className="text-[11px] uppercase text-muted-foreground">{COLUMNAS[i]}</span>
+                <span className="text-[10px] uppercase text-muted-foreground">{COLUMNAS[i]}</span>
                 <span
                   className={cn(
-                    "flex size-7 items-center justify-center rounded-full text-sm font-semibold tabular-nums",
+                    "flex size-6 items-center justify-center rounded-full text-xs font-semibold tabular-nums",
                     esHoy && "bg-primary text-primary-foreground",
                   )}
                 >
                   {format(d.fecha, "d")}
                 </span>
               </LinkDia>
-              <div className="min-h-32 space-y-1 p-1.5">
+              <div className="min-w-0 flex-1 space-y-1">
                 {d.citas.length === 0 ? (
-                  <p className="py-3 text-center text-xs text-muted-foreground/60">—</p>
+                  <p className="py-1 text-xs text-muted-foreground/60">Sin citas</p>
                 ) : (
                   d.citas.map((c) => {
                     const atenuada = c.estado === "cancelada" || c.estado === "no_show";
@@ -60,7 +61,7 @@ export function VistaSemana({
                       <div
                         key={c.id}
                         className={cn(
-                          "flex items-center gap-1 overflow-hidden rounded border-l-2 bg-muted/30 px-1.5 py-1",
+                          "flex items-center gap-1.5 overflow-hidden rounded border-l-2 bg-muted/30 px-2 py-1",
                           !color && "border-l-muted-foreground/40",
                           atenuada && "opacity-45",
                         )}
@@ -79,6 +80,62 @@ export function VistaSemana({
           );
         })}
       </div>
-    </div>
+
+      {/* Semana en columnas: tablet y desktop */}
+      <div className="hidden overflow-x-auto rounded-xl border bg-card sm:block">
+        <div className="grid min-w-[700px] grid-cols-7">
+          {dias.map((d, i) => {
+            const esHoy = d.fechaISO === hoyISO;
+            return (
+              <div key={d.fechaISO} className={cn(i > 0 && "border-l")}>
+                <LinkDia
+                  fechaISO={d.fechaISO}
+                  className={cn(
+                    "flex w-full flex-col items-center gap-0.5 px-2 py-2 transition-colors hover:bg-muted/50",
+                    esHoy && "bg-accent",
+                  )}
+                >
+                  <span className="text-[11px] uppercase text-muted-foreground">{COLUMNAS[i]}</span>
+                  <span
+                    className={cn(
+                      "flex size-7 items-center justify-center rounded-full text-sm font-semibold tabular-nums",
+                      esHoy && "bg-primary text-primary-foreground",
+                    )}
+                  >
+                    {format(d.fecha, "d")}
+                  </span>
+                </LinkDia>
+                <div className="min-h-32 space-y-1 p-1.5">
+                  {d.citas.length === 0 ? (
+                    <p className="py-3 text-center text-xs text-muted-foreground/60">—</p>
+                  ) : (
+                    d.citas.map((c) => {
+                      const atenuada = c.estado === "cancelada" || c.estado === "no_show";
+                      const color = c.doctorId ? colorPorDoctor.get(c.doctorId) : undefined;
+                      return (
+                        <div
+                          key={c.id}
+                          className={cn(
+                            "flex items-center gap-1 overflow-hidden rounded border-l-2 bg-muted/30 px-1.5 py-1",
+                            !color && "border-l-muted-foreground/40",
+                            atenuada && "opacity-45",
+                          )}
+                          style={color ? { borderLeftColor: color } : undefined}
+                        >
+                          <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+                            {c.horaIni.slice(0, 5)}
+                          </span>
+                          <span className="truncate text-xs font-medium">{c.patientNombre}</span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </>
   );
 }

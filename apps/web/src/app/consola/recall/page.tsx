@@ -97,7 +97,7 @@ export default async function RecallPage() {
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Stat label="Dormidos (≥6m)" value={String(dormidos)} sub="6 meses o más sin venir" />
         <Stat label="En riesgo (4-5m)" value={String(enRiesgo)} sub="4 a 5 meses sin venir" />
         <Stat label="Activos (<4m)" value={String(activos)} sub="menos de 4 meses" />
@@ -120,7 +120,7 @@ export default async function RecallPage() {
                 <TableHead>Nombre</TableHead>
                 <TableHead className="hidden md:table-cell">Celular</TableHead>
                 <TableHead className="hidden md:table-cell">Última visita</TableHead>
-                <TableHead className="text-right">Meses sin venir</TableHead>
+                <TableHead className="hidden text-right sm:table-cell">Meses sin venir</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acción</TableHead>
               </TableRow>
@@ -133,7 +133,7 @@ export default async function RecallPage() {
                   <TableCell className="hidden whitespace-nowrap text-sm text-muted-foreground md:table-cell">
                     {p.ultimaVisita ? fechaLarga(p.ultimaVisita) : "Nunca"}
                   </TableCell>
-                  <TableCell className="text-right text-sm tabular-nums">
+                  <TableCell className="hidden text-right text-sm tabular-nums sm:table-cell">
                     {p.mesesSinVisita}
                   </TableCell>
                   <TableCell>

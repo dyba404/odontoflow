@@ -80,7 +80,7 @@ export function EmitirButton({
         }}
         disabled={loading}
       >
-        {loading ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+        {loading ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
         {sunatEstado === "rechazado" ? "Reintentar" : "Emitir"}
       </Button>
 

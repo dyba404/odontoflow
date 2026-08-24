@@ -108,7 +108,7 @@ export default async function ProduccionPage({
         </Card>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Card>
               <CardContent className="p-5">
                 <p className="text-xs font-medium text-muted-foreground">Ventas del periodo</p>
@@ -140,7 +140,7 @@ export default async function ProduccionPage({
               <TableHeader>
                 <TableRow>
                   <TableHead>Doctor</TableHead>
-                  <TableHead className="text-center">Atendidas</TableHead>
+                  <TableHead className="hidden text-center sm:table-cell">Atendidas</TableHead>
                   <TableHead className="hidden text-center md:table-cell">No-shows</TableHead>
                   <TableHead className="hidden text-center md:table-cell">Pagos</TableHead>
                   <TableHead className="text-right">Ticket prom.</TableHead>
@@ -162,7 +162,7 @@ export default async function ProduccionPage({
                         <span className="text-sm text-muted-foreground">{f.doctorNombre}</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-center text-sm tabular-nums">{f.atendidas}</TableCell>
+                    <TableCell className="hidden text-center text-sm tabular-nums sm:table-cell">{f.atendidas}</TableCell>
                     <TableCell className="hidden text-center text-sm tabular-nums text-muted-foreground md:table-cell">
                       {f.noShows}
                     </TableCell>

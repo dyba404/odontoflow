@@ -51,11 +51,11 @@ export function SolicitudActions({
     <div className="flex items-center gap-2">
       <Button size="sm" onClick={confirmar} disabled={pending}>
         <Check className="size-3.5" />
-        Confirmar
+        <span className="hidden sm:inline">Confirmar</span>
       </Button>
       <Button size="sm" variant="outline" onClick={rechazar} disabled={pending}>
         <X className="size-3.5 text-destructive" />
-        Rechazar
+        <span className="hidden sm:inline">Rechazar</span>
       </Button>
     </div>
   );

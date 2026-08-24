@@ -93,7 +93,7 @@ export default async function WhatsAppConfigPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="p-5 pb-4">
             <CardTitle className="text-sm font-medium">Credenciales</CardTitle>

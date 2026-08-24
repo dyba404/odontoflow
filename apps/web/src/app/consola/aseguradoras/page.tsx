@@ -60,7 +60,7 @@ export default async function AseguradorasPage() {
           />
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {rows.map((a) => {
             const afiliados = porAseguradora.get(a.id) ?? 0;
             return (

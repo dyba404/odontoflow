@@ -149,7 +149,7 @@ export default async function ReviewsPage() {
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Stat label="Solicitudes enviadas" value={String(enviadas)} sub="total histórico" />
         <Stat label="Respondidas" value={String(respondidas)} sub="reseñas recibidas" />
         <Stat label="Tasa de respuesta" value={`${tasa}%`} sub="de las enviadas" />

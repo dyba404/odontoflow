@@ -22,7 +22,7 @@ export function GuiaSecciones({ secciones }: { secciones: GuiaSeccion[] }) {
             {seccion.titulo}
           </h2>
           <p className="mb-4 text-sm text-muted-foreground">{seccion.descripcion}</p>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {seccion.guias.map((guia) => (
               <article
                 key={guia.id}

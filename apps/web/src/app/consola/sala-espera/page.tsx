@@ -94,7 +94,7 @@ export default async function SalaEsperaPage() {
             </span>
           </Link>
         )}
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {COLUMNAS.map((col) => {
             const items = enFila.filter((c) => c.estado === col.estado);
             return (

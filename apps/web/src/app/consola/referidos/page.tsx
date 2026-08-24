@@ -52,7 +52,7 @@ export default async function ReferidosPage() {
         description="Pacientes que traen nuevos pacientes con su link personal."
       />
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Card>
           <CardContent className="p-5">
             <p className="text-xs font-medium text-muted-foreground">Pacientes referentes</p>

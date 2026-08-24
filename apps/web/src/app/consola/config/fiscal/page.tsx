@@ -136,7 +136,7 @@ export default async function FiscalConfigPage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 p-5 pb-3">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold">

@@ -92,7 +92,7 @@ export function LegalForm({ inicial, slug }: { inicial: LegalInicial; slug: stri
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="grid gap-4 p-5 pt-0 sm:grid-cols-2">
+        <CardContent className="grid grid-cols-1 gap-4 p-5 pt-0 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="razon-social">Razón social</Label>
             <Input

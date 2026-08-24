@@ -138,7 +138,7 @@ export function ComisionesClient({
         <Badge variant="secondary">Periodo {periodo}</Badge>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="p-5 pb-4">
             <CardTitle className="flex items-center gap-2 text-sm font-medium">

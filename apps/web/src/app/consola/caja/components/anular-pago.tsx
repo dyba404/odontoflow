@@ -60,7 +60,7 @@ export function AnularPago({
         onClick={() => setOpen(true)}
       >
         <Ban className="size-3.5" />
-        Anular
+        <span className="hidden sm:inline">Anular</span>
       </Button>
       <Dialog
         open={open}

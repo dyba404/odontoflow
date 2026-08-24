@@ -49,11 +49,11 @@ export function ConciliarPago({ paymentId, monto }: { paymentId: string; monto: 
       <div className="flex justify-end gap-1.5">
         <Button size="sm" onClick={() => setAccion("confirmar")}>
           <CheckCircle2 className="size-3.5" />
-          Conciliar
+          <span className="hidden sm:inline">Conciliar</span>
         </Button>
         <Button size="sm" variant="outline" onClick={() => setAccion("rechazar")}>
           <XCircle className="size-3.5" />
-          Rechazar
+          <span className="hidden sm:inline">Rechazar</span>
         </Button>
       </div>
 

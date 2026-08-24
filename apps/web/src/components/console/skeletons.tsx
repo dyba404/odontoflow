@@ -35,7 +35,7 @@ export function PacientesSkeleton() {
         <div className="h-4 w-72 max-w-full animate-pulse rounded-full bg-muted" />
       </div>
       <div className="h-9 w-72 max-w-full animate-pulse rounded-lg bg-muted" />
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={`pac-${i}`} className="rounded-2xl border bg-card p-5">
             <div className="flex items-start gap-3">
@@ -61,7 +61,7 @@ export function FichaPacienteSkeleton() {
           <div className="size-16 shrink-0 animate-pulse rounded-full bg-muted" />
           <div className="min-w-0 flex-1 space-y-3 py-1">
             <div className="h-5 w-56 animate-pulse rounded-full bg-muted" />
-            <div className="grid gap-2 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <div className="h-4 animate-pulse rounded-full bg-muted" />
               <div className="h-4 animate-pulse rounded-full bg-muted" />
               <div className="h-4 animate-pulse rounded-full bg-muted" />
@@ -77,7 +77,7 @@ export function FichaPacienteSkeleton() {
           ))}
         </div>
       </div>
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border bg-card p-5">
           <ListSkeleton rows={4} />
         </div>
@@ -100,7 +100,7 @@ export function PanelSkeleton() {
         <div className="h-4 w-96 max-w-full animate-pulse rounded-full bg-muted" />
       </div>
       <KpiSkeleton />
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <div className="rounded-2xl border bg-card p-5 lg:col-span-3">
           <ListSkeleton rows={6} />
         </div>

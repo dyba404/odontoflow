@@ -76,7 +76,7 @@ export function BajaButton({
             : "La comunicación de bajas es asíncrona: pregunta aquí el estado"
         }
       >
-        {loading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+        {loading ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
         Consultar baja
       </Button>
     );
@@ -88,7 +88,7 @@ export function BajaButton({
     <>
       <Button
         size="sm"
-        variant="ghost"
+        variant="outline"
         className="text-red-600 hover:text-red-700"
         onClick={() => setOpen(true)}
         disabled={loading}

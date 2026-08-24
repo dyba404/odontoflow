@@ -77,7 +77,7 @@ export default async function ListaEsperaPage() {
         action={<AgregarDialog />}
       />
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Stat label="En espera activa" value={String(activas)} sub="listas para ofrecer" />
         <Stat
           label="Con email"

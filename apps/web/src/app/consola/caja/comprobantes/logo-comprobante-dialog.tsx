@@ -4,11 +4,18 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ImageIcon, Loader2, Trash2, Upload } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
 
-export function LogoComprobanteDialog({ hayLogo: propHayLogo }: { hayLogo: boolean }) {
+export function LogoComprobanteDialog({
+  hayLogo: propHayLogo,
+  className,
+}: {
+  hayLogo: boolean;
+  className?: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [logo, setLogo] = useState("");
@@ -78,7 +85,7 @@ export function LogoComprobanteDialog({ hayLogo: propHayLogo }: { hayLogo: boole
 
   return (
     <>
-      <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
+      <Button size="sm" variant="outline" className={cn("w-full sm:w-auto", className)} onClick={() => setOpen(true)}>
         <ImageIcon className="size-3.5" />
         Logo de comprobantes
       </Button>

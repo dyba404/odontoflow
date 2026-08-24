@@ -35,8 +35,62 @@ export function VistaMes({
     return { d, fechaISO, citas: porDia.get(fechaISO) ?? [] };
   });
   return (
-    <div className="overflow-x-auto rounded-xl border bg-card">
-      <div className="min-w-[760px]">
+    <>
+      {/* Móvil: lista cronológica del mes, sin scroll */}
+      <div className="divide-y rounded-xl border bg-card sm:hidden">
+        {celdas
+          .filter((ce) => ce.d.getMonth() === fecha.getMonth() && ce.citas.length > 0)
+          .map((celda) => (
+            <div key={celda.fechaISO} className="flex items-start gap-3 p-3">
+              <LinkDia
+                fechaISO={celda.fechaISO}
+                className={cn(
+                  "flex w-12 shrink-0 flex-col items-center gap-0.5 rounded-lg py-1.5 transition-colors hover:bg-muted/50",
+                  celda.fechaISO === hoyISO && "bg-accent",
+                )}
+              >
+                <span className="text-[10px] uppercase text-muted-foreground">
+                  {COLUMNAS[(celda.d.getDay() + 6) % 7]}
+                </span>
+                <span
+                  className={cn(
+                    "flex size-6 items-center justify-center rounded-full text-xs font-semibold tabular-nums",
+                    celda.fechaISO === hoyISO && "bg-primary text-primary-foreground",
+                  )}
+                >
+                  {format(celda.d, "d")}
+                </span>
+              </LinkDia>
+              <div className="min-w-0 flex-1 space-y-1">
+                {celda.citas.map((c) => {
+                  const atenuada = c.estado === "cancelada" || c.estado === "no_show";
+                  const color = c.doctorId ? colorPorDoctor.get(c.doctorId) : undefined;
+                  return (
+                    <div
+                      key={c.id}
+                      className={cn(
+                        "truncate rounded border-l-2 bg-muted/40 px-2 py-1 text-xs",
+                        !color && "border-l-muted-foreground/40",
+                        atenuada && "opacity-45",
+                      )}
+                      style={color ? { borderLeftColor: color } : undefined}
+                    >
+                      <span className="tabular-nums text-muted-foreground">{c.horaIni.slice(0, 5)}</span>{" "}
+                      <span className="font-medium">{c.patientNombre}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        {celdas.every((ce) => ce.d.getMonth() !== fecha.getMonth() || ce.citas.length === 0) ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">Sin citas este mes.</p>
+        ) : null}
+      </div>
+
+      {/* Mes en grilla: tablet y desktop */}
+      <div className="hidden overflow-x-auto rounded-xl border bg-card sm:block">
+        <div className="min-w-[700px]">
         <div className="grid grid-cols-7 border-b">
           {COLUMNAS.map((c, i) => (
             <div
@@ -110,6 +164,7 @@ export function VistaMes({
           })}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

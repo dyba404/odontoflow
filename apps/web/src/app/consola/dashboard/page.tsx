@@ -108,7 +108,7 @@ export default async function IngresosPage({
         action={<PeriodosPills dias={dias} />}
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <Stat label="Hoy" value={fmtPEN(overview.ingresosHoy)} sub={`${overview.pagosHoy.length} pagos`} />
         <Stat label={`Total ${dias} días`} value={fmtPEN(totalRango)} sub="cobrado por caja" />
         <Stat label="Promedio diario" value={fmtPEN(promedio)} sub={`últimos ${dias} días`} />
@@ -133,7 +133,7 @@ export default async function IngresosPage({
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="p-5 pb-2">
             <CardTitle className="text-sm font-medium">Ingresos por día</CardTitle>

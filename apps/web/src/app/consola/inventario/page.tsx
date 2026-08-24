@@ -116,7 +116,7 @@ export default async function InventarioPage() {
       />
 
       {(alertas.bajos.length > 0 || alertas.lotesPorVencer.length > 0) && (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {alertas.bajos.length > 0 && (
             <Card className="border-amber-300/60">
               <CardContent className="space-y-2 p-4">
@@ -150,7 +150,7 @@ export default async function InventarioPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="p-5 pb-3">
             <CardTitle className="text-sm font-medium">Artículos</CardTitle>
@@ -169,9 +169,9 @@ export default async function InventarioPage() {
                   return (
                     <div key={i.id} className="flex items-center gap-3 py-3">
                       <div className="min-w-0 flex-1">
-                        <p className="flex items-center gap-2 text-sm font-medium">
+                        <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
                           {i.nombre}
-                          <Badge variant="gray">{i.categoria}</Badge>
+                          <Badge variant="gray" className="hidden sm:inline-flex">{i.categoria}</Badge>
                         </p>
                         <p className="text-xs text-muted-foreground">
                           Costo {fmtPEN(Number(i.costoUnit))} · mínimo {Number(i.stockMin)} {i.unidad}

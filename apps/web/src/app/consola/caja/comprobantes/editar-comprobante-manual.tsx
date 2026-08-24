@@ -66,8 +66,8 @@ export function EditarComprobanteManual({
       <>
         <Button
           size="sm"
-          variant="ghost"
-          className="h-7 px-2 text-xs text-red-600 hover:text-red-700"
+          variant="outline"
+          className="text-red-600 hover:text-red-700"
           onClick={() => setOpen(true)}
         >
           <Ban className="size-3.5" />
@@ -103,8 +103,7 @@ export function EditarComprobanteManual({
     <>
       <Button
         size="sm"
-        variant="ghost"
-        className="h-7 px-2 text-xs"
+        variant="outline"
         onClick={() => setOpen(true)}
       >
         <Pencil className="size-3.5" />

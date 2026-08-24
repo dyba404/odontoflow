@@ -455,6 +455,32 @@ export function VistaDia({
     doctor: d,
     lista: citas.filter((c) => c.doctorId === d.id),
   }));
+
+  const columnasLista = [
+    ...grupos.map((g) => ({
+      id: g.doctor.id,
+      nombre: g.doctor.name,
+      color: g.doctor.color,
+      citas: [...g.lista].sort(
+        (a, b) => minutos(a.horaIni) - minutos(b.horaIni),
+      ),
+      bloqueos: bloqueos.filter((b) => b.doctorId === g.doctor.id || b.doctorId === null),
+    })),
+    ...(sinAsignar.length > 0
+      ? [
+          {
+            id: "sin-asignar",
+            nombre: "Sin asignar",
+            color: undefined,
+            citas: [...sinAsignar].sort(
+              (a, b) => minutos(a.horaIni) - minutos(b.horaIni),
+            ),
+            bloqueos: [],
+          },
+        ]
+      : []),
+  ];
+
   const columnas = [
     ...grupos.map((g, i) => ({
       id: g.doctor.id,
@@ -520,34 +546,109 @@ export function VistaDia({
       : []),
   ];
   return (
-    <div className="overflow-x-auto rounded-xl border bg-card">
-      <div className="flex min-w-[760px]">
-        <div className="w-14 shrink-0">
-          <div className="h-10 border-b" />
-          {HORAS.map((h) => (
+    <>
+      {/* Lista móvil: cero scroll horizontal */}
+      <div className="rounded-xl border bg-card p-4 sm:hidden">
+        {columnasLista.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">Sin columnas.</p>
+        ) : (
+          <div className="space-y-5">
+            {columnasLista.map((col) => {
+              const hay = col.citas.length > 0 || col.bloqueos.length > 0;
+              return (
+                <div key={col.id}>
+                  <div className="mb-1 flex items-center gap-2 border-b pb-1.5">
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ background: col.color ?? "var(--muted-foreground)" }}
+                    />
+                    <span className="truncate text-sm font-medium">{col.nombre}</span>
+                  </div>
+                  {!hay ? (
+                    <p className="py-2 text-xs text-muted-foreground">Sin citas ni bloqueos.</p>
+                  ) : (
+                    <div>
+                      {col.bloqueos.map((b) => (
+                        <BloqueoChip
+                          key={b.id}
+                          id={b.id}
+                          motivo={b.motivo}
+                          className="flex items-center gap-2 py-2 text-xs text-muted-foreground"
+                        />
+                      ))}
+                      {col.citas.map((c) => {
+                        const atenuada = c.estado === "cancelada" || c.estado === "no_show";
+                        const accionable =
+                          c.estado === "solicitada" || c.estado === "confirmada";
+                        return (
+                          <div
+                            key={c.id}
+                            className={cn(
+                              "flex items-center gap-3 border-b py-2.5 last:border-b-0",
+                              atenuada && "opacity-50",
+                            )}
+                          >
+                            <div className="w-[86px] shrink-0 text-xs font-medium tabular-nums text-muted-foreground">
+                              {c.horaIni.slice(0, 5)} – {c.horaFin.slice(0, 5)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold">{c.patientNombre}</p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {c.servicio} · {fmtPEN(Number(c.servicioPrecio))}
+                              </p>
+                            </div>
+                            {accionable ? (
+                              <CitaActions
+                                citaId={c.id}
+                                paciente={c.patientNombre}
+                                doctorId={c.doctorId}
+                                fecha={fechaISO}
+                                horaIni={c.horaIni}
+                                doctores={doctoresTodos}
+                              />
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Grilla semanal/horaria: tablet y desktop */}
+      <div className="hidden overflow-x-auto rounded-xl border bg-card sm:block">
+        <div className="flex min-w-[700px]">
+          <div className="w-14 shrink-0">
+            <div className="h-10 border-b" />
+            {HORAS.map((h) => (
+              <div
+                key={h}
+                className="relative text-right text-xs tabular-nums text-muted-foreground"
+                style={{ height: HORA_PX }}
+              >
+                <span className="absolute right-0 top-0 -translate-y-1/2 bg-card pr-1.5">
+                  {String(h).padStart(2, "0")}:00
+                </span>
+              </div>
+            ))}
+          </div>
+          {columnas.map((col) => (
             <div
-              key={h}
-              className="relative text-right text-xs tabular-nums text-muted-foreground"
-              style={{ height: HORA_PX }}
+              key={col.id}
+              className={cn("flex min-w-[148px] flex-1 flex-col", col.border && "border-l")}
             >
-              <span className="absolute right-0 top-0 -translate-y-1/2 bg-card pr-1.5">
-                {String(h).padStart(2, "0")}:00
-              </span>
+              <div className="flex h-10 items-center justify-center gap-2 border-b bg-muted/20 px-3">
+                {col.header}
+              </div>
+              {col.body}
             </div>
           ))}
         </div>
-        {columnas.map((col) => (
-          <div
-            key={col.id}
-            className={cn("flex min-w-44 flex-1 flex-col", col.border && "border-l")}
-          >
-            <div className="flex h-10 items-center justify-center gap-2 border-b bg-muted/20 px-3">
-              {col.header}
-            </div>
-            {col.body}
-          </div>
-        ))}
       </div>
-    </div>
+    </>
   );
 }

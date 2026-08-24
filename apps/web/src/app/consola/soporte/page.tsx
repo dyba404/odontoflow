@@ -129,7 +129,7 @@ export default async function SoportePage() {
         description="Guías rápidas, contacto y estado real del servicio."
       />
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="space-y-3 p-5">
             <span className="flex size-9 items-center justify-center rounded-xl bg-accent text-accent-foreground">

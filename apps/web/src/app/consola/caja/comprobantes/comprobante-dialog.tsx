@@ -4,6 +4,7 @@ import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Receipt } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -18,10 +19,12 @@ export function ComprobanteDialog({
   pagos,
   serieSugerida,
   correlativoSugerido,
+  className,
 }: {
   pagos: Array<{ id: string; label: string }>;
   serieSugerida: string;
   correlativoSugerido: number;
+  className?: string;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -80,8 +83,8 @@ export function ComprobanteDialog({
 
   return (
     <>
-      <Button size="sm" onClick={() => setOpen(true)}>
-        <Receipt className="size-4" />
+      <Button size="sm" className={cn("w-full sm:w-auto", className)} onClick={() => setOpen(true)}>
+        <Receipt className="size-3.5" />
         Emitir comprobante
       </Button>
 
