@@ -19,6 +19,9 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      - name: Compilar paquetes internos (db, core, ui)
+        run: npm run build -w @odontoflow/db -w @odontoflow/core -w @odontoflow/ui
+
       - name: Typecheck (4 workspaces)
         run: npm run typecheck
 
