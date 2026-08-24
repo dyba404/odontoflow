@@ -94,7 +94,7 @@ export async function POST(
   const { token } = await params;
 
   let body: {
-    accion?: "verificar" | "aceptar";
+    accion?: "verificar" | "aceptar" | "rechazar";
     last4?: string;
     dob?: string;
     codigo?: string;
@@ -125,15 +125,21 @@ export async function POST(
     return NextResponse.json({ error: "presupuesto_vencido" }, { status: 410 });
   }
 
-  // "aceptar" exige la cookie firmada de verificación previa (path acotado).
-  if (body.accion === "aceptar") {
+  // "aceptar"/"rechazar" exigen la cookie firmada de verificación previa (path acotado).
+  const requiereVerificacion = body.accion === "aceptar" || body.accion === "rechazar";
+  if (requiereVerificacion) {
     const store = await cookies();
     const cookieOk = verificarCookiePresupuesto(
       token,
       store.get(nombreCookiePresupuesto(token))?.value,
     );
     if (!cookieOk) {
-      await logAcceso(q.tenantId, q.id, "aceptar_sin_verificacion", req);
+      await logAcceso(
+        q.tenantId,
+        q.id,
+        body.accion === "rechazar" ? "rechazar_sin_verificacion" : "aceptar_sin_verificacion",
+        req,
+      );
       return NextResponse.json({ error: "verificacion_requerida" }, { status: 401 });
     }
   } else {
@@ -185,6 +191,28 @@ export async function POST(
 
   if (q.estado === "aprobado" || q.estado === "convertido") {
     return NextResponse.json({ error: "presupuesto_ya_aceptado" }, { status: 400 });
+  }
+
+  // Rechazo desde el portal: sin firma ni PDF; solo estado + log de acceso.
+  if (body.accion === "rechazar") {
+    if (q.estado === "rechazado") {
+      return NextResponse.json({ error: "presupuesto_ya_rechazado" }, { status: 400 });
+    }
+
+    const ahora = new Date();
+    await db
+      .update(quotes)
+      .set({ estado: "rechazado", updatedAt: ahora })
+      .where(eq(quotes.id, q.id));
+
+    await logAcceso(q.tenantId, q.id, "rechazado", req);
+
+    const res = NextResponse.json({ ok: true });
+    res.cookies.delete({
+      name: nombreCookiePresupuesto(token),
+      path: `/api/publico/presupuesto/${token}`,
+    });
+    return res;
   }
 
   const firmanteNombre = body.firmanteNombre?.trim();

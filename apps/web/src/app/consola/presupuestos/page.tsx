@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/console/page-header";
 import { EmptyState } from "@/components/console/empty-state";
+import { DataList, DataRow } from "@/components/console/data-list";
 import { fmtPEN } from "@/lib/format";
 import { NuevoPresupuestoDialog } from "@/app/consola/presupuestos/nuevo-dialog";
 import { PresupuestoDetalleDialog } from "@/app/consola/presupuestos/detalle-dialog";
@@ -133,7 +134,7 @@ export default async function PresupuestosPage() {
         action={<NuevoPresupuestoDialog />}
       />
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Stat label="Borradores" value={String(borradores)} sub="pendientes de enviar" />
         <Stat label="Enviados" value={String(enviados)} sub="esperando respuesta" />
         <Stat label="Aprobados" value={fmtPEN(totalAprobado)} sub={`${aprobados.length} presupuestos`} />
@@ -151,43 +152,38 @@ export default async function PresupuestosPage() {
             action={<NuevoPresupuestoDialog />}
           />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Paciente</TableHead>
-                <TableHead>Título</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="hidden text-center md:table-cell">Ítems</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="hidden md:table-cell">Creado</TableHead>
-                <TableHead className="text-right">Acción</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            {/* Lista compacta: móvil y tablet */}
+            <DataList className="px-5 pb-4 lg:hidden">
               {presupuestos.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="text-sm font-medium">
-                    {p.patientNombre ?? "—"}
-                  </TableCell>
-                  <TableCell className="max-w-[220px] truncate text-sm">{p.titulo}</TableCell>
-                  <TableCell className="text-right text-sm font-semibold tabular-nums">
-                    {fmtPEN(p.totalNum)}
-                  </TableCell>
-                  <TableCell className="hidden text-center text-sm tabular-nums text-muted-foreground md:table-cell">
-                    {p.itemsCount}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={ESTADO_BADGE[p.estado] ?? "gray"}>
-                      {ESTADO_LABEL[p.estado] ?? p.estado}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden whitespace-nowrap text-sm text-muted-foreground md:table-cell">
-                    {fmtCreado(p.createdAt)}
-                  </TableCell>
-                  <TableCell className="text-right">
+                <DataRow
+                  key={p.id}
+                  title={
+                    <span className="flex items-center gap-2">
+                      <span className="truncate">{p.titulo}</span>
+                      <Badge variant={ESTADO_BADGE[p.estado] ?? "gray"}>
+                        {ESTADO_LABEL[p.estado] ?? p.estado}
+                      </Badge>
+                    </span>
+                  }
+                  meta={
+                    <>
+                      {p.patientNombre ?? "—"}
+                      {" · "}
+                      {fmtCreado(p.createdAt)}
+                      {p.itemsCount > 0 ? <> · {p.itemsCount} ítems</> : null}
+                    </>
+                  }
+                  trailing={
+                    <span className="text-sm font-semibold tabular-nums">
+                      {fmtPEN(p.totalNum)}
+                    </span>
+                  }
+                  actions={
                     <PresupuestoDetalleDialog
                       presupuesto={{
                         id: p.id,
+                        patientId: p.patientId,
                         patientNombre: p.patientNombre ?? "—",
                         titulo: p.titulo,
                         estado: p.estado,
@@ -199,11 +195,69 @@ export default async function PresupuestosPage() {
                         linkBloqueado: Boolean(p.linkLockedAt),
                       }}
                     />
-                  </TableCell>
-                </TableRow>
+                  }
+                />
               ))}
-            </TableBody>
-          </Table>
+            </DataList>
+
+            {/* Tabla: desktop */}
+            <div className="hidden lg:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Paciente</TableHead>
+                    <TableHead>Título</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-center">Ítems</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Creado</TableHead>
+                    <TableHead className="text-right">Acción</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {presupuestos.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="text-sm font-medium">
+                        {p.patientNombre ?? "—"}
+                      </TableCell>
+                      <TableCell className="max-w-[220px] truncate text-sm">{p.titulo}</TableCell>
+                      <TableCell className="text-right text-sm font-semibold tabular-nums">
+                        {fmtPEN(p.totalNum)}
+                      </TableCell>
+                      <TableCell className="text-center text-sm tabular-nums text-muted-foreground">
+                        {p.itemsCount}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={ESTADO_BADGE[p.estado] ?? "gray"}>
+                          {ESTADO_LABEL[p.estado] ?? p.estado}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                        {fmtCreado(p.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <PresupuestoDetalleDialog
+                          presupuesto={{
+                            id: p.id,
+                            patientId: p.patientId,
+                            patientNombre: p.patientNombre ?? "—",
+                            titulo: p.titulo,
+                            estado: p.estado,
+                            total: p.totalNum,
+                            expiraEn: p.expiraEn,
+                            nota: p.nota,
+                            items: p.itemsArr,
+                            tieneLink: Boolean(p.linkToken),
+                            linkBloqueado: Boolean(p.linkLockedAt),
+                          }}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </Card>
     </div>

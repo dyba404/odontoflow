@@ -4,9 +4,10 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, FileCheck2, PenLine, LockKeyhole } from "lucide-react";
+import { Loader2, FileCheck2, PenLine, LockKeyhole, XCircle } from "lucide-react";
 import { PadDeFirma } from "@/components/firma/pad-de-firma";
 
 type Presupuesto = {
@@ -23,7 +24,7 @@ function fmtPEN(n: number): string {
 }
 
 export function PresupuestoPublico({ token }: { token: string }) {
-  const [paso, setPaso] = useState<"2fa" | "ver" | "firmar" | "ok">("2fa");
+  const [paso, setPaso] = useState<"2fa" | "ver" | "firmar" | "ok" | "rechazado">("2fa");
   const [codigo, setCodigo] = useState("");
   const [modo, setModo] = useState<"phone_last4" | "dob" | "manual_code" | "desconocido">(
     "desconocido",
@@ -34,8 +35,12 @@ export function PresupuestoPublico({ token }: { token: string }) {
   const [nombre, setNombre] = useState("");
   const [rol, setRol] = useState<"paciente" | "tutor">("paciente");
   const [error, setError] = useState<string | null>(null);
+  const [confirmarRechazo, setConfirmarRechazo] = useState(false);
 
-  async function llamar(accion: "verificar" | "aceptar", extra?: Record<string, unknown>) {
+  async function llamar(
+    accion: "verificar" | "aceptar" | "rechazar",
+    extra?: Record<string, unknown>,
+  ) {
     setCargando(true);
     setError(null);
     try {
@@ -60,11 +65,13 @@ export function PresupuestoPublico({ token }: { token: string }) {
                   ? "Primero verifica tu identidad."
                   : j.error === "presupuesto_vencido"
                     ? "Este presupuesto ya venció. Contacta a la clínica."
-                    : j.error === "presupuesto_ya_aceptado"
-                      ? "Este presupuesto ya fue aceptado."
-                      : j.error === "link_no_valido"
-                        ? "El enlace no es válido."
-                        : "No se pudo completar la operación.",
+              : j.error === "presupuesto_ya_aceptado"
+                ? "Este presupuesto ya fue aceptado."
+                : j.error === "presupuesto_ya_rechazado"
+                  ? "Este presupuesto ya fue rechazado."
+                  : j.error === "link_no_valido"
+                    ? "El enlace no es válido."
+                    : "No se pudo completar la operación.",
         );
         return null;
       }
@@ -86,7 +93,7 @@ export function PresupuestoPublico({ token }: { token: string }) {
     const j = await llamar("verificar", payload);
     if (j?.presupuesto) {
       setPresupuesto(j.presupuesto);
-      setPaso("ver");
+      setPaso(j.presupuesto.estado === "rechazado" ? "rechazado" : "ver");
     }
   }
 
@@ -105,6 +112,14 @@ export function PresupuestoPublico({ token }: { token: string }) {
     });
     if (j) {
       setPaso("ok");
+    }
+  }
+
+  async function rechazar() {
+    const j = await llamar("rechazar");
+    if (j) {
+      setConfirmarRechazo(false);
+      setPaso("rechazado");
     }
   }
 
@@ -209,8 +224,39 @@ export function PresupuestoPublico({ token }: { token: string }) {
           <Button className="w-full" onClick={() => setPaso("firmar")}>
             <PenLine className="size-4" /> Aceptar y firmar
           </Button>
+          {presupuesto.estado === "borrador" || presupuesto.estado === "enviado" ? (
+            <Button
+              variant="outline"
+              className="w-full text-red-600 hover:text-red-700"
+              onClick={() => setConfirmarRechazo(true)}
+            >
+              Rechazar presupuesto
+            </Button>
+          ) : null}
         </Card>
       ) : null}
+
+      <Dialog
+        open={confirmarRechazo}
+        onClose={() => {
+          if (!cargando) setConfirmarRechazo(false);
+        }}
+        title="Rechazar presupuesto"
+        description="¿Rechazar este presupuesto? Esta acción no se puede deshacer."
+      >
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="outline"
+            disabled={cargando}
+            onClick={() => setConfirmarRechazo(false)}
+          >
+            Cancelar
+          </Button>
+          <Button variant="destructive" disabled={cargando} onClick={() => void rechazar()}>
+            {cargando ? <Loader2 className="size-4 animate-spin" /> : "Sí, rechazar"}
+          </Button>
+        </div>
+      </Dialog>
 
       {paso === "firmar" && presupuesto ? (
         <Card className="space-y-4 p-5">
@@ -257,6 +303,16 @@ export function PresupuestoPublico({ token }: { token: string }) {
           <p className="text-sm font-semibold">¡Presupuesto aceptado!</p>
           <p className="text-xs text-muted-foreground">
             La clínica ya fue notificada. Nos pondremos en contacto contigo.
+          </p>
+        </Card>
+      ) : null}
+
+      {paso === "rechazado" ? (
+        <Card className="space-y-2 p-8 text-center">
+          <XCircle className="mx-auto size-10 text-red-600" />
+          <p className="text-sm font-semibold">Presupuesto rechazado</p>
+          <p className="text-xs text-muted-foreground">
+            La clínica ya fue notificada de tu decisión.
           </p>
         </Card>
       ) : null}

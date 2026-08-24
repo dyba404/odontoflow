@@ -10,6 +10,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { fmtPEN } from "@/lib/format";
+import { MarcarPagada } from "./marcar-pagada";
 
 interface ItemPresupuesto {
   servicioId?: string | null;
@@ -53,6 +54,7 @@ const CUOTA_LABEL: Record<string, string> = {
 
 export interface PresupuestoResumen {
   id: string;
+  patientId: string;
   patientNombre: string;
   titulo: string;
   estado: string;
@@ -469,6 +471,7 @@ export function PresupuestoDetalleDialog({
                           <th className="px-3 py-2 font-medium">Pagado</th>
                           <th className="px-3 py-2 font-medium">Vence</th>
                           <th className="px-3 py-2 font-medium">Estado</th>
+                          <th className="px-3 py-2 text-right font-medium">Acción</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -487,6 +490,17 @@ export function PresupuestoDetalleDialog({
                                 {CUOTA_LABEL[c.estado] ?? c.estado}
                               </Badge>
                             </td>
+                            <td className="px-3 py-2 text-right">
+                              {c.estado !== "pagada" && c.estado !== "cancelada" ? (
+                                <MarcarPagada
+                                  cuotaId={c.id}
+                                  n={c.n}
+                                  monto={Number(c.monto) - Number(c.pagado)}
+                                  patientId={presupuesto.patientId}
+                                  concepto={presupuesto.titulo}
+                                />
+                              ) : null}
+                            </td>
                           </tr>
                         ))}
                         <tr className="border-t bg-muted/30">
@@ -497,19 +511,17 @@ export function PresupuestoDetalleDialog({
                           <td className="px-3 py-2 font-bold text-emerald-700 tabular-nums">
                             {fmtPEN(totalPagado)}
                           </td>
-                          <td colSpan={2} />
+                          <td colSpan={3} />
                         </tr>
                       </tbody>
                     </table>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    El pago de cuotas se registra desde{" "}
+                    Al marcar una cuota como pagada se registra el pago en{" "}
                     <Link href="/consola/caja" className="text-primary underline underline-offset-2">
                       Caja
-                    </Link>
-                    . Una vez registrado el pago, usa la API{" "}
-                    <code className="rounded bg-muted px-1 py-0.5">POST /api/cuotas/:id/pagar</code>{" "}
-                    con el paymentId para marcar la cuota como pagada.
+                    </Link>{" "}
+                    con el método elegido y la cuota queda pagada.
                   </p>
                 </div>
               )}
