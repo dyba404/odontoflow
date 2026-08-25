@@ -89,3 +89,79 @@ Además: cada clínica piloto queda con su canal de WhatsApp directo al fundador
 | Trials completados (llegan al día 15) | ≥50% |
 | Formularios de feedback completados | 100% de trials |
 | Conversión a pago tras trial | señal, no meta aún |
+
+---
+
+## Pack de copy listo para usar
+
+### Mensaje corto con link (WhatsApp — el caballito de batalla)
+
+> Dr(a). [Nombre], le dejo el link de mi sistema para consultorios:
+> https://app.marsmode.me
+>
+> Lo concreto: sus pacientes piden hora solos desde su propia página web,
+> reciben la confirmación y recordatorio automáticos, y usted deja de perder
+> citas por olvidos. Se prueba 15 días gratis, sin tarjeta.
+> ¿Le muestro en 10 minutos?
+
+**Tip**: adjuntar `docs/marketing/reserva.png` (la página de reservas) —
+el link ya muestra tarjeta bonita al compartir, gracias a la imagen OG.
+
+### Texto para grupos de Facebook (primero valor, cero spam)
+
+> ¿Cuántas citas se les caen a la semana porque "se les olvidó", doctor(a)?
+>
+> A los consultorios que asesoro les pasa lo mismo: agenda en cuaderno o
+> WhatsApp, recordatorios hechos a mano cuando hay tiempo (o sea, nunca), y
+> la caja que no cuadra hasta fin de mes.
+>
+> Estoy desarrollando un sistema peruano justamente para eso: el paciente pide
+> hora desde una página propia del consultorio (24/7, desde su celular),
+> recibe confirmación + recordatorio automático 24h antes, y la caja con
+> Yape/Plin cuadra sola al final del día. También emite boletas/facturas a
+> SUNAT si lo necesitan.
+>
+> Estoy regalando **15 días del plan completo, gratis y sin tarjeta**, a cambio
+> de feedback honesto de quienes lo prueben. Si quieres probarlo o conoces a
+> alguien que lo necesite, mándame DM o comenta y te escribo.
+>
+> Demo en vivo: https://app.marsmode.me/vitalia/reserva (pide una cita de
+> prueba y mira cómo llega la solicitud)
+
+### Guiones cortos para video (IG/TikTok/Reels — 20-40 seg cada uno)
+
+Cuando crees las cuentas, estos 6 clips se graban con OBS o incluso el celular
+(grabando la pantalla de la app):
+
+1. **"La cita que se perdió"** — Problema: pantalla de WhatsApp con "doctora,
+   se me olvidó 😔". Solución: corte a Odontoflow enviando recordatorio
+   automático. CTA: "15 días gratis, link en bio".
+2. **"Reserva a las 11pm"** — Narrado: "Tu paciente recuerda pedir cita a las
+   11 de la noche. Tu página de reservas atiende a esa hora también." Mostrar
+   wizard de reserva en un celular real. CTA igual.
+3. **"¿Cuánto facturaste esta semana?"** — Mostrar dashboard de ingresos;
+   narración sobre no saber tus números sin planilla. Para dueños de clínica.
+4. **"De papel a digital en un día"** — Antes/después: foto de agenda de papel
+   → agenda digital con colores por doctor. Migración asistida por ti.
+5. **"SUNAT sin sustos"** — Emitir una boleta en vivo en 30 segundos. Público:
+   clínicas consolidadas (plan Premium).
+6. **"Tu consultorio desde tu celular"** — Recorrido PWA instalada en un
+   teléfono: agenda del día, sala de espera, ficha. Cierra: "instálalo como
+   app, sin tienda".
+
+Caption genérico para todos:
+
+> Odontoflow · gestión para consultorios odontológicos 🦷🇵🇪
+> Reservas online 24/7 · Recordatorios automáticos · Caja Yape/Plin · SUNAT
+> Prueba 15 días gratis, sin tarjeta 👉 app.marsmode.me
+> #odontologia #odontologoperu #dentista #consultoriodental #saludperu
+
+### Respuestas rápidas a objeciones comunes
+
+| Objeción | Respuesta |
+|---|---|
+| "Ya tengo un sistema / uso Agenda Pro" | "Perfecto, entonces sabe lo que usa y lo que le falta. La diferencia acá es que sus pacientes reservan solos y los recordatorios salen sin que nadie los mande. Los 15 días son gratis — compárelo con lo que tiene hoy." |
+| "No soy bueno/a con la tecnología" | "Por eso yo mismo le cargo sus servicios y horarios, y le enseño todo en una videollamada de 20 minutos. Si en 15 días no le queda cómodo, no paga nada." |
+| "¿Mis datos de pacientes están seguros?" | "Cada consultorio es un espacio privado e independiente, acceso por roles, respaldo diario automático. Cumple la Ley 29733." |
+| "No tengo plata ahora" | "Justamente: 15 días sin pagar nada y sin tarjeta. Después de eso existe el plan Free para siempre — solo pagan los módulos avanzados." |
+

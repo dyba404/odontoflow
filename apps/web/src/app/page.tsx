@@ -28,6 +28,16 @@ export const metadata: Metadata = {
       "Reservas 24/7, recordatorios que reducen ausencias, caja y facturación SUNAT. Hecho para consultorios odontológicos en Perú.",
     type: "website",
     locale: "es_PE",
+    url: "/",
+    siteName: "Odontoflow",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Odontoflow — gestión para consultorios odontológicos" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Odontoflow — Tu consultorio, sin hojas de cálculo",
+    description:
+      "Reservas 24/7, recordatorios automáticos, caja y SUNAT. Prueba 15 días el plan Pro gratis.",
+    images: ["/og.png"],
   },
 };
 
