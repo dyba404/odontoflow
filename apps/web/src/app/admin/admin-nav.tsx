@@ -15,7 +15,7 @@ const NAV = [
   { href: "/admin/resumen", label: "Resumen", icon: LayoutDashboard },
   { href: "/admin/tenants", label: "Tenants", icon: Building2 },
   { href: "/admin/usuarios", label: "Usuarios", icon: Users },
-  { href: "/admin/auditoria", label: "AuditorA-a", icon: History },
+  { href: "/admin/auditoria", label: "Auditoría", icon: History },
   { href: "/mi-cuenta", label: "Mi cuenta", icon: UserCog },
 ];
 
