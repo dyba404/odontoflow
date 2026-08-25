@@ -10,6 +10,11 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
+  // Resuelve URLs relativas de metadata (og:image, twitter:image) contra el
+  // dominio público; sin esto Next cae a localhost y los crawlers no ven nada.
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3111",
+  ),
   title: "Odontoflow",
   description: "SaaS de gestión para consultorios odontológicos en Perú",
   manifest: "/manifest.webmanifest",
