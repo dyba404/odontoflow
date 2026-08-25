@@ -33,3 +33,6 @@ jobs:
 
       - name: Tests unitarios web
         run: npm run test:unit -w @odontoflow/web
+
+      - name: Barrido mojibake
+        run: node apps/web/scripts/escanea-mojibake.cjs
