@@ -12,6 +12,7 @@ import {
 import { hashPassword, createSession, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { rateLimit, ipReq } from "@/lib/rate-limit";
+import { TRIAL_DIAS, NOTA_TRIAL, fechaVenceTrial } from "@/lib/plans";
 
 export async function POST(req: Request) {
   const limite = rateLimit(`signup:${ipReq(req)}`, 5);
@@ -106,7 +107,15 @@ export async function POST(req: Request) {
     .values({ teamId: team.id, userId: user.id, role: "owner" })
     .returning();
 
-  await db.insert(subscriptions).values({ tenantId: team.id, plan: "free", estado: "activo" });
+  const venceTrial = fechaVenceTrial();
+  await db.insert(subscriptions).values({
+    tenantId: team.id,
+    plan: venceTrial ? "pro" : "free",
+    estado: "activo",
+    ...(venceTrial
+      ? { vence: venceTrial, nota: `${NOTA_TRIAL}_${TRIAL_DIAS}d` }
+      : {}),
+  });
   await db.insert(notificationSettings).values({ tenantId: team.id });
 
   void logAudit({

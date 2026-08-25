@@ -74,6 +74,8 @@ services:
       # resend es el canal de producción; smtp-dev envía TODO a Mailpit (bandeja
       # local, nada sale a internet). Modo actual del piloto: smtp-dev.
       MAIL_MODE: ${MAIL_MODE:-smtp-dev}
+      # Días de prueba gratuita Pro para signups nuevos (0 = desactivada).
+      TRIAL_DAYS: ${TRIAL_DAYS:-0}
       MAILPIT_HOST: ${MAILPIT_HOST:-mailpit}
       MAILPIT_PORT: ${MAILPIT_PORT:-1025}
       # WhatsApp contra whatsmock (mock Cloud API local): envío/recibo simulados.

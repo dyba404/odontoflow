@@ -73,6 +73,26 @@ export function planEsProOMayor(plan: PlanCode): boolean {
   return ORDEN_PLAN[plan] >= ORDEN_PLAN["pro"];
 }
 
+// Prueba gratuita Pro para clínicas nuevas. 0 = desactivada (dev/E2E);
+// producción define TRIAL_DAYS=15 en su .env.
+export const TRIAL_DIAS = Number(process.env.TRIAL_DAYS ?? "0");
+
+export const NOTA_TRIAL = "trial_pro";
+
+export function fechaVenceTrial(dias: number = TRIAL_DIAS): string | null {
+  if (!Number.isFinite(dias) || dias <= 0) return null;
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(
+    new Date(Date.now() + dias * 24 * 3600_000),
+  );
+}
+
+export function diasRestantes(vence: string, hoyLima: string): number {
+  const ms =
+    Date.parse(`${vence}T00:00:00Z`) - Date.parse(`${hoyLima}T00:00:00Z`);
+  return Math.round(ms / (24 * 3600_000));
+}
+
+
 export type GateOk = { ok: true };
 export type GateBloqueo = { ok: false; requerido: PlanCode; planActual: PlanCode };
 export type GateResultado = GateOk | GateBloqueo;

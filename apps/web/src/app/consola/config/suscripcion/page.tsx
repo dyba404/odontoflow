@@ -1,4 +1,4 @@
-import { CreditCard, Lock, Sparkles, Check, Gauge } from "lucide-react";
+import { CreditCard, Lock, Sparkles, Check, Gauge, Timer } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/console/empty-state";
 import { RenovarYape } from "@/app/consola/config/suscripcion/renovar-yape";
 import { getDefaultTeam, suscripcionTeam } from "@/lib/console-data";
 import { getSession, hoyTenant } from "@/lib/auth";
-import { usoPlan } from "@/lib/plans";
+import { usoPlan, NOTA_TRIAL, diasRestantes } from "@/lib/plans";
 import { fmtPEN } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -116,11 +116,19 @@ export default async function SuscripcionConfigPage() {
     );
   }
 
+  const hoy = await hoyTenant(team.timezone);
   const [sub, uso] = await Promise.all([
     suscripcionTeam(team.id),
-    usoPlan(team.id, await hoyTenant(team.timezone)),
+    usoPlan(team.id, hoy),
   ]);
   const planActual = sub?.plan ?? "free";
+
+  const enTrial =
+    sub?.plan === "pro" &&
+    Boolean(sub?.nota?.startsWith(NOTA_TRIAL)) &&
+    (sub.estado === "activo" || sub.estado === "por_renovar") &&
+    sub.vence !== null;
+  const diasTrial = enTrial && sub?.vence ? diasRestantes(sub.vence, hoy) : 0;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -128,6 +136,28 @@ export default async function SuscripcionConfigPage() {
         title="Suscripción"
         description="Plan mensual de Odontoflow. El cobro es directo: Yape, Plin o transferencia."
       />
+
+      {enTrial ? (
+        <Card className="border-amber-300 bg-amber-50/60">
+          <CardContent className="flex flex-wrap items-center gap-3 p-5">
+            <span className="flex size-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+              <Timer className="size-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-amber-800">
+                Prueba gratuita Pro activa
+              </p>
+              <p className="text-xs text-amber-700">
+                {diasTrial > 0
+                  ? `Te quedan ${diasTrial} ${diasTrial === 1 ? "día" : "días"} (hasta el ${sub!.vence}). `
+                  : `Tu prueba terminó hoy (${sub!.vence}). `}
+                Al vencer, tu clínica pasa automáticamente al plan Free y conservas
+                todos tus datos: nada se borra.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card className="border-primary/30">
         <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
