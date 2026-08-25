@@ -31,6 +31,10 @@ export const metadata: Metadata = {
   },
 };
 
+// Dinámica a propósito: los textos del trial dependen de TRIAL_DAYS, que es
+// env de runtime del contenedor (no llega al build de la imagen).
+export const dynamic = "force-dynamic";
+
 const TRIAL = Number(process.env.TRIAL_DAYS ?? "0");
 const TEXTO_TRIAL =
   TRIAL > 0 ? `Prueba ${TRIAL} días de Pro gratis · Sin tarjeta` : null;
