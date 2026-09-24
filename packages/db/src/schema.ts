@@ -49,15 +49,6 @@ export const planStatusEnum = pgEnum("plan_status", [
   "cancelado",
 ]);
 
-export const toothStateEnum = pgEnum("tooth_state", [
-  "sano",
-  "cariado",
-  "tratado",
-  "extraido",
-  "corona",
-  "ausente",
-]);
-
 export const receiptTypeEnum = pgEnum("receipt_type", [
   "boleta",
   "factura",
@@ -484,25 +475,6 @@ export const cashClosures = pgTable(
   (t) => [
     index("cash_closures_tenant_fecha_idx").on(t.tenantId, t.fecha),
     index("cash_closures_tenant_idx").on(t.tenantId),
-  ],
-);
-
-export const toothStates = pgTable(
-  "tooth_states",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    patientId: uuid("patient_id")
-      .notNull()
-      .references(() => patients.id, { onDelete: "cascade" }),
-    toothFdi: integer("tooth_fdi").notNull(),
-    estado: toothStateEnum("estado").notNull().default("sano"),
-    nota: text("nota"),
-    updatedBy: uuid("updated_by").references(() => users.id),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [
-    unique("tooth_states_patient_tooth_key").on(t.patientId, t.toothFdi),
-    index("tooth_states_patient_idx").on(t.patientId),
   ],
 );
 

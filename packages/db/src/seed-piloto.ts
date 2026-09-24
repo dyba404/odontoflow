@@ -729,14 +729,10 @@ async function run() {
       },
     ]);
 
-    // --- Odontograma: tooth_states + charts (status y plan) -----------------
-    const odontogramas: Array<{ patientId: string; estados: Array<typeof schema.toothStates.$inferInsert>; chart: object; planChart: object | null }> = [
+    // --- Odontograma: charts (status y plan) --------------------------------
+    const odontogramas: Array<{ patientId: string; chart: object; planChart: object | null }> = [
       {
         patientId: p1!.id,
-        estados: [
-          { patientId: p1!.id, toothFdi: 16, estado: "cariado", nota: "Caries oclusal profunda", updatedBy: uDuenia.id },
-          { patientId: p1!.id, toothFdi: 26, estado: "cariado", nota: "Caries mesial incipiente", updatedBy: uDuenia.id },
-        ],
         chart: chartJson({
           "16": toothCariado("occlusal", 3),
           "26": toothCariado("mesial", 2),
@@ -748,9 +744,6 @@ async function run() {
       },
       {
         patientId: p2!.id,
-        estados: [
-          { patientId: p2!.id, toothFdi: 36, estado: "tratado", nota: "Restauración resina oclusal", updatedBy: uDuenia.id },
-        ],
         chart: chartJson({
           "36": toothRestaurado("occlusal"),
         }),
@@ -758,9 +751,6 @@ async function run() {
       },
       {
         patientId: p4!.id,
-        estados: [
-          { patientId: p4!.id, toothFdi: 48, estado: "cariado", nota: "Exodoncia indicada (tercer molar)", updatedBy: uAna.id },
-        ],
         chart: chartJson({
           "48": toothExodonciaIndicada(),
         }),
@@ -770,9 +760,6 @@ async function run() {
       },
       {
         patientId: p12!.id,
-        estados: [
-          { patientId: p12!.id, toothFdi: 46, estado: "corona", nota: "Corona metal-porcelana", updatedBy: uAna.id },
-        ],
         chart: chartJson({
           "46": toothCorona(),
         }),
@@ -780,7 +767,6 @@ async function run() {
       },
     ];
     for (const o of odontogramas) {
-      await tx.insert(schema.toothStates).values(o.estados);
       await tx.insert(schema.odontogramCharts).values({
         tenantId: team.id,
         patientId: o.patientId,
@@ -1064,7 +1050,7 @@ async function run() {
       { entidad: "citas", creados: citasInsertadas.length + seriesCitas.length },
       { entidad: "series", creados: 1 },
       { entidad: "historias_clinicas", creados: 4 },
-      { entidad: "odontogram_charts + tooth_states", creados: odontogramas.length * 2 },
+      { entidad: "odontogram_charts", creados: odontogramas.length },
       { entidad: "periodontogramas", creados: 1 },
       { entidad: "pagos", creados: pagos.length },
       { entidad: "presupuestos", creados: quotesCreados.length },

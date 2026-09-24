@@ -36,7 +36,6 @@
     "postcss": "^8.4.31",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
-    "react-advanced-odontogram": "^2.4.0",
     "react-dom": "^19.0.0",
     "recharts": "^3.10.1",
     "resend": "^6.20.0",

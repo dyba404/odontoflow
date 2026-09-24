@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { USUARIOS, loginPorApi } from "./auth";
 
 const ES_FICHA = /\/consola\/pacientes\/[0-9a-f-]+/;
@@ -28,7 +30,9 @@ test("navegacion SPA: agenda (tabs y flechas), whatsapp (filtros) y dashboard (p
 
   await page.getByRole("button", { name: "Mes", exact: true }).click();
   await expect(page).toHaveURL(/vista=mes/);
-  await expect(page.getByText(/agosto 2026/)).toBeVisible();
+  // El header del mes se resuelve con la fecha actual (es-PE): asercion
+  // dinamica, no hardcodeada (decia "agosto 2026" y explotaba cada mes nuevo).
+  await expect(page.getByText(format(new Date(), "MMMM yyyy", { locale: es }))).toBeVisible();
 
   await page.getByRole("button", { name: "Día", exact: true }).click();
   await expect(page).toHaveURL(/vista=dia/);
@@ -182,23 +186,33 @@ test("el service worker no guarda HTML de paginas en cache", async ({ browser, b
     );
   });
 
-  const htmlEnCache = await page.evaluate(async () => {
-    const keys = await caches.keys();
-    for (const key of keys) {
-      const cache = await caches.open(key);
-      for (const req of await cache.keys()) {
-        const url = new URL(req.url);
-        const esHtmlDePagina =
-          !url.pathname.startsWith("/_next/") &&
-          !url.pathname.startsWith("/icons/") &&
-          url.pathname !== "/offline.html" &&
-          url.pathname !== "/" &&
-          !/\.[a-z0-9]{2,}$/i.test(url.pathname);
-        if (esHtmlDePagina) return true;
-      }
+  // El evaluate puede morir si una navegacion (SW/poll) destruye el contexto
+  // en medio: reintento corto en vez de fallar el test por flake de timing.
+  let htmlEnCache = false;
+  for (let intento = 0; intento < 3; intento++) {
+    try {
+      htmlEnCache = await page.evaluate(async () => {
+        const keys = await caches.keys();
+        for (const key of keys) {
+          const cache = await caches.open(key);
+          for (const req of await cache.keys()) {
+            const url = new URL(req.url);
+            const esHtmlDePagina =
+              !url.pathname.startsWith("/_next/") &&
+              !url.pathname.startsWith("/icons/") &&
+              url.pathname !== "/offline.html" &&
+              url.pathname !== "/" &&
+              !/\.[a-z0-9]{2,}$/i.test(url.pathname);
+            if (esHtmlDePagina) return true;
+          }
+        }
+        return false;
+      });
+      break;
+    } catch {
+      await page.waitForTimeout(1000);
     }
-    return false;
-  });
+  }
   expect(htmlEnCache).toBe(false);
 
   await context.close();

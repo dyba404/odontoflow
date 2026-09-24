@@ -16,7 +16,6 @@ import {
   subscriptions,
   blockedSlots,
   cashClosures,
-  toothStates,
   odontogramCharts,
   clinicalRecords,
   receipts,
@@ -651,20 +650,6 @@ export async function fichaPaciente(teamId: string, patientId: string) {
     .where(eq(payments.patientId, patientId))
     .orderBy(desc(payments.createdAt));
   return { paciente, citas, pagos };
-}
-
-export async function toothStatesPaciente(patientId: string) {
-  const db = getDb();
-  return db
-    .select({
-      toothFdi: toothStates.toothFdi,
-      estado: toothStates.estado,
-      nota: toothStates.nota,
-      updatedAt: toothStates.updatedAt,
-    })
-    .from(toothStates)
-    .where(eq(toothStates.patientId, patientId))
-    .orderBy(asc(toothStates.toothFdi));
 }
 
 export async function odontogramaChartPaciente(teamId: string, patientId: string) {

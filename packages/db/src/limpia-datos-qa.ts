@@ -33,7 +33,6 @@ const PATRONES_PACIENTE = [
 // Orden de borrado respetando FK (ver pg_constraint):
 // receipts -> payments -> dependientes de citas -> citas -> pacientes.
 const TABLAS_DEPENDIENTES_PACIENTE = [
-  "tooth_states",
   "quotes",
   "patient_coverages",
   "patient_magic_tokens",

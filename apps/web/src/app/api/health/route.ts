@@ -26,5 +26,8 @@ export async function GET() {
   };
   const ok = db;
 
-  return NextResponse.json({ ok, version: "1.0.0", ts, checks }, ok ? undefined : { status: 503 });
+  return NextResponse.json(
+    { ok, version: process.env.APP_VERSION ?? "dev", ts, checks },
+    ok ? undefined : { status: 503 },
+  );
 }

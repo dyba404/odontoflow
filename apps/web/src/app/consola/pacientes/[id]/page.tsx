@@ -30,7 +30,6 @@ import {
   getDefaultTeam,
   fichaPaciente,
   registrosPaciente,
-  toothStatesPaciente,
   odontogramaChartPaciente,
   periodoRegistrosPaciente,
   adjuntosDePaciente,
@@ -110,7 +109,6 @@ export default async function FichaPacientePage({
 
   const db = getDb();
   const [
-    dientes,
     registros,
     chart,
     periRegsRaw,
@@ -123,7 +121,6 @@ export default async function FichaPacientePage({
     aseguradoraRows,
     opcionesRepresentante,
   ] = await Promise.all([
-    toothStatesPaciente(ficha.paciente.id),
     registrosPaciente(ficha.paciente.id),
     odontogramaChartPaciente(team.id, ficha.paciente.id),
     pro ? periodoRegistrosPaciente(team.id, ficha.paciente.id) : Promise.resolve([]),
@@ -227,13 +224,11 @@ export default async function FichaPacientePage({
 
   const totalPagado = pagos.reduce((acc, p) => acc + Number(p.monto), 0);
   const ultimaVisita = citas[0]?.fecha ?? null;
-  let ultimaActualizacion: Date | null = null;
-  for (const d of dientes) {
-    const dt = new Date(d.updatedAt);
-    if (!Number.isNaN(dt.getTime()) && (!ultimaActualizacion || dt.getTime() > ultimaActualizacion.getTime())) {
-      ultimaActualizacion = dt;
-    }
-  }
+  // Ultima edicion del odontograma: el chart v2 (odontograma_charts) es la unica
+  // fuente desde que el odontograma simple v1 y tooth_states se retiraron.
+  const chartUpdated = chart ? new Date(chart.updatedAt) : null;
+  const ultimaActualizacion =
+    chartUpdated && !Number.isNaN(chartUpdated.getTime()) ? chartUpdated : null;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
