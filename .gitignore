@@ -17,8 +17,12 @@ pgdata/
 logs-*.txt
 session-*.md
 .opencode/
+.zcode/
 cookies.txt
 smoke-server.log
+
+# Demo navegable sin backend: entregable separado para clientes, no es parte del repo
+demo-ui/
 
 # Adjuntos de pacientes (archivos clínicos): jamás al repo
 apps/web/.data/
