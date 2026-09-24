@@ -47,5 +47,9 @@ Recordatorios WhatsApp por plantillas Meta con fallback automático a email.
 - 10-30 clientes pagantes al cierre de M5
 
 ## Estado
-Sistema maduro listo para M5. Roadmap completo y backlog post-M5 implementado. Ver `02-roadmap.md`.
-Máquinas de estado y protocolos de deshacer/corrección: `06-estados-protocolos.md`.
+v2.0.1 en producción (app.marsmode.me, host casero): producto completo, trial Pro
+15 días activo, marketing piloto en vivo (landing v2, Resend, OG card), "mi cuenta"
+self-service. Roadmap completo y backlog post-M5 implementado. Ver `02-roadmap.md`.
+Proceso SDD (OpenSpec) adoptado: `docs/12-sdd-openspec.md`. Máquinas de estado y
+protocolos de deshacer/corrección: `06-estados-protocolos.md`. Matriz de tools
+verificada: `13-repos-referencia.md`.

@@ -3,33 +3,55 @@
 SaaS de gestión para consultorios odontológicos en Perú (MYPE masivo). Agenda, pacientes,
 ficha clínica, caja, facturación, inventario y más. Multi-tenant con roles por staff.
 
-## Documentación
+## Documentación (índice completo)
 
+Contexto siempre-cargado (reglas):
+- `AGENTS.md` — reglas siempre-cargadas para agentes (contexto pasivo)
+- `constitution.md` — principios inmutables (C1-C7)
+
+Proceso SDD:
+- `docs/12-sdd-openspec.md` — proceso obligatorio (OpenSpec: specs + changes)
+- `openspec/` — specs de verdad actual (6 dominios) + changes en curso
+
+Por tema (un tema = un doc):
 - `docs/00-resumen.md` — decisiones clave
 - `docs/01-topologia.md` — arquitectura y despliegue
 - `docs/02-roadmap.md` — fases M0→M5 + backlog post-M5 (incluido en 1.0)
 - `docs/03-roles-diseno.md` — roles, permisos, superficies, privacidad
-- `docs/04-modelo-datos.md` — schema multi-tenant (migración 0004)
+- `docs/04-modelo-datos.md` — schema multi-tenant
 - `docs/05-modulos-topologia.md` — topología por módulo (facturación, inventario, etc.)
 - `docs/06-estados-protocolos.md` — máquinas de estado y protocolos de deshacer/corrección
+- `docs/07-soporte-plataforma.md` — panel operador fundador auditado
+- `docs/08-plan-escala.md` — programa de escala (olas 1-3: blindaje, storage, multi-máquina)
+- `docs/09-vision-v2.md` — visión v2.0.0: hallazgos, arquitectura, olas 4-6
+- `docs/10-capacitacion.md` — guion del video demo + capacitación por rol
+- `docs/11-marketing-piloto.md` — kit de marketing piloto (canales, copy, métricas)
+- `docs/13-repos-referencia.md` — matriz de tools/repositories verificada (fuentes 2026-09)
+- `docs/99-sesion-estado.md` — estado de sesiones, punto de reanudación
+- `docs/actualizar-produccion.md` — runbook de producción en host casero (backup, rollback)
 
 ## Estructura
 
 ```
 apps/web                → Next.js 15 (superficies por rol + API, puerto 3111)
+apps/web/src/vendor/    → react-advanced-odontogram vendoreado (ESM-only)
 packages/ui             → design system (tokens teal)
 packages/core           → dominio (roles, permisos, estados, engine de slots, tests)
 packages/db             → schema Drizzle multi-tenant + migraciones + seed
-scripts/                → utilidades Docker/DB/console
-docker-compose.yml      → desarrollo local: Postgres 16 + sidecar lycet (Greenter)
-docker-compose.prod.yml → producción: db + lycet + web (Next standalone) + cron (supercronic)
+scripts/                → utilidades Docker/DB/console + marsmode (prender/apagar prod)
+.github/workflows/      → CI (typecheck, lint, tests core/web, escáner mojibake)
+.references/            → 18 repos clonados como material de investigación (read-only)
+openspec/               → proceso SDD: specs de verdad actual + changes
+docker-compose.yml      → desarrollo local: Postgres 16 + sidecar lycet (Greenter) + Mailpit + whatsmock
+docker-compose.prod.yml → producción: db + lycet + web (Next standalone) + caddy + cloudflared + cron
 docker/cron/            → crontab + Dockerfile del contenedor cron (supercronic)
+demo-ui/                → demo navegable sin backend (gitignored; entregable separado para clientes)
 ```
 
 ## Setup
 
 ```
-docker compose up -d          # DEV: Postgres :5432 + lycet :8090
+docker compose up -d          # DEV: Postgres :5432 + lycet :8090 + Mailpit :8025
 npm install
 npm run db:migrate
 npm run db:seed
@@ -38,11 +60,11 @@ npm run dev                   # http://localhost:3111
 
 Copia `.env.local.example` a `.env.local` y ajusta según la tabla de variables de entorno.
 
-## Producción (Docker Compose)
+## Producción (Docker Compose, host casero)
 
-`docker-compose.prod.yml` levanta 4 contenedores: `db` (Postgres 16, sin puerto expuesto al
-host), `lycet` (sidecar Greenter), `web` (Next.js standalone en :3111) y `cron`
-(supercronic v0.2.49).
+`docker-compose.prod.yml` levanta el stack completo: `db` (Postgres 16, sin puerto expuesto al
+host), `lycet` (sidecar Greenter), `web` (Next.js standalone en :3111), `cron`
+(supercronic v0.2.49), `caddy`, `cloudflared` (túnel), `mailpit` y `whatsmock`.
 
 ```
 docker compose -f docker-compose.prod.yml up -d --build                  # levantar stack
@@ -50,6 +72,9 @@ docker compose -f docker-compose.prod.yml run --rm migrate npm run db:migrate  #
 docker compose -f docker-compose.prod.yml run --rm migrate npm run db:seed     # seed demo
 curl http://localhost:3111/api/health                                    # health check (200/503)
 ```
+
+Prender/apagar todo el servidor (libera la RAM de WSL): `scripts/marsmode.ps1 on|off|status`.
+Dominio público: `app.marsmode.me`. Runbook completo: `docs/actualizar-produccion.md`.
 
 El contenedor `cron` corre solo desde el arranque: su crontab (`CRON_TZ=America/Lima`)
 hace `POST` con `Bearer CRON_SECRET` a `http://web:3111/api/cron/*`. 6 jobs:
@@ -109,12 +134,15 @@ Seed crea 5 usuarios (password: `demo1234`, dominio `@demo.odontoflow.pe`):
 | `npm run of:up` / `of:down` / `of:status` / `of:db` | Docker Compose (WSL2): subir/bajar/estado/psql. |
 | `instalar-cron` | **DEV-ONLY (Windows)**: tareas programadas `OfCron`/`OfCronDiario` → `localhost:3111/api/cron/*` (requiere `CRON_SECRET`). En producción lo reemplaza el contenedor `cron` (supercronic) de `docker-compose.prod.yml`. |
 | `scripts/backup.ps1` | `pg_dump` vía WSL/docker → `backups/*.dump` (retención 30 días). |
+| `scripts/marsmode.ps1 on\|off\|status` | Prender/apagar el servidor prod (WSL + Docker + túnel) y liberar RAM. |
+| `scripts/e2e-funcional.js` | Suite E2E funcional canónica (16 pasos) contra la app desplegada: `npm run e2e:funcional`. |
 | `GET /api/health` | Health check: `SELECT 1` con timeout 3s → 200 ok / 503. |
 
 ## Reglas
 
-1. Multi-tenant: `tenant_id` en toda query y validación server-side.
-2. BoxyHQ se usa solo como referencia de modelo de datos (tenants/memberships), re-implementado en `packages/db`; ni su UI ni su motor corren aquí.
-3. Privacidad del paciente: whitelist estricta; el paciente nunca ve listas, agenda del doctor ni ocupación real.
-4. Cobro de suscripciones es manual (Yape/Plin directo) vía panel admin; sin pasarela todavía.
-5. Cada clínica emite comprobantes con SU RUC/certificado/Clave SOL (nunca el nuestro).
+1. Multi-tenant: `tenant_id` en toda query y validación server-side. RBAC server-side (SSOT `packages/core`).
+2. Cada clínica emite comprobantes con SU RUC/certificado/Clave SOL (nunca el nuestro).
+3. Privacidad del paciente: whitelist estricta; el paciente nunca ve listas ni ocupación real.
+4. Cobro de suscripciones es manual (Yape/Plin) vía panel admin; sin pasarela todavía.
+5. Feature nueva sin change aprobado en `openspec/changes/` no entra al código (`docs/12-sdd-openspec.md`).
+6. Commits en español sin acentos, cuerpo detallado; sin mojibake en código user-facing (escáner en CI).

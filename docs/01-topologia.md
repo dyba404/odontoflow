@@ -72,6 +72,12 @@ excluyentes según la conectividad del host** —
   usa el stage `build` del mismo Dockerfile) con el workspace completo:
   `docker compose -f docker-compose.prod.yml run --rm migrate npm run db:migrate`
   (y `... run --rm migrate npm run db:seed`).
+- Prender/apagar el servidor completo: `scripts/marsmode.ps1 on|off|status` (implementado
+  2026-08-31). El off apaga la tarea keep-alive, baja el stack y hace `wsl --shutdown`
+  para liberar los ~4 GB de RAM de vmmemWSL (el dominio queda con 530 hasta el `on`);
+  el on enciende WSL+Docker, detiene contenedores ajenos al prod
+  (`scripts/marsmode-solo-prod.sh`), levanta el stack con `--profile tunnel` y reactiva
+  el keep-alive. Útil en el host casero (la app no siempre está en uso).
 - Health check: `GET /api/health` en :3111 → 200/503 (checable también vía el
   dominio público).
 - El cron corre solo desde `compose up`; no hay que programar nada en el host.

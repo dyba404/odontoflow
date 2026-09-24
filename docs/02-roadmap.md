@@ -471,6 +471,14 @@ danphe MIT, mediflow-ai MIT). Resumen por ola:
       `scripts/configurar-keepalive-wsl.ps1`). Nota multi-instancia: al pasar a
       varias máquinas (Ola 3) swap del EventEmitter por Postgres LISTEN/NOTIFY
       sin cambiar clientes SSE.
+- [x] **v2.0.1+ — Piloto en producción (en vivo, sesiones 28-30):** marketing
+      piloto (GitHub privado + CI verde, trial Pro TRIAL_DAYS, landing v2, Resend
+      real end-to-end, OG card WhatsApp), "mi cuenta" self-service (cambio de
+      correo/contrasena verificados por contrasena actual; nombre de cuenta en el
+      menu) y escaner de mojibake en CI (5 patrones sobre codigo user-facing).
+      Runbook de producción casero: `docs/actualizar-produccion.md`; matriz de
+      tools verificada: `docs/13-repos-referencia.md`; proceso SDD (OpenSpec):
+      `docs/12-sdd-openspec.md`.
 - [ ] **v2.1 — Copilot agéntico:** build en v2.0.0, ship separado (registry de
       tools, paridad RBAC, redacción PHI, confirmación de writes, BudgetGuard).
 
