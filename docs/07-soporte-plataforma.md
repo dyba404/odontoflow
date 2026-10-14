@@ -1,6 +1,5 @@
 # Soporte de plataforma (v1.7.0): fundador, acciones de soporte e impersonación auditada
 
-> **Para el agente implementador:** este es el plan completo y autocontenido.
 > Todo lo de abajo está verificado contra el código actual (líneas citadas).
 > Decisiones del dueño del proyecto ya tomadas: (1) el fundador se crea en el seed
 > con contraseña TEMPORAL y la cambia en el primer login; (2) impersonación incluida

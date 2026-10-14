@@ -1,7 +1,7 @@
 # Odontoflow
 
 [![CI](https://github.com/dyba404/odontoflow/actions/workflows/ci.yml/badge.svg)](https://github.com/dyba404/odontoflow/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-core%20%2B%20E2E%20Playwright-brightgreen)](docs/12-sdd-openspec.md)
+[![Tests](https://img.shields.io/badge/tests-core%20%2B%20E2E%20Playwright-brightgreen)](docs/06-estados-protocolos.md)
 
 SaaS de gestión para consultorios odontológicos en Perú (MYPE masivo). Agenda, pacientes,
 ficha clínica, caja, facturación, inventario y más. Multi-tenant con roles por staff.
@@ -27,14 +27,6 @@ Docker Compose · GitHub Actions · tests core (`node:test`) + E2E Playwright ·
 
 ## Documentación (índice completo)
 
-Contexto siempre-cargado (reglas):
-- `AGENTS.md` — reglas siempre-cargadas para agentes (contexto pasivo)
-- `constitution.md` — principios inmutables (C1-C7)
-
-Proceso SDD:
-- `docs/12-sdd-openspec.md` — proceso obligatorio (OpenSpec: specs + changes)
-- `openspec/` — specs de verdad actual (6 dominios) + changes en curso
-
 Por tema (un tema = un doc):
 - `docs/00-resumen.md` — decisiones clave
 - `docs/01-topologia.md` — arquitectura y despliegue
@@ -48,8 +40,6 @@ Por tema (un tema = un doc):
 - `docs/09-vision-v2.md` — visión v2.0.0: hallazgos, arquitectura, olas 4-6
 - `docs/10-capacitacion.md` — guion del video demo + capacitación por rol
 - `docs/11-marketing-piloto.md` — kit de marketing piloto (canales, copy, métricas)
-- `docs/13-repos-referencia.md` — matriz de tools/repositories verificada (fuentes 2026-09)
-- `docs/99-sesion-estado.md` — estado de sesiones, punto de reanudación
 - `docs/actualizar-produccion.md` — runbook de producción en host casero (backup, rollback)
 
 ## Estructura
@@ -62,8 +52,6 @@ packages/core           → dominio (roles, permisos, estados, engine de slots, 
 packages/db             → schema Drizzle multi-tenant + migraciones + seed
 scripts/                → utilidades Docker/DB/console + marsmode (prender/apagar prod)
 .github/workflows/      → CI (typecheck, lint, tests core/web, escáner mojibake)
-.references/            → 18 repos clonados como material de investigación (read-only)
-openspec/               → proceso SDD: specs de verdad actual + changes
 docker-compose.yml      → desarrollo local: Postgres 16 + sidecar lycet (Greenter) + Mailpit + whatsmock
 docker-compose.prod.yml → producción: db + lycet + web (Next standalone) + caddy + cloudflared + cron
 docker/cron/            → crontab + Dockerfile del contenedor cron (supercronic)
@@ -166,5 +154,4 @@ Seed crea 5 usuarios (password: `demo1234`, dominio `@demo.odontoflow.pe`):
 2. Cada clínica emite comprobantes con SU RUC/certificado/Clave SOL (nunca el nuestro).
 3. Privacidad del paciente: whitelist estricta; el paciente nunca ve listas ni ocupación real.
 4. Cobro de suscripciones es manual (Yape/Plin) vía panel admin; sin pasarela todavía.
-5. Feature nueva sin change aprobado en `openspec/changes/` no entra al código (`docs/12-sdd-openspec.md`).
-6. Commits en español sin acentos, cuerpo detallado; sin mojibake en código user-facing (escáner en CI).
+5. Commits en español sin acentos, cuerpo detallado; sin mojibake en código user-facing (escáner en CI).
