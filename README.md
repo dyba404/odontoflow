@@ -1,7 +1,29 @@
 # Odontoflow
 
+[![CI](https://github.com/dyba404/odontoflow/actions/workflows/ci.yml/badge.svg)](https://github.com/dyba404/odontoflow/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-core%20%2B%20E2E%20Playwright-brightgreen)](docs/12-sdd-openspec.md)
+
 SaaS de gestión para consultorios odontológicos en Perú (MYPE masivo). Agenda, pacientes,
 ficha clínica, caja, facturación, inventario y más. Multi-tenant con roles por staff.
+**En producción real** (Docker Compose en host propio + Cloudflare Tunnel).
+
+## Características
+
+- **Agenda** con engine de slots propio, bloqueos y protocolos de corrección.
+- **Ficha clínica** con odontograma e historial por paciente.
+- **Caja y facturación electrónica SUNAT** (boleta/factura) vía sidecar lycet (Greenter), con reemisión automática de comprobantes rechazados.
+- **Inventario** con kardex y digest diario de stock bajo.
+- **Portal del paciente** con login.
+- **WhatsApp Cloud API**: recordatorios de citas y seguimiento de presupuestos.
+- **Suscripciones** (Free/Pro/Premium) con ciclo automático: renovación, días de gracia y suspensión.
+- **Multi-tenant** con RBAC server-side y `tenant_id` forzado en toda query.
+- **6 cron jobs** (recordatorios, renovaciones, fiscal, digest, recall de pacientes dormidos, seguimiento).
+- Cifrado at-rest de credenciales fiscales y tokens de WhatsApp (`LOCAL_MASTER_KEY`).
+
+## Stack
+
+Next.js 15 (App Router) · TypeScript · Drizzle ORM · PostgreSQL 16 · monorepo npm workspaces ·
+Docker Compose · GitHub Actions · tests core (`node:test`) + E2E Playwright · Resend · Caddy + cloudflared.
 
 ## Documentación (índice completo)
 
