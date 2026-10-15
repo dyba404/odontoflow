@@ -1,11 +1,9 @@
 # Odontoflow
 
 [![CI](https://github.com/dyba404/odontoflow/actions/workflows/ci.yml/badge.svg)](https://github.com/dyba404/odontoflow/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-core%20%2B%20E2E%20Playwright-brightgreen)](docs/06-estados-protocolos.md)
 
-SaaS de gestión para consultorios odontológicos en Perú (MYPE masivo). Agenda, pacientes,
-ficha clínica, caja, facturación, inventario y más. Multi-tenant con roles por staff.
-**En producción real** (Docker Compose en host propio + Cloudflare Tunnel).
+SaaS de gestión para consultorios odontológicos en Perú. Agenda, pacientes, ficha
+clínica, caja, facturación electrónica, inventario y más. Multi-tenant con roles por staff.
 
 ## Características
 
@@ -25,22 +23,12 @@ ficha clínica, caja, facturación, inventario y más. Multi-tenant con roles po
 Next.js 15 (App Router) · TypeScript · Drizzle ORM · PostgreSQL 16 · monorepo npm workspaces ·
 Docker Compose · GitHub Actions · tests core (`node:test`) + E2E Playwright · Resend · Caddy + cloudflared.
 
-## Documentación (índice completo)
+## Documentación
 
-Por tema (un tema = un doc):
-- `docs/00-resumen.md` — decisiones clave
-- `docs/01-topologia.md` — arquitectura y despliegue
-- `docs/02-roadmap.md` — fases M0→M5 + backlog post-M5 (incluido en 1.0)
-- `docs/03-roles-diseno.md` — roles, permisos, superficies, privacidad
-- `docs/04-modelo-datos.md` — schema multi-tenant
-- `docs/05-modulos-topologia.md` — topología por módulo (facturación, inventario, etc.)
-- `docs/06-estados-protocolos.md` — máquinas de estado y protocolos de deshacer/corrección
-- `docs/07-soporte-plataforma.md` — panel operador fundador auditado
-- `docs/08-plan-escala.md` — programa de escala (olas 1-3: blindaje, storage, multi-máquina)
-- `docs/09-vision-v2.md` — visión v2.0.0: hallazgos, arquitectura, olas 4-6
-- `docs/10-capacitacion.md` — guion del video demo + capacitación por rol
-- `docs/11-marketing-piloto.md` — kit de marketing piloto (canales, copy, métricas)
-- `docs/actualizar-produccion.md` — runbook de producción en host casero (backup, rollback)
+Arquitectura y despliegue en `docs/01-topologia.md`, modelo de datos multi-tenant en
+`docs/04-modelo-datos.md`, roles y privacidad en `docs/03-roles-diseno.md`, máquinas de
+estado en `docs/06-estados-protocolos.md`, roadmap en `docs/02-roadmap.md` y el runbook
+de actualización (backup + rollback) en `docs/actualizar-produccion.md`. Lo demás, en `docs/`.
 
 ## Estructura
 
@@ -70,7 +58,7 @@ npm run dev                   # http://localhost:3111
 
 Copia `.env.local.example` a `.env.local` y ajusta según la tabla de variables de entorno.
 
-## Producción (Docker Compose, host casero)
+## Despliegue (Docker Compose)
 
 `docker-compose.prod.yml` levanta el stack completo: `db` (Postgres 16, sin puerto expuesto al
 host), `lycet` (sidecar Greenter), `web` (Next.js standalone en :3111), `cron`
@@ -83,8 +71,8 @@ docker compose -f docker-compose.prod.yml run --rm migrate npm run db:seed     #
 curl http://localhost:3111/api/health                                    # health check (200/503)
 ```
 
-Prender/apagar todo el servidor (libera la RAM de WSL): `scripts/marsmode.ps1 on|off|status`.
-Dominio público: `app.marsmode.me`. Runbook completo: `docs/actualizar-produccion.md`.
+Prender/apagar el stack completo: `scripts/marsmode.ps1 on|off|status`.
+Runbook completo: `docs/actualizar-produccion.md`.
 
 El contenedor `cron` corre solo desde el arranque: su crontab (`CRON_TZ=America/Lima`)
 hace `POST` con `Bearer CRON_SECRET` a `http://web:3111/api/cron/*`. 6 jobs:
@@ -142,10 +130,10 @@ Seed crea 5 usuarios (password: `demo1234`, dominio `@demo.odontoflow.pe`):
 | `npm run db:migrate` | Aplica migraciones. |
 | `npm run db:seed` | Seed con datos demo. |
 | `npm run of:up` / `of:down` / `of:status` / `of:db` | Docker Compose (WSL2): subir/bajar/estado/psql. |
-| `instalar-cron` | **DEV-ONLY (Windows)**: tareas programadas `OfCron`/`OfCronDiario` → `localhost:3111/api/cron/*` (requiere `CRON_SECRET`). En producción lo reemplaza el contenedor `cron` (supercronic) de `docker-compose.prod.yml`. |
+| `instalar-cron` | **DEV-ONLY (Windows)**: tareas programadas `OfCron`/`OfCronDiario` → `localhost:3111/api/cron/*` (requiere `CRON_SECRET`). En despliegue lo reemplaza el contenedor `cron` (supercronic) de `docker-compose.prod.yml`. |
 | `scripts/backup.ps1` | `pg_dump` vía WSL/docker → `backups/*.dump` (retención 30 días). |
-| `scripts/marsmode.ps1 on\|off\|status` | Prender/apagar el servidor prod (WSL + Docker + túnel) y liberar RAM. |
-| `scripts/e2e-funcional.js` | Suite E2E funcional canónica (16 pasos) contra la app desplegada: `npm run e2e:funcional`. |
+| `scripts/marsmode.ps1 on\|off\|status` | Prender/apagar el stack (WSL + Docker + túnel). |
+| `scripts/e2e-funcional.js` | Suite E2E funcional (16 pasos) contra la app corriendo: `npm run e2e:funcional`. |
 | `GET /api/health` | Health check: `SELECT 1` con timeout 3s → 200 ok / 503. |
 
 ## Reglas
