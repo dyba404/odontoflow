@@ -59,4 +59,4 @@ foreach ($r in $repos) {
 
 Step "6/6 Estado final"
 wsl.exe -d Ubuntu -u dev -- docker compose version
-Write-Host "`nListo. Postgres/docker OK. Abre opencode y escribe 'continua'." -ForegroundColor Green
+Write-Host "`nListo. Postgres/docker OK." -ForegroundColor Green
