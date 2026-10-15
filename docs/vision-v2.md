@@ -13,7 +13,7 @@ v2.0.0 convierte a Odontoflow de "gestor administrativo de clínica dental" a
 periodontograma, planes de tratamiento con pipeline, presupuestos firmables,
 consentimientos con valor legal, portal del paciente self-service, métricas de
 retención y un copiloto agéntico — sobre la infraestructura blindada del
-programa de escala (olas 1-3, ver `docs/08-plan-escala.md`).
+programa de escala (olas 1-3, ver `docs/plan-escala.md`).
 
 Tres fuentes alimentan el plan:
 1. Programa de escala v1.10-v1.12 + portal P1-P5 + retención S1-S5 (aprobado antes, se hereda).
@@ -275,7 +275,7 @@ sin implementarse ahora.
 
 ---
 
-## 4. Programa de infra (olas 1-3) → `docs/08-plan-escala.md`
+## 4. Programa de infra (olas 1-3) → `docs/plan-escala.md`
 
 | # | Ola | Contenido clave | Tiempo |
 |---|---|---|---|

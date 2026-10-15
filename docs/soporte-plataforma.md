@@ -242,12 +242,12 @@ bloqueado/desbloqueado, membresía activa/inactiva, impersonación solicitada/in
   http://localhost:3111` en apps/web/.env.local; el cron apunta a 3111). Corregir a 3111.
 - `README.md` (Variables de entorno): marcar `ADMIN_EMAILS` como deprecated-bootstrap;
   agregar fila `FOUNDER_EMAIL`/`FOUNDER_PASSWORD` (opcional, para `db:seed:founder`).
-- `docs/00-resumen.md`: fila nueva "Panel de operador" → flag en DB (patrón cal.com/dub).
-- `docs/04-modelo-datos.md`: columnas nuevas de `users`/`sessions` + tabla
+- `docs/resumen.md`: fila nueva "Panel de operador" → flag en DB (patrón cal.com/dub).
+- `docs/modelo-datos.md`: columnas nuevas de `users`/`sessions` + tabla
   `impersonation_requests`; aclaración BoxyHQ: se re-implementó su MODELO DE DATOS en
   Drizzle (no es un motor integrado ni un fork).
-- `docs/01-topologia.md`: `/admin` + sesión plataforma en el mapa de superficies.
-- `docs/02-roadmap.md`: esta versión ya registrada como sección v1.7.0.
+- `docs/arquitectura.md`: `/admin` + sesión plataforma en el mapa de superficies.
+- `docs/roadmap.md`: esta versión ya registrada como sección v1.7.0.
 
 ## 6. E2E y verificación
 
@@ -274,7 +274,7 @@ Si el seed cambia, re-verificar idempotencia (`npm run db:seed` dos veces seguid
 
 ## 7. Out of scope explícito
 
-- Pasarela de pago (sigue manual Yape/Plin — docs/00-resumen.md:22).
+- Pasarela de pago (sigue manual Yape/Plin — docs/resumen.md:22).
 - Página de estado de salud interna (health panel).
 - Multi-fundador (el flag lo permite en el futuro; por ahora 1 cuenta seed).
 - Historial global de impersonaciones cross-tenant (vive en `audit_logs` por tenant).

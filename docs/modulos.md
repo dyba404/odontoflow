@@ -6,7 +6,7 @@ sprint** salvo donde se indica lo contrario. Esquema multi-tenant: toda tabla ll
 un padre con tenant.
 
 Máquinas de estado y protocolos de corrección (deshacer/anular/reabrir/retroceder) con
-diagramas y catálogo de errores: `docs/06-estados-protocolos.md`.
+diagramas y catálogo de errores: `docs/estados.md`.
 
 Mapa general del sistema:
 
@@ -61,7 +61,7 @@ Mapa general del sistema:
  usuario SOL + Clave SOL + certificado PEM cifrados at-rest con LOCAL_MASTER_KEY (lib/crypto)
 ```
 
-Ruta de baja/corrección fiscal (detalle completo en `docs/06-estados-protocolos.md` §3):
+Ruta de baja/corrección fiscal (detalle completo en `docs/estados.md` §3):
 
 | Endpoint | Método | Función |
 |---|---|---|
@@ -120,7 +120,7 @@ Ruta de baja/corrección fiscal (detalle completo en `docs/06-estados-protocolos
 |---|---|
 | Tablas | `payments.estado` (valido|anulado) + `anulado_por/anulado_at/motivo_anulacion/anulado_con_id`, `cash_closures.estado` (cerrado|reabierto) + `reabierto_por/reabierto_at/motivo_reapertura` |
 | Endpoints | `POST /api/caja/pagos/[id]/anular` (payments.register + plan caja), `POST /api/caja/cierre/[id]/reabrir` (solo owner + plan caja) |
-| Máquina | `valido → anulado`; cierre `cerrado → reabierto` (+ nuevo cierre). Detalle en `docs/06-estados-protocolos.md` §2 |
+| Máquina | `valido → anulado`; cierre `cerrado → reabierto` (+ nuevo cierre). Detalle en `docs/estados.md` §2 |
 | Dependencia externa | Ninguna |
 | Estado | Implementado en este sprint |
 
@@ -144,7 +144,7 @@ Ruta de baja/corrección fiscal (detalle completo en `docs/06-estados-protocolos
 | Aspecto | Detalle |
 |---|---|
 | Tablas | `waitlists` (patient_id, service_id, preferencia, prioridad, estado activa/ofrecida/aceptada/expirada/retirada), `patient_magic_tokens` (link sin cuenta) |
-| Máquina | `activa → [ofrecida, retirada]`; `ofrecida → [aceptada, retirada, activa]` (la vuelta `ofrecida → activa` re-encola al paciente para el siguiente hueco). Detalle en `docs/06-estados-protocolos.md` §5 |
+| Máquina | `activa → [ofrecida, retirada]`; `ofrecida → [aceptada, retirada, activa]` (la vuelta `ofrecida → activa` re-encola al paciente para el siguiente hueco). Detalle en `docs/estados.md` §5 |
 | Dependencia externa | Email vía Resend (`RESEND_API_KEY`; sin credencial la oferta queda pendiente en cola) |
 | Estado | Implementado en este sprint |
 
@@ -186,7 +186,7 @@ Ruta de baja/corrección fiscal (detalle completo en `docs/06-estados-protocolos
 | Aspecto | Detalle |
 |---|---|
 | Tablas | `quotes` (items jsonb, total, estado, expira_en), `installments` (quote_id, patient_id, n, monto, pagado, vence, estado, payment_id) |
-| Máquina | `borrador → [enviado, rechazado]`; `enviado → [aprobado, rechazado]`; `aprobado → [convertido]`; rechazo/convertido terminales. Detalle en `docs/06-estados-protocolos.md` §6 |
+| Máquina | `borrador → [enviado, rechazado]`; `enviado → [aprobado, rechazado]`; `aprobado → [convertido]`; rechazo/convertido terminales. Detalle en `docs/estados.md` §6 |
 | Dependencia externa | Ninguna (email de aprobación vía Resend si está configurado) |
 | Estado | Implementado en este sprint |
 
@@ -258,7 +258,7 @@ Ruta de baja/corrección fiscal (detalle completo en `docs/06-estados-protocolos
 | Aspecto | Detalle |
 |---|---|
 | Tablas | `lab_orders` (estado enviado/fabricacion/recibido/colocado/cancelado, laboratorio, fecha_promesa, costo, rev, motivo_revision) |
-| Endpoint | `PATCH /api/laboratorio/[id]/estado` — avance paso a paso, cancelado desde cualquiera, retroceso exacto de un paso con motivo (400 `motivo_requerido_para_retroceder` / `transicion_invalida`). Detalle en `docs/06-estados-protocolos.md` §4 |
+| Endpoint | `PATCH /api/laboratorio/[id]/estado` — avance paso a paso, cancelado desde cualquiera, retroceso exacto de un paso con motivo (400 `motivo_requerido_para_retroceder` / `transicion_invalida`). Detalle en `docs/estados.md` §4 |
 | Dependencia externa | Ninguna |
 | Estado | Implementado en este sprint |
 

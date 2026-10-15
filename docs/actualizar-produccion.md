@@ -90,6 +90,6 @@ Candidato verificado 2026-08: **Oracle Cloud Free Tier** (siempre gratis, no exp
   tienen variantes arm64 oficiales; validar lycet/whap en arm64 antes de migrar
 
 Alternativa paga cuando hay MRR: Hetzner CPX21 (~€8/mes, x86, sin sorpresas).
-El procedimiento completo está en `docs/08-plan-escala.md`; el resumen:
+El procedimiento completo está en `docs/plan-escala.md`; el resumen:
 crear VPS → instalar Docker → `git clone` → mismo `.env` (misma LOCAL_MASTER_KEY)
 → `pg_dump` aquí → restore allá → cambiar DNS → apagar túnel.

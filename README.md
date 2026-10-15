@@ -25,9 +25,9 @@ Docker Compose · GitHub Actions · tests core (`node:test`) + E2E Playwright ·
 
 ## Documentación
 
-Arquitectura y despliegue en `docs/01-topologia.md`, modelo de datos multi-tenant en
-`docs/04-modelo-datos.md`, roles y privacidad en `docs/03-roles-diseno.md`, máquinas de
-estado en `docs/06-estados-protocolos.md`, roadmap en `docs/02-roadmap.md` y el runbook
+Arquitectura y despliegue en `docs/arquitectura.md`, modelo de datos multi-tenant en
+`docs/modelo-datos.md`, roles y privacidad en `docs/roles.md`, máquinas de
+estado en `docs/estados.md`, roadmap en `docs/roadmap.md` y el runbook
 de actualización (backup + rollback) en `docs/actualizar-produccion.md`. Lo demás, en `docs/`.
 
 ## Estructura
@@ -87,7 +87,7 @@ hace `POST` con `Bearer CRON_SECRET` a `http://web:3111/api/cron/*`. 6 jobs:
 | `seguimiento` | Diario | Seguimiento de presupuestos enviados hace ≥3 días (1er aviso) y ≥7 (final) + cuotas vencidas. |
 
 En desarrollo local (Windows) los mismos endpoints se agendan con
-`scripts/instalar-cron.ps1` (**dev-only**). Detalle en `docs/01-topologia.md`.
+`scripts/instalar-cron.ps1` (**dev-only**). Detalle en `docs/arquitectura.md`.
 
 ## Variables de entorno
 

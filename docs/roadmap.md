@@ -128,7 +128,6 @@ Salida: todo lo internamente resoluble quedó resuelto. Solo resta lo externo: V
   - 13 capturas reales de la app en `public/guia/`, regenerables con `scripts/captura-guia.mjs`
   - `/consola/soporte` reemplaza sus 3 guías inline por tarjeta al centro
 - [x] Fase 2 Checklist de primeros pasos en el panel del owner: `console-data.primerosPasos()` calcula con datos reales (legal configurado, servicios, equipo invitado, pacientes como proxy de página compartida, primera cita confirmada); contador 0/5..4/5, items tachados al completar y la tarjeta desaparece sola al terminar. Verificado con tenant efímero vía `/api/auth/signup` (muestra 0/5) y el demo completo (oculta)
-- [x] Fase 3 `docs/10-capacitacion.md`: guion del video demo escena por escena para grabarlo después con OBS (versión ventas 5 min + capacitación por rol 10 min) + procedimiento para regenerar capturas
 - [x] Typecheck + lint + build verdes; E2E 11/11 contra el build final (6 desktop + 5 móvil)
 
 Salida: entregable de capacitación para cuando se venda el servicio (guías in-app por rol, link público para el equipo, checklist de onboarding y guion de grabación) y el responsive verificado en celular/tablet con regresión automática.
@@ -209,7 +208,7 @@ Salida: la mitigación para el bug de navegaciones con searchParams es autónomo
 
 ## v1.7.0 — Soporte de plataforma: fundador, acciones de soporte e impersonación auditada
 
-Plan completo en `docs/07-soporte-plataforma.md` (problema, patrones externos verificados
+Plan completo en `docs/soporte-plataforma.md` (problema, patrones externos verificados
 en cal.com/dub/chatwoot, hechos del código actual, checklist por capa y E2E). Resumen:
 
 - [x] Cuenta fundador real: `users.is_platform_admin` + sesión plataforma sin membership;
@@ -228,7 +227,7 @@ en cal.com/dub/chatwoot, hechos del código actual, checklist por capa y E2E). R
       impersonar con banner → salir → usuario bloqueado sin login → token vencido).
 - [x] Docs batch: README puerto **3111** (no 3000), `ADMIN_EMAILS` como bootstrap
       deprecated, aclaración BoxyHQ = modelo de datos re-implementado (no fork/motor),
-      filas nuevas en 00-resumen/04-modelo-datos/01-topologia.
+      filas nuevas en resumen/modelo-datos/arquitectura.
 - [x] Verificado: typecheck + lint (0 warnings) + build standalone fresco (con `/primer-acceso`); **12/12** admin, **14/14** regresión, **9/9** vivo y **6/6** serie contra el build final; health `{db, correo, lycet}: true`; `db:clean` post-suites (10 pacientes, 9 citas, 6 pagos, 4 comprobantes)
 
 Salida: el operador del SaaS tiene identidad propia y herramientas de soporte auditadas
@@ -330,9 +329,9 @@ Lote de pulido sobre lo avanzado en v1.7.0/v1.7.1/v1.8.0 (sin features nuevas).
       del fallback inline `NEXT_PUBLIC_APP_URL ?? localhost:3111` (y el
       fallback de `appBaseUrl()` queda en 3111, alineado con toda la app).
 - [x] **Docs:** modalidad Caddy en el modo túnel documentada en
-      `01-topologia.md` (arranca igual, loopea ACME sin puertos abiertos;
+      `arquitectura.md` (arranca igual, loopea ACME sin puertos abiertos;
       esperado, no rompe) y regla 8 (admin con membresía) en
-      `07-soporte-plataforma.md`.
+      `soporte-plataforma.md`.
 - [x] Verificado: typecheck + lint (0 warnings) + build standalone fresco;
       **admin 14/14** (12 previos + test 7 nuevo, desktop + Pixel 7) y
       **regresión 15/15** contra el build final; crons `recordatorios/diario/
@@ -403,7 +402,7 @@ v1.7.0. Free queda con límite real de uso para cerrar ventas a Pro.
 
 ## v1.10 → v2.0.0 — Programa de escala + plataforma clínica (plan maestro)
 
-Plan completo en `docs/09-vision-v2.md` e infra en `docs/08-plan-escala.md`.
+Plan completo en `docs/vision-v2.md` e infra en `docs/plan-escala.md`.
 Investigación base: 8 repos de referencia en `.references/` (dentalpin BSL,
 dentalops MIT, react-advanced-odontogram MIT, medplum Apache, openemr GPL,
 danphe MIT, mediflow-ai MIT). Resumen por ola:
@@ -432,7 +431,7 @@ danphe MIT, mediflow-ai MIT). Resumen por ola:
       con document_hash + recordatorios 7/14d), F5 consentimientos firmados ✅
       (templates + firma con hash/IP/UA), F6 sala/consultorios ✅ (máquina de
       sala paralela: sala_estado + room + appointment_status_events; decisión
-      documentada en 09-vision-v2.md), F7 allocations de pago ✅
+      documentada en vision-v2.md), F7 allocations de pago ✅
       (payment_allocations + reconcile + computePaidSummary único).
 - [x] **v2.0.0 Ola 5 — Portal P1-P5:** reprogramar desde portal (link de
       gestión reutilizando el wizard /gestionar), instrucciones pre/post-op
@@ -484,7 +483,7 @@ danphe MIT, mediflow-ai MIT). Resumen por ola:
 
 ## Backlog post-M5 → incluido en 1.0
 
-Topología detallada por módulo en `docs/05-modulos-topologia.md`.
+Topología detallada por módulo en `docs/modulos.md`.
 
 - [x] Facturación electrónica — sidecar Greenter `lycet` (cada tenant con SU RUC/certificado/Clave SOL)
 - [x] Baja SUNAT real: boleta vía Resumen de Bajas (RA, ticket, asíncrono) y factura vía nota de crédito (tipoDoc 07, codMotivo 01)

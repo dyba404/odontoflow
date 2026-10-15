@@ -1,6 +1,6 @@
 # Plan de escala Odontoflow (olas 1-3)
 
-> Aprobado 2026-08-20. Doc operativo: `docs/09-vision-v2.md` contiene la visión
+> Aprobado 2026-08-20. Doc operativo: `docs/vision-v2.md` contiene la visión
 > completa. Este documento define la infraestructura de escala a 100 clínicas.
 
 **Contexto:** objetivo de mercado = 100 clínicas Pro/Premium (fotos/PDFs,

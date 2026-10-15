@@ -49,5 +49,5 @@ Recordatorios WhatsApp por plantillas Meta con fallback automático a email.
 ## Estado
 v2.0.1 en producción (app.marsmode.me, host casero): producto completo, trial Pro
 15 días activo, marketing piloto en vivo (landing v2, Resend, OG card), "mi cuenta"
-self-service. Roadmap completo y backlog post-M5 implementado. Ver `02-roadmap.md`.
-Máquinas de estado y protocolos de deshacer/corrección: `06-estados-protocolos.md`.
+self-service. Roadmap completo y backlog post-M5 implementado. Ver `roadmap.md`.
+Máquinas de estado y protocolos de deshacer/corrección: `estados.md`.

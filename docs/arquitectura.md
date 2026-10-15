@@ -148,7 +148,7 @@ Windows 11 24H2
 - Rate limiting in-memory (`lib/rate-limit.ts`) en auth pública y endpoints públicos: login 10/min, signup 5/min, recuperar 5/min, solicitudes públicas 10/min, slots 60/min, webhook WhatsApp 30/min → `429` + `Retry-After`.
 - `GET /api/health`: `SELECT 1` con timeout 3s → 200/503.
 - `scripts/backup.ps1`: `pg_dump` vía WSL/docker → `backups/*.dump` (retención 30 días).
-- PWA: `manifest.webmanifest` + `sw.js` (navigations network-first con fallback `offline.html`; cache-first para `/_next/static` e iconos) + banner offline + utilidades IndexedDB (`lib/offline-store.ts`). Detalle en `docs/05-modulos-topologia.md` §15-16.
+- PWA: `manifest.webmanifest` + `sw.js` (navigations network-first con fallback `offline.html`; cache-first para `/_next/static` e iconos) + banner offline + utilidades IndexedDB (`lib/offline-store.ts`). Detalle en `docs/modulos.md` §15-16.
 
 ## Plan de infra a futuro
 
