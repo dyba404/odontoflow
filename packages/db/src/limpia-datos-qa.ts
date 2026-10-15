@@ -16,6 +16,8 @@ if (!urlEnv) throw new Error("DATABASE_URL no definido");
 const url: string = urlEnv;
 
 const PATRONES_PACIENTE = [
+  "nombre LIKE 'Doble Click %'",
+  "nombre LIKE 'QA %'",
   "nombre LIKE 'Paciente E2E %'",
   "nombre LIKE 'Paciente Vivo %'",
   "nombre LIKE 'Paciente Publico %'",
@@ -61,6 +63,9 @@ async function main() {
       (SELECT count(*) FROM receipts WHERE payment_id IN (SELECT id FROM payments WHERE ${pacienteQa}))::int AS comprobantes`);
 
     await client.begin(async (tx) => {
+      // installments referencian quotes (FK quote_id): fuera ANTES que quotes
+      await tx.unsafe(`DELETE FROM installments WHERE quote_id IN (SELECT id FROM quotes WHERE ${pacienteQa})`);
+
       for (const t of TABLAS_DEPENDIENTES_PACIENTE) {
         await tx.unsafe(`DELETE FROM ${t} WHERE ${pacienteQa}`);
       }

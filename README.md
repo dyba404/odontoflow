@@ -5,6 +5,22 @@
 SaaS de gestión para consultorios odontológicos en Perú. Agenda, pacientes, ficha
 clínica, caja, facturación electrónica, inventario y más. Multi-tenant con roles por staff.
 
+## Pantallas
+
+<p>
+  <img src="docs/screenshots/agenda.png" width="49%" alt="Agenda del día por doctor con citas" />
+  <img src="docs/screenshots/panel-general.png" width="49%" alt="Panel general de la consola" />
+</p>
+<p>
+  <img src="docs/screenshots/ficha.png" width="49%" alt="Ficha del paciente con historial, pagos y seguros" />
+  <img src="docs/screenshots/caja.png" width="49%" alt="Caja del día con totales por método de pago" />
+</p>
+<p>
+  <img src="docs/screenshots/pacientes.png" width="49%" alt="Listado de pacientes" />
+</p>
+
+*Capturas del demo que genera el seed (`npm run db:seed`); pacientes y movimientos ficticios.*
+
 ## Características
 
 - **Agenda** con engine de slots propio, bloqueos y protocolos de corrección.
