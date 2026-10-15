@@ -1,7 +1,7 @@
 # Odontoflow v2.0.0 — Visión y plan
 
 > Aprobado por el usuario el 2026-08-20. Versión de referencia para todo el
-> programa v2.0.0. Fuente: `.opencode/plans/v2-vision.md` + investigación de 8
+> programa v2.0.0. Fuente: investigación de 8
 > repos en `.references/`.
 
 ---
@@ -211,7 +211,7 @@ stack (Next.js route handlers + postgres-js + Drizzle):
 
 11. **Catálogo de eventos + docs.** Registrar todo evento en
     `lib/events/catalog.ts` (unión TS de payload), script que genera
-    `docs/eventos-catalog.md`, changelog en `docs/99-sesion-estado.md`, ADRs
+    `docs/eventos-catalog.md`, changelog, ADRs
     en `docs/adr/NNNN-titulo.md` cuando la decisión no es obvia.
 
 12. **DEMO_MODE.** Guard sobre acciones destructivas en tenants demo → útil

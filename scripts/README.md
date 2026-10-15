@@ -16,8 +16,6 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup-post-reboot.ps1
 5. Corre `docker run --rm hello-world` para verificar
 6. Clona los 5 repos de referencia en `.references/` (si faltan)
 
-Cuando termine con exito: abrir opencode en `C:\Users\Administrator\Documents\projects\odontoflow`
-y decir `continua` para retomar con Drizzle/DB + M1.
 
 ## backup.ps1
 Genera un respaldo de la base de datos Postgres (contenedor `odontoflow-db` en WSL/Ubuntu).

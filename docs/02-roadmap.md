@@ -477,8 +477,6 @@ danphe MIT, mediflow-ai MIT). Resumen por ola:
       correo/contrasena verificados por contrasena actual; nombre de cuenta en el
       menu) y escaner de mojibake en CI (5 patrones sobre codigo user-facing).
       Runbook de producción casero: `docs/actualizar-produccion.md`; matriz de
-      tools verificada: `docs/13-repos-referencia.md`; proceso SDD (OpenSpec):
-      `docs/12-sdd-openspec.md`.
 - [ ] **v2.1 — Copilot agéntico:** build en v2.0.0, ship separado (registry de
       tools, paridad RBAC, redacción PHI, confirmación de writes, BudgetGuard).
 

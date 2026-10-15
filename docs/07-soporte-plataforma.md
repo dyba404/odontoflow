@@ -248,7 +248,6 @@ bloqueado/desbloqueado, membresía activa/inactiva, impersonación solicitada/in
   Drizzle (no es un motor integrado ni un fork).
 - `docs/01-topologia.md`: `/admin` + sesión plataforma en el mapa de superficies.
 - `docs/02-roadmap.md`: esta versión ya registrada como sección v1.7.0.
-- `docs/99-sesion-estado.md`: estado de sesión al terminar.
 
 ## 6. E2E y verificación
 
